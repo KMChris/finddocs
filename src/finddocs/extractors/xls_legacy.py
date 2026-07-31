@@ -95,6 +95,9 @@ def _format_number(value: float) -> str:
     if not math.isfinite(value):
         return ""
     rounded = round(value, _NUMBER_PRECISION)
+    if rounded == 0.0 and value != 0.0:
+        # Liczba mniejsza od przyjetej precyzji, lepiej zapisac ja w postaci wykladniczej.
+        return repr(value)
     if rounded == int(rounded) and abs(rounded) < 1e15:
         return str(int(rounded))
     text = f"{rounded:.{_NUMBER_PRECISION}f}".rstrip("0").rstrip(".")

@@ -70,6 +70,10 @@ _FIELD_BEGIN = "\x13"
 _FIELD_SEPARATOR = "\x14"
 _FIELD_END = "\x15"
 
+#: Znacznik konca komorki tabeli i jego postac z modelu obiektowego Worda.
+_CELL_END = "\x07"
+_CELL_END_PAIR = "\r\x07"
+
 
 def _strip_field_codes(text: str) -> str:
     """Usuwa kody pol Worda, zostawiajac ich wynik widoczny dla czytelnika.
@@ -92,12 +96,17 @@ def _strip_field_codes(text: str) -> str:
 
 
 def _clean_word_text(text: str) -> str:
-    """Zamienia znaki sterujace Worda na zwykly tekst z podzialem na akapity."""
+    """Zamienia znaki sterujace Worda na zwykly tekst z podzialem na akapity.
+
+    Model obiektowy Worda konczy komorke tabeli para znakow 0x0D 0x07. Znak konca
+    akapitu jest tam czescia znacznika komorki, wiec jest usuwany przed zamiana,
+    zeby separator kolumn nie wyladowal na poczatku nastepnego wiersza.
+    """
     if not text:
         return ""
     if _FIELD_BEGIN in text or _FIELD_SEPARATOR in text or _FIELD_END in text:
         text = _strip_field_codes(text)
-    return text.translate(_WORD_TRANSLATION)
+    return text.replace(_CELL_END_PAIR, _CELL_END).translate(_WORD_TRANSLATION)
 
 
 def _sections_from_text(
@@ -156,16 +165,28 @@ def _clean_meta_text(value: object) -> str | None:
     return cleaned or None
 
 
+def _plain_datetime(value: _dt.datetime) -> _dt.datetime:
+    """Zwraca zwykly, naiwny ``datetime``. COM oddaje wlasna podklase z strefa czasowa."""
+    return _dt.datetime(
+        value.year,
+        value.month,
+        value.day,
+        value.hour,
+        value.minute,
+        value.second,
+        value.microsecond,
+    )
+
+
 def _coerce_datetime(value: object) -> _dt.datetime | None:
     """Sprowadza date z COM albo z olefile do naiwnego ``datetime``."""
     if isinstance(value, _dt.datetime):
-        return value.replace(tzinfo=None) if value.tzinfo is not None else value
+        return _plain_datetime(value)
     if isinstance(value, _dt.date):
         return _dt.datetime(value.year, value.month, value.day)
     if isinstance(value, str) and value.strip():
         with contextlib.suppress(ValueError):
-            parsed = _dt.datetime.fromisoformat(value.strip())
-            return parsed.replace(tzinfo=None) if parsed.tzinfo is not None else parsed
+            return _plain_datetime(_dt.datetime.fromisoformat(value.strip()))
     return None
 
 
@@ -180,8 +201,8 @@ _WD_DO_NOT_SAVE_CHANGES = 0
 #: Celowo bledne haslo. Word zglosi blad zamiast czekac na okno dialogowe.
 _BOGUS_DOC_KEY = "__brak__"
 
-#: Dolny limit czasu na automatyzacje, chroni przed absurdalnie krotka konfiguracja.
-_MIN_COM_TIMEOUT = 5.0
+#: Limit czasu uzywany, gdy konfiguracja podaje wartosc niedodatnia.
+_DEFAULT_COM_TIMEOUT = 90.0
 
 #: Wlasciwosci wbudowane pobierane z dokumentu.
 _COM_PROPERTY_NAMES: tuple[str, ...] = (
@@ -362,7 +383,9 @@ class LegacyDocComExtractor(Extractor):
             daemon=True,
         )
         thread.start()
-        timeout = max(_MIN_COM_TIMEOUT, float(context.office_com_timeout_seconds))
+        timeout = float(context.office_com_timeout_seconds)
+        if timeout <= 0:
+            timeout = _DEFAULT_COM_TIMEOUT
         thread.join(timeout)
         if thread.is_alive():
             self._force_quit(state)
@@ -402,14 +425,18 @@ class LegacyDocComExtractor(Extractor):
         pythoncom.CoInitialize()
         document: Any = None
         try:
-            app = win32com.client.DispatchEx("Word.Application")
+            # DispatchEx wymusza osobny proces Worda, niezalezny od sesji uzytkownika.
+            dispatch: Any = win32com.client.DispatchEx
+            app: Any = dispatch("Word.Application")
             state.app = app
             app.Visible = False
             app.DisplayAlerts = 0
             with contextlib.suppress(Exception):
                 app.AutomationSecurity = _MSO_AUTOMATION_SECURITY_FORCE_DISABLE
+            # Word rozwiazuje sciezki wzgledne wzgledem wlasnego katalogu roboczego,
+            # dlatego zawsze przekazujemy sciezke bezwzgledna.
             document = app.Documents.Open(
-                str(path),
+                str(Path(path).resolve()),
                 ConfirmConversions=False,
                 ReadOnly=True,
                 AddToRecentFiles=False,

@@ -107,10 +107,10 @@ def _part_text(part: EmailMessage) -> str:
     """Tekst czesci tekstowej. Nieznane kodowanie jest zastepowane odczytem z podmiana."""
     try:
         content = part.get_content()
-        if isinstance(content, str):
-            return content
     except (LookupError, UnicodeError, ValueError, KeyError, TypeError):
         content = None
+    if isinstance(content, str):
+        return content
     try:
         payload = part.get_payload(decode=True)
     except (LookupError, UnicodeError, ValueError, TypeError):
@@ -366,7 +366,7 @@ class EmlExtractor(Extractor):
             data = part.get_payload(decode=True)
         except (LookupError, UnicodeError, ValueError, TypeError):
             return None
-        if not isinstance(data, bytes) or not data:
+        if not isinstance(data, bytes) or (not data and not filename):
             return None
 
         extension = mimetypes.guess_extension(content_type) or ".bin"

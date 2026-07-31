@@ -12,7 +12,7 @@ import unicodedata
 
 #: Znaki, ktore Unicode NFKD rozklada na litere i znak diakrytyczny, sa obslugiwane
 #: automatycznie. Ponizsze litery to osobne znaki alfabetu i wymagaja mapy.
-_SPECIAL_FOLD: dict[str, str] = {
+SPECIAL_FOLD: dict[str, str] = {
     "ł": "l",
     "Ł": "L",
     "đ": "d",
@@ -137,8 +137,8 @@ def fold_diacritics(text: str) -> str:
     """
     if not text:
         return ""
-    if any(ch in _SPECIAL_FOLD for ch in text):
-        text = text.translate(str.maketrans(_SPECIAL_FOLD))
+    if any(ch in SPECIAL_FOLD for ch in text):
+        text = text.translate(str.maketrans(SPECIAL_FOLD))
     decomposed = unicodedata.normalize("NFKD", text)
     return "".join(ch for ch in decomposed if not unicodedata.combining(ch))
 
@@ -207,6 +207,7 @@ def tokenize_words(text: str) -> list[str]:
 
 __all__ = [
     "OCR_CONFUSIONS",
+    "SPECIAL_FOLD",
     "alpha_ratio",
     "clean_text",
     "collapse_repeated_chars",
