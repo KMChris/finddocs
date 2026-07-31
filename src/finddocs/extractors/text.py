@@ -10,13 +10,18 @@ z ``finddocs.errors``.
 
 from __future__ import annotations
 
-import codecs
 import re
 from pathlib import Path
 from typing import Final
 
 from finddocs.errors import CorruptedFileError, EmptyDocumentError, ExtractionError
 from finddocs.extractors.base import ExtractionContext, Extractor
+from finddocs.extractors.encoding import (
+    BOM_ENCODINGS,
+    DETECTION_SAMPLE_BYTES,
+    FALLBACK_ENCODINGS,
+    decode_text,
+)
 from finddocs.normalization.text import clean_text, looks_like_garbage
 from finddocs.types import (
     DocumentMetadata,
@@ -25,18 +30,6 @@ from finddocs.types import (
     SupportLevel,
     TextOrigin,
 )
-
-#: Kodowania sprawdzane po kolei, gdy detekcja statystyczna nie da odpowiedzi.
-FALLBACK_ENCODINGS: Final[tuple[str, ...]] = (
-    "utf-8-sig",
-    "cp1250",
-    "iso-8859-2",
-    "utf-16",
-    "latin-1",
-)
-
-#: Ile poczatkowych bajtow wystarcza do rozpoznania kodowania.
-DETECTION_SAMPLE_BYTES: Final[int] = 256 * 1024
 
 #: Docelowa wielkosc bloku, gdy plik nie ma pustych linii.
 BLOCK_TARGET_CHARS: Final[int] = 4000
@@ -47,75 +40,7 @@ PARAGRAPH_SPLIT_THRESHOLD: Final[int] = BLOCK_TARGET_CHARS * 2
 #: Co ile blokow sprawdzac anulowanie i limit czasu.
 CHECKPOINT_EVERY: Final[int] = 16
 
-#: Znaczniki kolejnosci bajtow. UTF-32 sprawdzany przed UTF-16, bo ma wspolny prefiks.
-BOM_ENCODINGS: Final[tuple[tuple[bytes, str], ...]] = (
-    (codecs.BOM_UTF8, "utf-8-sig"),
-    (codecs.BOM_UTF32_LE, "utf-32"),
-    (codecs.BOM_UTF32_BE, "utf-32"),
-    (codecs.BOM_UTF16_LE, "utf-16"),
-    (codecs.BOM_UTF16_BE, "utf-16"),
-)
-
 _PARAGRAPH_SPLIT_RE = re.compile(r"\n[ \t\f\v]*\n")
-
-
-def _canonical_encoding(name: str) -> str:
-    """Ujednolica zapis nazwy kodowania do postaci malymi literami z lacznikiem."""
-    return name.strip().lower().replace("_", "-")
-
-
-def _bom_encoding(data: bytes) -> str | None:
-    """Kodowanie wynikajace ze znacznika BOM albo None, gdy znacznika brak."""
-    for marker, encoding in BOM_ENCODINGS:
-        if data.startswith(marker):
-            return encoding
-    return None
-
-
-def _detect_encoding(data: bytes) -> str | None:
-    """Proponuje kodowanie na podstawie analizy statystycznej probki poczatku pliku."""
-    try:
-        from charset_normalizer import from_bytes
-    except ImportError:
-        return None
-    try:
-        best = from_bytes(data[:DETECTION_SAMPLE_BYTES]).best()
-    except Exception:
-        return None
-    if best is None or not best.encoding:
-        return None
-    return _canonical_encoding(str(best.encoding))
-
-
-def _candidate_encodings(data: bytes) -> list[str]:
-    """Lista kodowan do sprawdzenia: BOM, detekcja statystyczna, potem stale fallbacki."""
-    seen: set[str] = set()
-    candidates: list[str] = []
-    for name in (_bom_encoding(data), _detect_encoding(data), *FALLBACK_ENCODINGS):
-        if not name:
-            continue
-        canonical = _canonical_encoding(name)
-        if canonical in seen:
-            continue
-        seen.add(canonical)
-        candidates.append(canonical)
-    return candidates
-
-
-def _decode_text(data: bytes) -> tuple[str, str, list[str]]:
-    """Dekoduje bajty. Zwraca tekst, uzyte kodowanie i liste ostrzezen."""
-    candidates = _candidate_encodings(data)
-    for encoding in candidates:
-        try:
-            return data.decode(encoding), encoding, []
-        except (UnicodeDecodeError, LookupError):
-            continue
-    warning = "Nie udalo sie jednoznacznie rozpoznac kodowania, czesc znakow zastapiono."
-    fallback = candidates[0] if candidates else "utf-8"
-    try:
-        return data.decode(fallback, errors="replace"), fallback, [warning]
-    except LookupError:
-        return data.decode("utf-8", errors="replace"), "utf-8", [warning]
 
 
 def _split_long_line(line: str, target: int) -> list[str]:
@@ -176,14 +101,15 @@ class PlainTextExtractor(Extractor):
                 details={"plik": path.name},
             )
 
-        text, encoding, decode_warnings = _decode_text(data)
+        decoded = decode_text(data)
+        text, encoding = decoded.text, decoded.encoding
         result = ExtractionResult(
             metadata=DocumentMetadata(title=path.stem, extra={"encoding": encoding}),
             origin=TextOrigin.NATIVE,
             parser_name=self.name,
             support_level=self.support_level,
         )
-        result.warnings.extend(decode_warnings)
+        result.warnings.extend(decoded.warnings)
         if size_truncated:
             result.warnings.append(
                 "Plik jest wiekszy niz dozwolony limit, odczytano tylko poczatek tresci."

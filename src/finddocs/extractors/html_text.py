@@ -21,6 +21,7 @@ from pathlib import Path
 
 from finddocs.errors import CorruptedFileError, EmptyDocumentError, ExtractionError
 from finddocs.extractors.base import ExtractionContext, Extractor
+from finddocs.extractors.encoding import DecodedText, decode_text
 from finddocs.normalization.text import clean_text, looks_like_garbage
 from finddocs.types import (
     DocumentMetadata,
@@ -61,15 +62,6 @@ _XML_ENCODING_RE = re.compile(
 )
 _TAG_RE = re.compile(r"<[^>]*>")
 
-#: Sygnatury BOM rozpoznawane przed analiza deklaracji kodowania.
-_BOM_ENCODINGS: tuple[tuple[bytes, str], ...] = (
-    (codecs.BOM_UTF8, "utf-8-sig"),
-    (codecs.BOM_UTF32_LE, "utf-32"),
-    (codecs.BOM_UTF32_BE, "utf-32"),
-    (codecs.BOM_UTF16_LE, "utf-16"),
-    (codecs.BOM_UTF16_BE, "utf-16"),
-)
-
 
 @dataclass(slots=True)
 class _Paragraph:
@@ -77,16 +69,6 @@ class _Paragraph:
 
     text: str
     heading: str | None = None
-
-
-@dataclass(slots=True)
-class _Decoded:
-    """Wynik dekodowania bajtow pliku HTML."""
-
-    text: str
-    encoding: str
-    replaced: bool = False
-    """True, gdy nie udalo sie rozpoznac kodowania i uzyto zamiany bledow."""
 
 
 class _HtmlTextParser(HTMLParser):
@@ -202,14 +184,6 @@ class _HtmlTextParser(HTMLParser):
         self._flush_paragraph()
 
 
-def _try_decode(data: bytes, encoding: str) -> str | None:
-    """Proba dekodowania w podanym kodowaniu. Zwraca None, gdy sie nie uda."""
-    try:
-        return data.decode(encoding)
-    except (UnicodeDecodeError, LookupError, ValueError):
-        return None
-
-
 def _is_known_codec(name: str) -> bool:
     """Czy Python zna kodowanie o tej nazwie."""
     try:
@@ -217,14 +191,6 @@ def _is_known_codec(name: str) -> bool:
     except (LookupError, ValueError):
         return False
     return True
-
-
-def _bom_encoding(data: bytes) -> str | None:
-    """Kodowanie wynikajace ze znacznika BOM albo None."""
-    for signature, encoding in _BOM_ENCODINGS:
-        if data.startswith(signature):
-            return encoding
-    return None
 
 
 def _declared_charset(data: bytes) -> str | None:
@@ -240,45 +206,9 @@ def _declared_charset(data: bytes) -> str | None:
     return None
 
 
-def _sniff_with_charset_normalizer(data: bytes) -> _Decoded | None:
-    """Rozpoznanie kodowania przy pomocy charset_normalizer. None, gdy sie nie uda."""
-    try:
-        from charset_normalizer import from_bytes
-    except ImportError:
-        return None
-    try:
-        best = from_bytes(data).best()
-    except Exception:
-        return None
-    if best is None:
-        return None
-    encoding = str(best.encoding or "utf-8")
-    return _Decoded(text=str(best), encoding=encoding)
-
-
-def _decode_html_bytes(data: bytes) -> _Decoded:
-    """Dekoduje bajty dokumentu HTML.
-
-    Kolejnosc: BOM, deklaracja ``<meta charset>`` z poczatku pliku, charset_normalizer,
-    a na koncu UTF-8 z zamiana nieprawidlowych bajtow.
-    """
-    bom = _bom_encoding(data)
-    if bom is not None:
-        text = _try_decode(data, bom)
-        if text is not None:
-            return _Decoded(text=text, encoding=bom)
-
-    declared = _declared_charset(data)
-    if declared is not None:
-        text = _try_decode(data, declared)
-        if text is not None:
-            return _Decoded(text=text, encoding=declared)
-
-    sniffed = _sniff_with_charset_normalizer(data)
-    if sniffed is not None:
-        return sniffed
-
-    return _Decoded(text=data.decode("utf-8", errors="replace"), encoding="utf-8", replaced=True)
+def _decode_html_bytes(data: bytes) -> DecodedText:
+    """Dekoduje bajty dokumentu HTML, respektujac deklaracje kodowania w pliku."""
+    return decode_text(data, declared=_declared_charset(data))
 
 
 def _parse_html(text: str) -> _HtmlTextParser:

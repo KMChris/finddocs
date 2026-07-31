@@ -149,6 +149,12 @@ def message_boxes(monkeypatch: pytest.MonkeyPatch) -> list[QMessageBox]:
     return seen
 
 
+@pytest.fixture
+def drain_tasks() -> Callable[[], None]:
+    """Funkcja czekajaca na zakonczenie zadan oddanych do puli watkow."""
+    return wait_for_tasks
+
+
 @pytest.fixture(autouse=True)
 def _drain_thread_pool(qtbot: object) -> Iterator[None]:
     """Po tescie czeka na zadania w tle, zanim pytest-qt usunie kontrolki."""

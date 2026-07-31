@@ -14,10 +14,9 @@ from collections.abc import Iterator, Sequence
 from itertools import chain
 from pathlib import Path
 
-import charset_normalizer
-
 from finddocs.errors import CorruptedFileError, EmptyDocumentError, ExtractionError
 from finddocs.extractors.base import ExtractionContext, Extractor
+from finddocs.extractors.encoding import decode_text
 from finddocs.normalization.text import clean_text
 from finddocs.types import (
     DocumentMetadata,
@@ -25,15 +24,6 @@ from finddocs.types import (
     ExtractionResult,
     SupportLevel,
     TextOrigin,
-)
-
-#: Kodowania probowane po kolei, gdy automatyczny detektor nie zwroci wyniku.
-_FALLBACK_ENCODINGS: tuple[str, ...] = (
-    "utf-8-sig",
-    "cp1250",
-    "iso-8859-2",
-    "utf-16",
-    "latin-1",
 )
 
 #: Separatory rozwazane przy analizie probki, w kolejnosci preferencji.
@@ -66,14 +56,6 @@ def _set_field_size_limit(limit: int = _FIELD_SIZE_LIMIT) -> None:
             current //= 2
         else:
             return
-
-
-def _try_decode(raw: bytes, encoding: str) -> str | None:
-    """Probuje zdekodowac bajty. Zwraca None, gdy kodowanie nie pasuje."""
-    try:
-        return raw.decode(encoding)
-    except (LookupError, UnicodeDecodeError):
-        return None
 
 
 def _looks_numeric(value: str) -> bool:
@@ -209,17 +191,6 @@ class CsvExtractor(Extractor):
             raise EmptyDocumentError(f"Plik {path.name} jest pusty.", details={"plik": path.name})
 
         try:
-            best = charset_normalizer.from_path(path).best()
-        except (OSError, ValueError):
-            best = None
-            result.warnings.append(
-                "Automatyczne rozpoznanie kodowania nie powiodlo sie, uzyto listy zapasowej."
-            )
-        if best is not None:
-            encoding = str(best.encoding or "utf-8")
-            return str(best).lstrip("\ufeff"), encoding
-
-        try:
             raw = path.read_bytes()
         except OSError as exc:
             raise ExtractionError(
@@ -228,20 +199,18 @@ class CsvExtractor(Extractor):
                 cause=exc,
             ) from exc
 
-        for candidate in _FALLBACK_ENCODINGS:
-            decoded = _try_decode(raw, candidate)
-            if decoded is None:
-                continue
-            if candidate == "latin-1":
-                result.warnings.append(
-                    "Kodowanie rozpoznano zapasowo jako latin-1, znaki moga byc znieksztalcone."
-                )
-            return decoded.lstrip("\ufeff"), candidate
-
-        raise CorruptedFileError(
-            f"Nie udalo sie zdekodowac pliku {path.name} zadnym ze znanych kodowan.",
-            details={"plik": path.name, "probowane": list(_FALLBACK_ENCODINGS)},
-        )
+        decoded = decode_text(raw)
+        result.warnings.extend(decoded.warnings)
+        if decoded.encoding == "latin-1":
+            result.warnings.append(
+                "Kodowanie rozpoznano zapasowo jako latin-1, znaki moga byc znieksztalcone."
+            )
+        if not decoded.text and raw:
+            raise CorruptedFileError(
+                f"Nie udalo sie zdekodowac pliku {path.name} zadnym ze znanych kodowan.",
+                details={"plik": path.name},
+            )
+        return decoded.text, decoded.encoding
 
     def _sample(self, text: str) -> str:
         """Probka tekstu do wykrywania separatora, przycieta do pelnej linii."""

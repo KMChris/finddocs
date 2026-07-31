@@ -43,6 +43,32 @@ class _TaskSignals(QObject):
     cancelled = Signal()
 
 
+#: Zadania oddane do puli watkow, ktore jeszcze nie zglosily wyniku.
+#:
+#: Pula usuwa obiekt ``QRunnable`` zaraz po zakonczeniu metody ``run``. Gdyby nikt
+#: nie trzymal referencji z poziomu Pythona, odsmiecacz mogl by usunac takze obiekt
+#: sygnalow, a wtedy zdarzenie czekajace w kolejce watku glownego wskazywaloby na
+#: zwolniona pamiec. Konczy sie to naruszeniem ochrony pamieci, nie wyjatkiem.
+_ACTIVE_TASKS: set[QRunnable] = set()
+
+
+def _retain(task: QRunnable, signals: _TaskSignals) -> None:
+    """Trzyma zadanie przy zyciu, dopoki nie dostarczy wyniku do watku glownego."""
+    _ACTIVE_TASKS.add(task)
+
+    def release(*_args: object) -> None:
+        _ACTIVE_TASKS.discard(task)
+
+    signals.finished.connect(release)
+    signals.failed.connect(release)
+    signals.cancelled.connect(release)
+
+
+def active_task_count() -> int:
+    """Liczba zadan oddanych do puli, ktore nie zglosily jeszcze wyniku."""
+    return len(_ACTIVE_TASKS)
+
+
 class SearchTask(QRunnable):
     """Jedno wyszukiwanie wykonywane poza watkiem interfejsu."""
 
@@ -57,6 +83,7 @@ class SearchTask(QRunnable):
         self._request = request
         self.token = CancellationFlag()
         self.setAutoDelete(True)
+        _retain(self, self.signals)
 
     @Slot()
     def run(self) -> None:
@@ -88,6 +115,7 @@ class CallableTask(QRunnable):
         self._work = work
         self._label = label
         self.setAutoDelete(True)
+        _retain(self, self.signals)
 
     @Slot()
     def run(self) -> None:
@@ -134,5 +162,6 @@ __all__ = [
     "CancellationFlag",
     "ProgressBridge",
     "SearchTask",
+    "active_task_count",
     "thread_pool",
 ]

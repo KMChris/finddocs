@@ -36,6 +36,7 @@ from finddocs.errors import (
     UnsupportedFormatError,
 )
 from finddocs.extractors.base import ExtractionContext, Extractor
+from finddocs.extractors.encoding import decode_text
 from finddocs.normalization.text import clean_text, looks_like_garbage
 from finddocs.types import (
     DocumentMetadata,
@@ -542,22 +543,19 @@ class _MsgContainer:
         return usable.decode("utf-16-le", errors="replace")
 
     def decode_html(self, raw: bytes) -> str:
-        """Dekoduje tresc HTML: BOM, deklaracja charset, potem strony kodowe wiadomosci."""
-        candidates: list[str] = []
-        if raw.startswith(codecs.BOM_UTF8):
-            candidates.append("utf-8-sig")
+        """Dekoduje tresc HTML: deklaracja charset, potem strony kodowe wiadomosci.
+
+        Strona kodowa wiadomosci jest tylko podpowiedzia. Domyslne cp1252 dekoduje
+        dowolne bajty, wiec przyjete bez sprawdzenia zamienialoby tresc UTF-8
+        w ciag znakow bez sensu.
+        """
+        declared: str | None = None
         match = _CHARSET_RE.search(raw[:4096])
         if match is not None:
-            declared = match.group(1).decode("ascii", "ignore")
-            if _is_known_codec(declared):
-                candidates.append(declared)
-        candidates.extend([self.html_encoding, self.encoding, "utf-8", "cp1252"])
-        for encoding in dict.fromkeys(candidates):
-            try:
-                return raw.decode(encoding)
-            except (UnicodeDecodeError, LookupError):
-                continue
-        return raw.decode("latin-1", errors="replace")
+            candidate = match.group(1).decode("ascii", "ignore")
+            if _is_known_codec(candidate):
+                declared = candidate
+        return decode_text(raw, declared=declared, extra=(self.html_encoding, self.encoding)).text
 
     # --- wlasciwosci ---
 
