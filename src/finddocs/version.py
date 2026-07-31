@@ -6,7 +6,7 @@ APP_NAME = "FindDocs"
 APP_VERSION = "0.1.0"
 
 #: Wersja schematu bazy metadanych. Podnies przy kazdej migracji.
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 1
 
 #: Wersja potoku normalizacji. Zmiana wymusza ponowne przetworzenie tekstu.
 NORMALIZATION_VERSION = 1

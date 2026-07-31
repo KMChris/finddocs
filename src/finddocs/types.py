@@ -351,6 +351,7 @@ class DocumentRecord:
     title: str | None
     web_url: str | None
     parent_url: str | None
+    local_path: str | None
     library: str | None
     chunk_count: int
     page_count: int | None
