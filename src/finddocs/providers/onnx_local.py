@@ -106,7 +106,7 @@ class OnnxEmbeddingProvider(EmbeddingProvider):
             passage_prefix=self.manifest.passage_prefix,
             license_name=descriptor.license_name if descriptor else self.manifest.license,
             source=descriptor.source_url if descriptor else self.manifest.source,
-            runtime=f"onnxruntime CPU, {threads} watkow",
+            runtime=f"onnxruntime CPU, {threads} wątków",
         )
         log.info(
             "provider.loaded",
