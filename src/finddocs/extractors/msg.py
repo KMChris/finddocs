@@ -185,14 +185,14 @@ def decompress_rtf(data: bytes) -> bytes:
         return data
     if len(data) < 16:
         raise CorruptedFileError(
-            "Strumien RTF wiadomosci jest zbyt krotki, brakuje naglowka kompresji.",
+            "Strumień RTF wiadomości jest zbyt krótki, brakuje nagłówka kompresji.",
             details={"dlugosc": len(data)},
         )
     try:
         comp_size, raw_size, comp_type, _crc = struct.unpack("<4I", data[:16])
     except struct.error as exc:  # pragma: no cover - dlugosc sprawdzona wyzej
         raise CorruptedFileError(
-            "Naglowek skompresowanego RTF jest uszkodzony.", cause=exc
+            "Nagłówek skompresowanego RTF jest uszkodzony.", cause=exc
         ) from exc
 
     end = 4 + comp_size
@@ -201,7 +201,7 @@ def decompress_rtf(data: bytes) -> bytes:
         return payload[:raw_size] if 0 < raw_size < len(payload) else payload
     if comp_type != _RTF_COMPRESSED_MAGIC:
         raise CorruptedFileError(
-            "Nieznany typ kompresji tresci RTF w wiadomosci.",
+            "Nieznany typ kompresji treści RTF w wiadomości.",
             details={"comptype": f"0x{comp_type:08X}"},
         )
     return _lzfu_decompress(payload, raw_size)
@@ -437,7 +437,7 @@ class _MsgContainer:
             storages = ole.listdir(streams=False, storages=True)
         except (OSError, ValueError, KeyError, IndexError, struct.error) as exc:
             raise CorruptedFileError(
-                "Nie udalo sie odczytac struktury katalogow pliku MSG.", cause=exc
+                "Nie udało się odczytać struktury katalogów pliku MSG.", cause=exc
             ) from exc
         self._streams: list[OlePath] = [tuple(entry) for entry in streams]
         self._storages: list[OlePath] = [tuple(entry) for entry in storages]
@@ -496,7 +496,7 @@ class _MsgContainer:
             with self._ole.openstream(list(path)) as stream:
                 raw = stream.read() if limit is None else stream.read(limit)
         except (OSError, ValueError, KeyError, IndexError, struct.error):
-            self.warnings.append(f"Nie udalo sie odczytac strumienia wiadomosci: {'/'.join(path)}.")
+            self.warnings.append(f"Nie udało się odczytać strumienia wiadomości: {'/'.join(path)}.")
             return b""
         return bytes(raw)
 
@@ -649,13 +649,13 @@ class MsgExtractor(Extractor):
             is_ole = olefile.isOleFile(str(path))
         except OSError as exc:
             raise CorruptedFileError(
-                "Nie udalo sie otworzyc pliku wiadomosci MSG.",
+                "Nie udało się otworzyć pliku wiadomości MSG.",
                 details={"plik": path.name},
                 cause=exc,
             ) from exc
         if not is_ole:
             raise CorruptedFileError(
-                "Plik nie jest kontenerem OLE, wiec nie jest poprawna wiadomoscia MSG.",
+                "Plik nie jest kontenerem OLE, więc nie jest poprawna wiadomością MSG.",
                 details={"plik": path.name},
             )
         try:
@@ -665,7 +665,7 @@ class MsgExtractor(Extractor):
             raise
         except Exception as exc:
             raise ExtractionError(
-                "Nie udalo sie odczytac wiadomosci MSG.",
+                "Nie udało się odczytać wiadomości MSG.",
                 details={"plik": path.name, "blad": type(exc).__name__},
                 cause=exc,
             ) from exc
@@ -678,7 +678,7 @@ class MsgExtractor(Extractor):
         container = _MsgContainer(ole)
         if not container.has_msg_streams():
             raise UnsupportedFormatError(
-                "Plik OLE nie zawiera strumieni wiadomosci MSG.",
+                "Plik OLE nie zawiera strumieni wiadomości MSG.",
                 details={"plik": path.name},
             )
         root = container.object_at((), _TOP_LEVEL_HEADERS)
@@ -698,7 +698,7 @@ class MsgExtractor(Extractor):
         body_text, body_source = self._read_body(container, root, warnings)
         if body_text and len(body_text) > context.max_chars:
             body_text = body_text[: context.max_chars]
-            warnings.append("Tresc wiadomosci zostala przycieta do limitu znakow.")
+            warnings.append("Treść wiadomości została przycięta do limitu znaków.")
         if body_text:
             sections.append(
                 ExtractedSection(
@@ -718,14 +718,14 @@ class MsgExtractor(Extractor):
             )
         elif attachment_storages:
             warnings.append(
-                "Zalaczniki wiadomosci zostaly pominiete zgodnie z konfiguracja "
+                "Załączniki wiadomości zostały pominięte zgodnie z konfiguracją "
                 f"(liczba: {len(attachment_storages)})."
             )
 
         warnings.extend(container.warnings)
         if not body_text and not envelope.subject and not attachments:
             raise EmptyDocumentError(
-                "Wiadomosc MSG nie zawiera tematu, tresci ani zalacznikow.",
+                "Wiadomość MSG nie zawiera tematu, treści ani załączników.",
                 details={"plik": path.name},
             )
 
@@ -828,7 +828,7 @@ class MsgExtractor(Extractor):
                 return _html_to_plain(html)
             except FindDocsError as exc:
                 warnings.append(
-                    f"Nie udalo sie odczytac tresci HTML wiadomosci: {exc.user_message}"
+                    f"Nie udało się odczytać treści HTML wiadomości: {exc.user_message}"
                 )
                 return ""
         raw_rtf = container.get_binary(root, _PID_RTF_COMPRESSED)
@@ -837,15 +837,15 @@ class MsgExtractor(Extractor):
         try:
             decompressed = decompress_rtf(raw_rtf)
         except FindDocsError as exc:
-            warnings.append(f"Nie udalo sie rozpakowac tresci RTF wiadomosci: {exc.user_message}")
+            warnings.append(f"Nie udało się rozpakować treści RTF wiadomości: {exc.user_message}")
             return ""
         if not decompressed:
-            warnings.append("Skompresowana tresc RTF wiadomosci jest pusta.")
+            warnings.append("Skompresowana treść RTF wiadomości jest pusta.")
             return ""
         try:
             return _rtf_to_plain(decompressed)
         except FindDocsError as exc:
-            warnings.append(f"Nie udalo sie odczytac tresci RTF wiadomosci: {exc.user_message}")
+            warnings.append(f"Nie udało się odczytać treści RTF wiadomości: {exc.user_message}")
             return ""
 
     def _read_attachments(
@@ -878,11 +878,11 @@ class MsgExtractor(Extractor):
             if data_path is not None:
                 size = container.stream_size(data_path)
                 if size > context.max_bytes or used_bytes + max(size, 0) > context.max_bytes:
-                    warnings.append(f"Pominieto zbyt duzy zalacznik: {name}.")
+                    warnings.append(f"Pominięto zbyt duży załącznik: {name}.")
                     continue
                 data = container.read_stream(data_path)
                 if not data:
-                    warnings.append(f"Zalacznik jest pusty lub nieczytelny: {name}.")
+                    warnings.append(f"Załącznik jest pusty lub nieczytelny: {name}.")
                     continue
                 used_bytes += len(data)
                 attachments.append(ExtractedAttachment(name=name, mime_type=mime, data=data))
@@ -893,13 +893,13 @@ class MsgExtractor(Extractor):
                     container.first_string(inner, (_PID_SUBJECT, _PID_NORMALIZED_SUBJECT))
                 ).strip()
                 label = inner_subject or name
-                note = f"Zalacznik: osadzona wiadomosc Outlook, temat: {label}"
+                note = f"Załącznik: osadzona wiadomość Outlook, temat: {label}"
                 warnings.append(
                     "Zalacznik jest osadzona wiadomoscia Outlook, jej tresc nie zostala "
                     f"rozpakowana: {label}."
                 )
             else:
-                warnings.append(f"Zalacznik nie zawiera danych mozliwych do odczytu: {name}.")
+                warnings.append(f"Załącznik nie zawiera danych możliwych do odczytu: {name}.")
                 continue
 
             cleaned_note = clean_text(note)
@@ -956,7 +956,7 @@ def _envelope_text(envelope: _Envelope) -> str:
 
 
 def _attachment_note(name: str, mime: str | None, size: int) -> str:
-    parts = [f"Zalacznik: {name}"]
+    parts = [f"Załącznik: {name}"]
     if mime:
         parts.append(f"typ: {mime}")
     parts.append(f"rozmiar: {size} B")

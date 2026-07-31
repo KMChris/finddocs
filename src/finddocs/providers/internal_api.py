@@ -60,7 +60,7 @@ class InternalApiEmbeddingProvider(EmbeddingProvider):
                 "Wlacz go swiadomie w ustawieniach, jesli organizacja udostepnila API."
             )
         if not base_url:
-            raise ConfigurationError("Nie podano adresu wewnetrznego API embeddingow.")
+            raise ConfigurationError("Nie podano adresu wewnetrznego API embeddingów.")
 
         self._policy = policy or get_policy()
         self._policy.check(base_url, EgressCategory.INTERNAL_API)
@@ -113,16 +113,16 @@ class InternalApiEmbeddingProvider(EmbeddingProvider):
             payload = response.json()
         except Exception as exc:
             raise ProviderError(
-                "Wewnetrzne API embeddingow nie odpowiedzialo poprawnie.", cause=exc
+                "Wewnetrzne API embeddingów nie odpowiedziało poprawnie.", cause=exc
             ) from exc
 
         rows = payload.get("data") or []
         if len(rows) != len(texts):
-            raise ProviderError("Wewnetrzne API zwrocilo inna liczbe wektorow niz zapytan.")
+            raise ProviderError("Wewnetrzne API zwróciło inna liczbę wektorów niż zapytań.")
         matrix = np.asarray([r["embedding"] for r in rows], dtype="float32")
         if matrix.shape[1] != self._info.dimension:
             raise ProviderError(
-                f"Wewnetrzne API zwrocilo wektory o wymiarze {matrix.shape[1]}, "
+                f"Wewnetrzne API zwróciło wektory o wymiarze {matrix.shape[1]}, "
                 f"oczekiwano {self._info.dimension}."
             )
         return l2_normalize(matrix)

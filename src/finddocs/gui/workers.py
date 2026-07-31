@@ -98,7 +98,7 @@ class SearchTask(QRunnable):
             return
         except Exception as exc:
             log.exception("gui.search_crashed")
-            self.signals.failed.emit("FD-7000", f"Nieoczekiwany blad: {type(exc).__name__}.")
+            self.signals.failed.emit("FD-7000", f"Nieoczekiwany błąd: {type(exc).__name__}.")
             return
         if self.token.is_cancelled():
             self.signals.cancelled.emit()
@@ -127,7 +127,7 @@ class CallableTask(QRunnable):
             return
         except Exception as exc:
             log.exception("gui.task_crashed", label=self._label)
-            self.signals.failed.emit("FD-0000", f"Nieoczekiwany blad: {type(exc).__name__}.")
+            self.signals.failed.emit("FD-0000", f"Nieoczekiwany błąd: {type(exc).__name__}.")
             return
         self.signals.finished.emit(result)
 

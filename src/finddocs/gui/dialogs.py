@@ -73,7 +73,7 @@ def show_error(parent: QWidget | None, text: str, title: str = i18n.ERROR_TITLE)
 
 def show_error_with_code(parent: QWidget | None, code: str, message: str) -> None:
     """Blad wraz z kodem, ktory ulatwia zgloszenie problemu."""
-    show_error(parent, f"{message}\n\nKod bledu: {code}")
+    show_error(parent, f"{message}\n\nKod błędu: {code}")
 
 
 def ask_yes_no(parent: QWidget | None, text: str, title: str = i18n.CONFIRM_TITLE) -> bool:

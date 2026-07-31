@@ -45,7 +45,7 @@ def test_startup_note_is_shown_without_model(
 
     assert message_boxes, "Uwagi startowe powinny pojawic sie w oknie komunikatu."
     text = message_boxes[0].text()
-    assert "Tryb dokladny dziala normalnie" in text
+    assert "Tryb dokładny działa normalnie" in text
     # Brak modelu nie uniewaznia indeksu pelnotekstowego, wiec nie straszymy przebudowa.
     assert main_window.context.rebuild_required is False
     assert message_boxes[0].windowTitle() == i18n.STARTUP_NOTES_TITLE
@@ -80,7 +80,7 @@ def test_status_bar_shows_index_state(main_window: MainWindow) -> None:
     text = main_window.index_label.text()
     assert "Dokumenty: 0" in text
     assert "Fragmenty: 0" in text
-    assert "Tryb semantyczny niedostepny" in text
+    assert "Tryb semantyczny niedostępny" in text
 
 
 @pytest.mark.gui

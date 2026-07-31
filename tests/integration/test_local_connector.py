@@ -245,7 +245,7 @@ def test_test_connection_dla_istniejacego_katalogu(tree: Path) -> None:
     status = build_connector(tree).test_connection()
 
     assert status.ok is True
-    assert "dostepny" in status.message
+    assert "dostępny" in status.message
     # Sonda liczy wszystkie pozycje pierwszego poziomu, takze katalogi i pliki ukryte.
     assert status.details["pozycji_na_pierwszym_poziomie"] == 6
     assert status.details["licznik_ograniczony"] is False

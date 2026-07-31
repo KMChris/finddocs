@@ -70,7 +70,7 @@ class KeyringCredentialStore(CredentialStore):
         backend = keyring.get_keyring()
         backend_name = type(backend).__name__
         if "fail" in backend_name.lower():
-            raise CredentialStoreError("Magazyn poswiadczen systemu nie jest dostepny.")
+            raise CredentialStoreError("Magazyn poświadczeń systemu nie jest dostępny.")
         self._keyring = keyring
         self._error = KeyringError
         self._service = service
@@ -81,7 +81,7 @@ class KeyringCredentialStore(CredentialStore):
             self._keyring.set_password(self._service, key, value)
         except self._error as exc:
             raise CredentialStoreError(
-                "Nie udalo sie zapisac poswiadczen w Menedzerze poswiadczen Windows.",
+                "Nie udało się zapisać poświadczeń w Menedżerze poświadczeń Windows.",
                 cause=exc,
             ) from exc
 
@@ -91,7 +91,7 @@ class KeyringCredentialStore(CredentialStore):
             return stored
         except self._error as exc:
             raise CredentialStoreError(
-                "Nie udalo sie odczytac poswiadczen z Menedzera poswiadczen Windows.",
+                "Nie udało się odczytać poświadczeń z Menedżera poświadczeń Windows.",
                 cause=exc,
             ) from exc
 
@@ -113,7 +113,7 @@ class DpapiCredentialStore(CredentialStore):
             import win32crypt  # noqa: F401
         except ImportError as exc:  # pragma: no cover - tylko poza Windows
             raise CredentialStoreError(
-                "DPAPI jest dostepne wylacznie na Windows.", cause=exc
+                "DPAPI jest dostępne wyłącznie na Windows.", cause=exc
             ) from exc
         self._storage_file = storage_file
         self._storage_file.parent.mkdir(parents=True, exist_ok=True)
@@ -212,7 +212,7 @@ def create_credential_store(storage_dir: Path, *, prefer: str = "auto") -> Crede
             log.warning("credentials.non_persistent_store", tried=errors)
         return store
 
-    raise CredentialStoreError("Nie udalo sie utworzyc zadnego magazynu poswiadczen.")
+    raise CredentialStoreError("Nie udało się utworzyć żadnego magazynu poświadczeń.")
 
 
 def token_cache_key(source_id: str) -> str:

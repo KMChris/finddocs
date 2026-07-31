@@ -59,19 +59,19 @@ def _open_image(path: Path) -> Image.Image:
         return Image.open(path)
     except Image.DecompressionBombError as exc:
         raise ExtractionError(
-            f"Obraz ma zbyt duza liczbe pikseli, aby go bezpiecznie otworzyc: {path.name}.",
+            f"Obraz ma zbyt duża liczbę pikseli, aby go bezpiecznie otworzyć: {path.name}.",
             details={"plik": path.name},
             cause=exc,
         ) from exc
     except UnidentifiedImageError as exc:
         raise CorruptedFileError(
-            f"Nie udalo sie rozpoznac formatu obrazu: {path.name}.",
+            f"Nie udało się rozpoznać formatu obrazu: {path.name}.",
             details={"plik": path.name},
             cause=exc,
         ) from exc
     except (OSError, ValueError) as exc:
         raise CorruptedFileError(
-            f"Nie udalo sie otworzyc pliku obrazu: {path.name}.",
+            f"Nie udało się otworzyć pliku obrazu: {path.name}.",
             details={"plik": path.name},
             cause=exc,
         ) from exc
@@ -158,13 +158,13 @@ def _read_image_info(path: Path) -> _ImageInfo:
             )
     except Image.DecompressionBombError as exc:
         raise ExtractionError(
-            f"Obraz ma zbyt duza liczbe pikseli, aby go bezpiecznie odczytac: {path.name}.",
+            f"Obraz ma zbyt duża liczbę pikseli, aby go bezpiecznie odczytać: {path.name}.",
             details={"plik": path.name},
             cause=exc,
         ) from exc
     except (OSError, ValueError) as exc:
         raise CorruptedFileError(
-            f"Nie udalo sie odczytac naglowka obrazu: {path.name}.",
+            f"Nie udało się odczytać nagłówka obrazu: {path.name}.",
             details={"plik": path.name},
             cause=exc,
         ) from exc
@@ -182,7 +182,7 @@ def _fit_to_pixels(image: Image.Image, max_pixels: int) -> Image.Image:
         return image.resize(new_size, Image.Resampling.LANCZOS)
     except (OSError, ValueError) as exc:
         raise CorruptedFileError(
-            "Nie udalo sie przeskalowac obrazu do rozmiaru akceptowanego przez OCR.",
+            "Nie udało się przeskalować obrazu do rozmiaru akceptowanego przez OCR.",
             details={"docelowy_rozmiar": list(new_size)},
             cause=exc,
         ) from exc
@@ -195,7 +195,7 @@ def _prepare_frame(frame: Image.Image, max_pixels: int) -> Image.Image:
         prepared = frame.convert(target_mode)
     except (OSError, ValueError) as exc:
         raise CorruptedFileError(
-            f"Nie udalo sie przeksztalcic klatki obrazu do trybu {target_mode}.",
+            f"Nie udało się przekształcić klatki obrazu do trybu {target_mode}.",
             details={"tryb_zrodlowy": frame.mode},
             cause=exc,
         ) from exc
@@ -224,13 +224,13 @@ def load_image_frames(
                 yield _prepare_frame(frame, max_pixels)
     except Image.DecompressionBombError as exc:
         raise ExtractionError(
-            f"Obraz ma zbyt duza liczbe pikseli, aby go bezpiecznie odczytac: {path.name}.",
+            f"Obraz ma zbyt duża liczbę pikseli, aby go bezpiecznie odczytać: {path.name}.",
             details={"plik": path.name},
             cause=exc,
         ) from exc
     except (OSError, ValueError) as exc:
         raise CorruptedFileError(
-            f"Nie udalo sie odczytac klatek obrazu: {path.name}.",
+            f"Nie udało się odczytać klatek obrazu: {path.name}.",
             details={"plik": path.name},
             cause=exc,
         ) from exc
@@ -284,7 +284,7 @@ class ImageExtractor(Extractor):
             needs_ocr=True,
         )
         if info.width * info.height > LARGE_IMAGE_PIXELS:
-            result.warnings.append("Obraz bardzo duzy, OCR moze zostac ograniczony")
+            result.warnings.append("Obraz bardzo duży, OCR może zostać ograniczony")
         if info.frames > DEFAULT_MAX_FRAMES:
             result.warnings.append(
                 f"Liczba klatek obrazu: {info.frames}. OCR obejmie pierwsze {DEFAULT_MAX_FRAMES}."

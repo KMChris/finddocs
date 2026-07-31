@@ -61,13 +61,13 @@ class _SheetOutcome:
     """Podsumowanie odczytu jednego arkusza."""
 
     next_order: int
-    """Kolejny wolny numer porzadkowy sekcji."""
+    """Kolejny wolny numer porządkowy sekcji."""
 
     rows: int
-    """Liczba sekcji z trescia (naglowek oraz wiersze) dodanych dla arkusza."""
+    """Liczba sekcji z treścią (nagłówek oraz wiersze) dodanych dla arkusza."""
 
     failed: bool = False
-    """True, gdy odczyt arkusza przerwal blad biblioteki."""
+    """True, gdy odczyt arkusza przerwał błąd biblioteki."""
 
 
 def _has_ole_signature(path: Path) -> bool:
@@ -197,11 +197,11 @@ class XlsxExtractor(Extractor):
         if content_rows == 0:
             if failed_sheets:
                 raise CorruptedFileError(
-                    "Nie udalo sie odczytac zadnego arkusza skoroszytu, plik moze byc uszkodzony.",
+                    "Nie udało się odczytać żadnego arkusza skoroszytu, plik może być uszkodzony.",
                     details={"plik": path.name, "arkusze": sheet_names},
                 )
             raise EmptyDocumentError(
-                "Skoroszyt Excel nie zawiera danych mozliwych do zaindeksowania.",
+                "Skoroszyt Excel nie zawiera danych możliwych do zaindeksowania.",
                 details={"plik": path.name, "arkusze": sheet_names},
             )
         return result
@@ -215,12 +215,12 @@ class XlsxExtractor(Extractor):
         except zipfile.BadZipFile as exc:
             if _has_ole_signature(path):
                 raise PasswordProtectedError(
-                    "Skoroszyt jest zaszyfrowany lub zabezpieczony haslem.",
+                    "Skoroszyt jest zaszyfrowany lub zabezpieczony hasłem.",
                     details={"plik": path.name},
                     cause=exc,
                 ) from exc
             raise CorruptedFileError(
-                "Plik xlsx jest uszkodzony: nie udalo sie odczytac archiwum ZIP.",
+                "Plik xlsx jest uszkodzony: nie udało się odczytać archiwum ZIP.",
                 details={"plik": path.name},
                 cause=exc,
             ) from exc
@@ -235,21 +235,21 @@ class XlsxExtractor(Extractor):
         details: dict[str, Any] = {"plik": path.name, "blad": type(exc).__name__}
         if any(marker in message for marker in _ENCRYPTED_MARKERS):
             return PasswordProtectedError(
-                "Skoroszyt jest zabezpieczony haslem, odczyt tresci nie jest mozliwy.",
+                "Skoroszyt jest zabezpieczony hasłem, odczyt treści nie jest możliwy.",
                 details=details,
             )
         if any(marker in message for marker in _UNSUPPORTED_MARKERS):
             return UnsupportedFormatError(
-                "Ten wariant pliku Excel nie jest obslugiwany przez parser xlsx.",
+                "Ten wariant pliku Excel nie jest obsługiwany przez parser xlsx.",
                 details=details,
             )
         if isinstance(exc, OSError):
             return ExtractionError(
-                "Nie udalo sie odczytac pliku skoroszytu z dysku.",
+                "Nie udało się odczytać pliku skoroszytu z dysku.",
                 details=details,
             )
         return CorruptedFileError(
-            "Nie udalo sie otworzyc skoroszytu Excel, plik moze byc uszkodzony.",
+            "Nie udało się otworzyć skoroszytu Excel, plik może być uszkodzony.",
             details=details,
         )
 
@@ -267,7 +267,7 @@ class XlsxExtractor(Extractor):
         try:
             props = workbook.properties
         except Exception:
-            result.warnings.append("Nie udalo sie odczytac wlasciwosci skoroszytu.")
+            result.warnings.append("Nie udało się odczytać właściwości skoroszytu.")
             return
         metadata = result.metadata
         metadata.title = _clean_meta(getattr(props, "title", None))
@@ -352,7 +352,7 @@ class XlsxExtractor(Extractor):
                 if used_rows >= limit:
                     result.warnings.append(
                         f"Arkusz '{title}': przekroczono limit {limit} wierszy, "
-                        "dalsza czesc arkusza zostala pominieta."
+                        "dalsza część arkusza została pominięta."
                     )
                     break
                 used_rows += 1
@@ -397,7 +397,7 @@ class XlsxExtractor(Extractor):
         except Exception as exc:
             failed = True
             result.warnings.append(
-                f"Arkusz '{title}': odczyt przerwano po bledzie ({type(exc).__name__})."
+                f"Arkusz '{title}': odczyt przerwano po błędzie ({type(exc).__name__})."
             )
 
         if content_rows == 0 and sheet_text:

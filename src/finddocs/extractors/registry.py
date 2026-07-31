@@ -73,7 +73,7 @@ class ExtractorRegistry:
             from finddocs.errors import PasswordProtectedError
 
             raise PasswordProtectedError(
-                "Plik jest zaszyfrowany albo zabezpieczony haslem.",
+                "Plik jest zaszyfrowany albo zabezpieczony hasłem.",
                 details={"mime": info.mime_type},
             )
 
@@ -107,13 +107,13 @@ class ExtractorRegistry:
             if result.support_level is SupportLevel.FULL:
                 result.support_level = extractor.support_level
             for note in unavailable:
-                result.warnings.append(f"Adapter niedostepny, uzyto zapasowego. {note}")
+                result.warnings.append(f"Adapter niedostępny, użyto zapasowego. {note}")
             return result, info
 
         if last_error is not None:
             raise last_error
         raise UnsupportedFormatError(
-            f"Zaden adapter dla {info.mime_type} nie jest dostepny w tym systemie.",
+            f"Żaden adapter dla {info.mime_type} nie jest dostępny w tym systemie.",
             details={"mime": info.mime_type, "unavailable": unavailable},
         )
 

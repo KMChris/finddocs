@@ -67,7 +67,7 @@ def test_report_reports_incomplete_set(
 
     assert report_view.table.rowCount() == corpus_stats["niewyszukiwalne"]
     assert report_view.table.item(0, 0).text() == "pusty.txt"
-    assert report_view.table.item(0, 2).text() == "brak tresci"
+    assert report_view.table.item(0, 2).text() == "brak treści"
 
 
 @pytest.mark.gui

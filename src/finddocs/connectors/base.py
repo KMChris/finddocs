@@ -33,7 +33,7 @@ class ScanCursor:
     """Pozycja w enumeracji zrodla, pozwalajaca wznowic przerwane skanowanie."""
 
     token: str | None = None
-    """Nieprzezroczysty znacznik konektora, np. odsylacz nextLink z Graph."""
+    """Nieprzezroczysty znacznik konektora, np. odsyłacz nextLink z Graph."""
 
     visited: int = 0
     complete: bool = False
@@ -141,7 +141,7 @@ def ensure_space_for(destination: Path, size: int, *, safety: float = 2.0) -> No
         raise StorageSpaceError(
             "Za malo miejsca w przestrzeni tymczasowej, zeby pobrac plik. "
             f"Potrzeba okolo {required // (1024 * 1024)} MB, "
-            f"dostepne {free // (1024 * 1024)} MB.",
+            f"dostępne {free // (1024 * 1024)} MB.",
             details={"required": required, "available": free},
         )
 

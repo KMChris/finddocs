@@ -1,4 +1,4 @@
-"""Raport pokrycia zbioru dokumentow.
+"""Raport pokrycia zbioru dokumentów.
 
 Raport odpowiada na jedno pytanie: czy to, co uzytkownik widzi w wynikach, jest
 calym zbiorem. Dlatego liczy nie tylko sukcesy, ale przede wszystkim dokumenty,
@@ -64,15 +64,15 @@ _REQUIRING_OCR_SQL = """
 STATUS_LABELS: dict[str, str] = {
     DocumentStatus.PENDING.value: "Oczekuje na przetworzenie",
     DocumentStatus.INDEXED.value: "Zaindeksowany",
-    DocumentStatus.PARTIAL.value: "Zaindeksowany czesciowo",
-    DocumentStatus.SKIPPED.value: "Pominiety",
-    DocumentStatus.UNSUPPORTED.value: "Format nieobslugiwany",
+    DocumentStatus.PARTIAL.value: "Zaindeksowany częściowo",
+    DocumentStatus.SKIPPED.value: "Pominięty",
+    DocumentStatus.UNSUPPORTED.value: "Format nieobsługiwany",
     DocumentStatus.CORRUPTED.value: "Plik uszkodzony",
-    DocumentStatus.PASSWORD_PROTECTED.value: "Zabezpieczony haslem",
-    DocumentStatus.EMPTY.value: "Brak tresci do zaindeksowania",
-    DocumentStatus.DOWNLOAD_FAILED.value: "Nie udalo sie pobrac pliku",
-    DocumentStatus.ERROR.value: "Blad przetwarzania",
-    DocumentStatus.DELETED.value: "Usuniety ze zrodla",
+    DocumentStatus.PASSWORD_PROTECTED.value: "Zabezpieczony hasłem",
+    DocumentStatus.EMPTY.value: "Brak treści do zaindeksowania",
+    DocumentStatus.DOWNLOAD_FAILED.value: "Nie udało się pobrać pliku",
+    DocumentStatus.ERROR.value: "Błąd przetwarzania",
+    DocumentStatus.DELETED.value: "Usunięty ze źródła",
 }
 
 
@@ -91,7 +91,7 @@ def build_coverage_report(index: IndexService) -> CoverageReport:
         return _build(index)
     except sqlite3.DatabaseError as exc:
         raise FindDocsError(
-            "Nie udalo sie zbudowac raportu pokrycia, baza metadanych nie odpowiada.",
+            "Nie udało się zbudować raportu pokrycia, baza metadanych nie odpowiada.",
             cause=exc,
         ) from exc
 
@@ -207,7 +207,7 @@ def _optional_int(value: str | None) -> int | None:
 
 
 def non_searchable_count(report: CoverageReport) -> int:
-    """Liczba dokumentow, ktorych nie da sie wyszukac.
+    """Liczba dokumentów, ktorych nie da sie wyszukac.
 
     Liczba jest wyprowadzana ze statusow, wiec pozostaje poprawna takze wtedy,
     gdy lista szczegolowa zostala ograniczona limitem.
@@ -228,7 +228,7 @@ def _plural(count: int, one: str, few: str, many: str) -> str:
 
 
 def _documents(count: int) -> str:
-    return f"{count} {_plural(count, 'dokument', 'dokumenty', 'dokumentow')}"
+    return f"{count} {_plural(count, 'dokument', 'dokumenty', 'dokumentów')}"
 
 
 def _stamp(value: _dt.datetime | None) -> str:
@@ -250,34 +250,34 @@ def coverage_summary_text(report: CoverageReport) -> str:
         f"Fragmenty w indeksie: {report.total_chunks}, wektory: {report.total_vectors}.",
         f"OCR: wymagany dla {report.requiring_ocr}, udany dla {report.ocr_succeeded}, "
         f"nieudany dla {report.ocr_failed}.",
-        f"Pominiete: {report.skipped}, nieobslugiwane: {report.unsupported}, "
-        f"uszkodzone: {report.corrupted}, zabezpieczone haslem: {report.password_protected}, "
-        f"bez tresci: {report.empty}.",
-        f"Bledy pobierania: {report.download_errors}, inne bledy: {report.other_errors}.",
+        f"Pominięte: {report.skipped}, nieobsługiwane: {report.unsupported}, "
+        f"uszkodzone: {report.corrupted}, zabezpieczone hasłem: {report.password_protected}, "
+        f"bez treści: {report.empty}.",
+        f"Błędy pobierania: {report.download_errors}, inne błędy: {report.other_errors}.",
         f"Ostatnie skanowanie: {_stamp(report.last_scan_at)}. "
         f"Ostatnie pelne indeksowanie: {_stamp(report.last_full_index_at)}.",
     ]
 
     if report.discovered == 0:
         lines.append(
-            "Indeks jest pusty, zadne zrodlo nie zostalo jeszcze przeskanowane. "
-            "Wyniki wyszukiwania beda puste, co nie oznacza braku dokumentow w zrodle."
+            "Indeks jest pusty, żadne źródło nie zostało jeszcze przeskanowane. "
+            "Wyniki wyszukiwania beda puste, co nie oznacza braku dokumentów w zrodle."
         )
         return "\n".join(lines)
 
     if missing > 0:
         lines.append(
-            f"UWAGA: zbior NIE jest kompletny. {_documents(missing)} nie da sie wyszukac, "
-            "wiec wyniki moga pomijac istotne tresci."
+            f"UWAGA: zbiór NIE jest kompletny. {_documents(missing)} nie da sie wyszukac, "
+            "więc wyniki mogą pomijać istotne treści."
         )
         lines.append(
-            "Szczegoly kazdego takiego dokumentu wraz z powodem znajduja sie na liscie "
-            "dokumentow niewyszukiwalnych."
+            "Szczegóły każdego takiego dokumentu wraz z powodem znajdują się na liście "
+            "dokumentów niewyszukiwalnych."
         )
     else:
         lines.append(
             "Wszystkie wykryte dokumenty sa wyszukiwalne, zbior jest kompletny "
-            "w zakresie objetym skonfigurowanymi zrodlami."
+            "w zakresie objętym skonfigurowanymi źródłami."
         )
     return "\n".join(lines)
 

@@ -43,13 +43,13 @@ class SharePointSourceSettings:
     """interactive albo device_code."""
 
     site_url: str = ""
-    """Pelny adres witryny, np. https://contoso.sharepoint.com/sites/Finanse."""
+    """Pełny adres witryny, np. https://contoso.sharepoint.com/sites/Finanse."""
 
     site_id: str = ""
     drive_id: str = ""
     drive_name: str = ""
     folder_path: str = ""
-    """Sciezka katalogu startowego wzgledem korzenia biblioteki. Pusta oznacza korzen."""
+    """Ścieżka katalogu startowego względem korzenia biblioteki. Pusta oznacza korzeń."""
 
     recursive: bool = True
     scopes: list[str] = field(default_factory=lambda: ["Files.Read.All", "Sites.Read.All"])
@@ -103,7 +103,7 @@ class EmbeddingSettings:
     max_sequence_length: int = 512
     batch_size: int = 8
     num_threads: int = 0
-    """0 oznacza automatyczny dobor na podstawie liczby rdzeni."""
+    """0 oznacza automatyczny dobór na podstawie liczby rdzeni."""
 
     quantized: bool = True
     query_prefix: str = "zapytanie: "
@@ -126,10 +126,10 @@ class OcrSettings:
     render_dpi: int = 220
     max_pages_per_document: int = 60
     min_chars_per_page: int = 90
-    """Ponizej tej liczby znakow na strone uznajemy warstwe tekstowa za bezuzyteczna."""
+    """Poniżej tej liczby znaków na stronę uznajemy warstwę tekstowa za bezużyteczna."""
 
     min_alpha_ratio: float = 0.45
-    """Minimalny udzial liter w tekscie, ponizej ktorego podejrzewamy smieci."""
+    """Minimalny udział liter w tekście, poniżej którego podejrzewamy śmieci."""
 
     max_image_pixels: int = 40_000_000
     page_timeout_seconds: float = 120.0
@@ -161,7 +161,7 @@ class SearchSettings:
     fts_weight: float = 1.0
     vector_weight: float = 1.0
     exact_boost: float = 0.6
-    """Premia dodawana do wyniku dokumentu zawierajacego wszystkie elementy dokladne."""
+    """Premia dodawana do wyniku dokumentu zawierajacego wszystkie elementy dokładne."""
 
     semantic_candidates: int = 400
     fts_candidates: int = 2000
@@ -191,7 +191,7 @@ class DiagnosticsSettings:
 
     log_level: str = "INFO"
     log_queries: bool = False
-    """Lokalny tryb diagnostyczny. Domyslnie wylaczony, zapytania nie trafiaja do logow."""
+    """Lokalny tryb diagnostyczny. Domyślnie wyłączony, zapytania nie trafiaja do logów."""
 
     keep_log_files: int = 5
     max_log_size_mb: int = 20
@@ -218,7 +218,7 @@ class AppConfig:
 
     format_version: int = CONFIG_FORMAT_VERSION
     data_root: str = ""
-    """Pusty oznacza domyslny katalog danych uzytkownika."""
+    """Pusty oznacza domyślny katalog danych użytkownika."""
 
     sources: list[SourceConfig] = field(default_factory=list)
     embedding: EmbeddingSettings = field(default_factory=EmbeddingSettings)
@@ -230,7 +230,7 @@ class AppConfig:
     ui: UiSettings = field(default_factory=UiSettings)
     first_run_completed: bool = False
     allow_model_download: bool = False
-    """Pobieranie modeli wymaga jawnej zgody uzytkownika."""
+    """Pobieranie modeli wymaga jawnej zgody użytkownika."""
 
     # --- zgodnosc indeksu -------------------------------------------------
 
@@ -282,7 +282,7 @@ class AppConfig:
         for src in self.sources:
             if src.source_id == source_id:
                 return src
-        raise ConfigurationError(f"Nie znaleziono zrodla o identyfikatorze {source_id}.")
+        raise ConfigurationError(f"Nie znaleziono źródła o identyfikatorze {source_id}.")
 
     def enabled_sources(self) -> list[SourceConfig]:
         return [s for s in self.sources if s.enabled]
@@ -368,11 +368,11 @@ def load_config(path: Path | None = None) -> AppConfig:
         raw = json.loads(target.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
         raise ConfigurationError(
-            f"Plik konfiguracyjny {target} jest uszkodzony i nie da sie go odczytac.",
+            f"Plik konfiguracyjny {target} jest uszkodzony i nie da się go odczytać.",
             cause=exc,
         ) from exc
     if not isinstance(raw, dict):
-        raise ConfigurationError(f"Plik konfiguracyjny {target} ma nieprawidlowa strukture.")
+        raise ConfigurationError(f"Plik konfiguracyjny {target} ma nieprawidłowa strukturę.")
     return config_from_dict(raw)
 
 

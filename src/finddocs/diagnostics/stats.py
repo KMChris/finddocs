@@ -215,12 +215,12 @@ def _onnxruntime_info() -> dict[str, Any]:
     try:
         import onnxruntime
     except ImportError:
-        return {"wersja": None, "providery": [], "dostepny": False}
+        return {"wersja": None, "providery": [], "dostępny": False}
     providers = list(onnxruntime.get_available_providers())
     return {
         "wersja": str(getattr(onnxruntime, "__version__", "")),
         "providery": providers,
-        "dostepny": True,
+        "dostępny": True,
         "widoczny_tylko_cpu": providers == ["CPUExecutionProvider"],
     }
 
@@ -230,8 +230,8 @@ def _faiss_info() -> dict[str, Any]:
     try:
         import faiss
     except ImportError:
-        return {"wersja": None, "dostepny": False}
-    return {"wersja": str(getattr(faiss, "__version__", "")), "dostepny": True}
+        return {"wersja": None, "dostępny": False}
+    return {"wersja": str(getattr(faiss, "__version__", "")), "dostępny": True}
 
 
 def collect_environment_info(paths: AppPaths | None = None) -> dict[str, Any]:
@@ -277,7 +277,7 @@ def _credential_store_info(paths: AppPaths) -> dict[str, Any]:
     uwaga = (
         ""
         if store.persistent
-        else "Magazyn dziala w pamieci procesu, poswiadczenia gina po zamknieciu aplikacji."
+        else "Magazyn działa w pamięci procesu, poświadczenia giną po zamknięciu aplikacji."
     )
     return {"rodzaj": store.name, "trwaly": store.persistent, "uwaga": uwaga}
 
@@ -291,7 +291,7 @@ def collect_component_info(config: AppConfig) -> dict[str, Any]:
     engines = [
         {
             "nazwa": info.name,
-            "dostepny": info.available,
+            "dostępny": info.available,
             "powod_niedostepnosci": info.reason,
             "wersja": info.version,
             "jezyki": list(info.languages),
@@ -319,7 +319,7 @@ def collect_all(index: IndexService) -> dict[str, Any]:
         indeks = collect_index_stats(index)
     except sqlite3.DatabaseError as exc:
         raise FindDocsError(
-            "Nie udalo sie odczytac statystyk indeksu z bazy metadanych.", cause=exc
+            "Nie udało się odczytać statystyk indeksu z bazy metadanych.", cause=exc
         ) from exc
     return {
         "indeks": indeks,

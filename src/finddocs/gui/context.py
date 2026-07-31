@@ -116,7 +116,7 @@ class AppContext:
                     return True, ""
             except OSError as exc:
                 log.warning("gui.open_document_failed", kind=kind, error_type=type(exc).__name__)
-        return False, "Nie udalo sie otworzyc dokumentu. Sprawdz, czy plik nadal istnieje."
+        return False, "Nie udało się otworzyć dokumentu. Sprawdź, czy plik nadal istnieje."
 
     def open_location(self, *, parent_url: str | None, local_path: str | None) -> tuple[bool, str]:
         """Otwiera katalog dokumentu albo lokalizacje w SharePoint."""
@@ -139,7 +139,7 @@ class AppContext:
                 return True, ""
             except OSError as exc:
                 log.warning("gui.open_location_failed", error_type=type(exc).__name__)
-        return False, "Nie udalo sie otworzyc lokalizacji dokumentu."
+        return False, "Nie udało się otworzyć lokalizacji dokumentu."
 
     def open_path(self, path: Path) -> bool:
         try:
@@ -153,17 +153,17 @@ class AppContext:
 
     def require_index(self) -> IndexService:
         if self.index is None:
-            raise ConfigurationError("Indeks nie zostal otwarty.")
+            raise ConfigurationError("Indeks nie został otwarty.")
         return self.index
 
     def require_search(self) -> SearchService:
         if self.search is None:
-            raise ConfigurationError("Wyszukiwarka nie zostala przygotowana.")
+            raise ConfigurationError("Wyszukiwarka nie została przygotowana.")
         return self.search
 
     def require_runner(self) -> JobRunner:
         if self.runner is None:
-            raise ConfigurationError("Wykonawca zadan nie zostal uruchomiony.")
+            raise ConfigurationError("Wykonawca zadań nie został uruchomiony.")
         return self.runner
 
     def status_summary(self) -> dict[str, Any]:

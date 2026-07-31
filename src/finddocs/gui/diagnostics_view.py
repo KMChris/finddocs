@@ -8,7 +8,6 @@ from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QHBoxLayout,
-    QHeaderView,
     QLabel,
     QPushButton,
     QTableWidget,
@@ -21,6 +20,7 @@ from PySide6.QtWidgets import (
 from finddocs.gui import i18n
 from finddocs.gui.context import AppContext
 from finddocs.gui.dialogs import show_error, show_info, show_warning
+from finddocs.gui.tables import configure_columns
 from finddocs.gui.workers import CallableTask, thread_pool
 from finddocs.logging_setup import get_logger
 
@@ -89,7 +89,7 @@ class DiagnosticsView(QWidget):
         row = QHBoxLayout()
         row.setSpacing(8)
 
-        refresh = QPushButton("Odswiez")
+        refresh = QPushButton("Odśwież")
         refresh.setObjectName("Primary")
         refresh.clicked.connect(self.refresh)
         row.addWidget(refresh)
@@ -119,10 +119,10 @@ class DiagnosticsView(QWidget):
 
     def _make_table(self) -> QTableWidget:
         table = QTableWidget(0, 2)
-        table.setHorizontalHeaderLabels(["Parametr", "Wartosc"])
+        table.setHorizontalHeaderLabels(["Parametr", "Wartość"])
         table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         table.verticalHeader().setVisible(False)
-        table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        configure_columns(table, (1,))
         return table
 
     def _fill(self, table: QTableWidget, data: dict[str, Any]) -> None:
@@ -168,7 +168,7 @@ class DiagnosticsView(QWidget):
         def work() -> dict[str, Any]:
             return self.context.require_index().consistency().to_dict()
 
-        task = CallableTask(work, label="spojnosc indeksu")
+        task = CallableTask(work, label="spójność indeksu")
 
         def done(result: object) -> None:
             if not isinstance(result, dict):
@@ -179,10 +179,10 @@ class DiagnosticsView(QWidget):
             if problems:
                 show_warning(
                     self,
-                    "Wykryto problemy ze spojnoscia indeksu:\n" + "\n".join(map(str, problems)),
+                    "Wykryto problemy ze spójnością indeksu:\n" + "\n".join(map(str, problems)),
                 )
             else:
-                self.status_message.emit("Indeks jest spojny.")
+                self.status_message.emit("Indeks jest spójny.")
 
         task.signals.finished.connect(done)
         task.signals.failed.connect(self._show_error)
@@ -191,7 +191,7 @@ class DiagnosticsView(QWidget):
     def compact_vectors(self) -> None:
         index = self.context.index
         if index is None or index.vector_store is None:
-            show_info(self, "Indeks wektorowy nie jest dostepny.")
+            show_info(self, "Indeks wektorowy nie jest dostępny.")
             return
 
         def work() -> str:
@@ -199,10 +199,10 @@ class DiagnosticsView(QWidget):
 
             store = self.context.require_index().vector_store
             if store is None:
-                return "Indeks wektorowy nie jest dostepny."
+                return "Indeks wektorowy nie jest dostępny."
             count = compact(self.context.require_index().repository, store)
             self.context.require_index().db.optimize()
-            return f"Skompaktowano indeks wektorowy. Aktywnych wektorow: {count}."
+            return f"Skompaktowano indeks wektorowy. Aktywnych wektorów: {count}."
 
         self.status_message.emit("Kompaktowanie indeksu wektorowego...")
         task = CallableTask(work, label="kompaktacja")
@@ -237,7 +237,7 @@ class DiagnosticsView(QWidget):
             lambda result: show_info(
                 self,
                 f"Pakiet diagnostyczny zapisano w:\n{result}\n\n"
-                "Pakiet nie zawiera tresci dokumentow.",
+                "Pakiet nie zawiera treści dokumentów.",
             )
         )
         task.signals.failed.connect(self._show_error)
@@ -247,9 +247,9 @@ class DiagnosticsView(QWidget):
         self.context.config.diagnostics.log_queries = enabled
         self.context.save()
         self.status_message.emit(
-            "Zapisywanie zapytan w logu wlaczone."
+            "Zapisywanie zapytań w logu włączone."
             if enabled
-            else "Zapisywanie zapytan w logu wylaczone."
+            else "Zapisywanie zapytań w logu wyłączone."
         )
 
     def _show_error(self, code: str, message: str) -> None:

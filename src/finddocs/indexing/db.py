@@ -194,7 +194,7 @@ class Database:
         problems = self.integrity_check()
         if problems:
             raise IndexCorruptedError(
-                "Plik indeksu jest uszkodzony. Wykonaj odbudowe indeksu.",
+                "Plik indeksu jest uszkodzony. Wykonaj odbudowę indeksu.",
                 details={"problems": problems[:5]},
             )
 

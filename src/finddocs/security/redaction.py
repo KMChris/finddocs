@@ -71,7 +71,7 @@ def redact_text(value: str) -> str:
     out = _KEYVALUE_RE.sub(lambda m: f"{m.group(1)}={REDACTED}", out)
     out = _LONG_HEX_RE.sub(REDACTED, out)
     if len(out) > MAX_VALUE_CHARS:
-        out = out[:MAX_VALUE_CHARS] + f"...[+{len(out) - MAX_VALUE_CHARS} znakow]"
+        out = out[:MAX_VALUE_CHARS] + f"...[+{len(out) - MAX_VALUE_CHARS} znaków]"
     return out
 
 
@@ -80,7 +80,7 @@ def redact_value(key: str, value: Any, *, depth: int = 0) -> Any:
     lowered = key.lower()
     if lowered in LENGTH_ONLY_KEYS:
         try:
-            return f"<{len(value)} znakow>"
+            return f"<{len(value)} znaków>"
         except TypeError:
             return REDACTED
     if lowered in SENSITIVE_KEYS:
@@ -116,7 +116,7 @@ def safe_url(url: str) -> str:
     """Usuwa czesc zapytania z adresu URL (moze zawierac tokeny SAS)."""
     without_fragment = url.split("#", 1)[0]
     base, sep, _query = without_fragment.partition("?")
-    return base + ("?[parametry usuniete]" if sep else "")
+    return base + ("?[parametry usunięte]" if sep else "")
 
 
 __all__ = [

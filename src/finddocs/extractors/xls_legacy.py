@@ -149,13 +149,13 @@ class LegacyXlsExtractor(Extractor):
     def unavailable_reason(self) -> str:
         if _IMPORT_ERROR is None:
             return ""
-        return f"Biblioteka xlrd nie jest dostepna: {_IMPORT_ERROR}"
+        return f"Biblioteka xlrd nie jest dostępna: {_IMPORT_ERROR}"
 
     def extract(self, path: Path, context: ExtractionContext) -> ExtractionResult:
         """Czyta wszystkie arkusze skoroszytu i zwraca sekcje wierszy."""
         if _IMPORT_ERROR is not None:
             raise DependencyUnavailableError(
-                "Obsluga plikow XLS wymaga biblioteki xlrd.",
+                "Obsługa plików XLS wymaga biblioteki xlrd.",
                 details={"blad_importu": _IMPORT_ERROR},
             )
         context.checkpoint()
@@ -168,7 +168,7 @@ class LegacyXlsExtractor(Extractor):
             raise
         except Exception as exc:
             raise CorruptedFileError(
-                f"Nie udalo sie odczytac skoroszytu {path.name}, plik jest uszkodzony.",
+                f"Nie udało się odczytać skoroszytu {path.name}, plik jest uszkodzony.",
                 details={"plik": path.name, "blad": type(exc).__name__},
             ) from exc
         finally:
@@ -176,7 +176,7 @@ class LegacyXlsExtractor(Extractor):
         self._append_library_warnings(result, diagnostics.getvalue())
         if not result.sections:
             raise EmptyDocumentError(
-                f"Skoroszyt {path.name} nie zawiera tresci mozliwej do zaindeksowania.",
+                f"Skoroszyt {path.name} nie zawiera treści możliwej do zaindeksowania.",
                 details={"plik": path.name},
             )
         return result
@@ -201,12 +201,12 @@ class LegacyXlsExtractor(Extractor):
             ) from exc
         except OSError as exc:
             raise ExtractionError(
-                f"Nie udalo sie otworzyc pliku {path.name}.",
+                f"Nie udało się otworzyć pliku {path.name}.",
                 details={"plik": path.name},
             ) from exc
         except Exception as exc:
             raise CorruptedFileError(
-                f"Nie udalo sie odczytac skoroszytu {path.name}, plik jest uszkodzony.",
+                f"Nie udało się odczytać skoroszytu {path.name}, plik jest uszkodzony.",
                 details={"plik": path.name, "blad": type(exc).__name__},
             ) from exc
 
@@ -216,7 +216,7 @@ class LegacyXlsExtractor(Extractor):
         lowered = message.casefold()
         if any(marker in lowered for marker in _PASSWORD_MARKERS):
             return PasswordProtectedError(
-                f"Skoroszyt {path.name} jest zaszyfrowany albo zabezpieczony haslem.",
+                f"Skoroszyt {path.name} jest zaszyfrowany albo zabezpieczony hasłem.",
                 details={"plik": path.name, "komunikat": message},
             )
         if "not supported" in lowered and any(m in lowered for m in _MODERN_FORMAT_MARKERS):
@@ -226,7 +226,7 @@ class LegacyXlsExtractor(Extractor):
                 details={"plik": path.name, "komunikat": message},
             )
         return CorruptedFileError(
-            f"Nie udalo sie odczytac skoroszytu {path.name}, plik jest uszkodzony.",
+            f"Nie udało się odczytać skoroszytu {path.name}, plik jest uszkodzony.",
             details={"plik": path.name, "komunikat": message},
         )
 
@@ -262,14 +262,14 @@ class LegacyXlsExtractor(Extractor):
                 failed.append(label)
             if budget.exhausted:
                 result.warnings.append(
-                    "Przekroczono limit znakow dokumentu, dalsza tresc zostala pominieta."
+                    "Przekroczono limit znaków dokumentu, dalsza treść została pominięta."
                 )
                 break
         if failed:
-            result.warnings.append(f"Pominieto uszkodzone arkusze: {', '.join(failed)}.")
+            result.warnings.append(f"Pominięto uszkodzone arkusze: {', '.join(failed)}.")
             if not result.sections:
                 raise CorruptedFileError(
-                    "Nie udalo sie odczytac zadnego arkusza skoroszytu.",
+                    "Nie udało się odczytać żadnego arkusza skoroszytu.",
                     details={"arkusze": failed},
                 )
 
@@ -315,7 +315,7 @@ class LegacyXlsExtractor(Extractor):
         limit = min(total_rows, context.sheet_max_rows)
         if total_rows > limit:
             result.warnings.append(
-                f"Arkusz {label}: odczytano {limit} z {total_rows} wierszy, reszte pominieto."
+                f"Arkusz {label}: odczytano {limit} z {total_rows} wierszy, reszte pominięto."
             )
         headers, first_data_row = self._read_headers(sheet, limit)
         heading = " | ".join(h for h in headers if h) or label
@@ -422,7 +422,7 @@ class LegacyXlsExtractor(Extractor):
             if not line or line in seen:
                 continue
             seen.add(line)
-            result.warnings.append(f"Ostrzezenie biblioteki xlrd: {line}")
+            result.warnings.append(f"Ostrzeżenie biblioteki xlrd: {line}")
             if len(seen) >= _MAX_LIBRARY_WARNINGS:
                 break
 

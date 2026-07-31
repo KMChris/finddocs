@@ -219,7 +219,7 @@ def _parse_html(text: str) -> _HtmlTextParser:
         parser.close()
     except Exception as exc:
         raise CorruptedFileError(
-            "Nie udalo sie przetworzyc struktury dokumentu HTML.",
+            "Nie udało się przetworzyć struktury dokumentu HTML.",
             cause=exc,
         ) from exc
     return parser
@@ -231,19 +231,19 @@ def _read_html_bytes(path: Path, context: ExtractionContext) -> bytes:
         size = path.stat().st_size
     except OSError as exc:
         raise ExtractionError(
-            f"Nie udalo sie odczytac pliku HTML: {path.name}.",
+            f"Nie udało się odczytać pliku HTML: {path.name}.",
             details={"plik": path.name},
         ) from exc
     if size > context.max_bytes:
         raise ExtractionError(
-            "Plik HTML jest wiekszy niz dozwolony limit odczytu.",
+            "Plik HTML jest większy niż dozwolony limit odczytu.",
             details={"plik": path.name, "rozmiar": size, "limit": context.max_bytes},
         )
     try:
         data = path.read_bytes()
     except OSError as exc:
         raise CorruptedFileError(
-            f"Nie udalo sie wczytac zawartosci pliku HTML: {path.name}.",
+            f"Nie udało się wczytać zawartości pliku HTML: {path.name}.",
             details={"plik": path.name},
         ) from exc
     if not data.strip():
@@ -303,7 +303,7 @@ class HtmlExtractor(Extractor):
         )
         if decoded.replaced:
             result.warnings.append(
-                "Nie udalo sie rozpoznac kodowania pliku, uzyto UTF-8 z zamiana bledow."
+                "Nie udało się rozpoznać kodowania pliku, użyto UTF-8 z zamiana błędów."
             )
 
         total_chars = 0
@@ -327,16 +327,16 @@ class HtmlExtractor(Extractor):
 
         if truncated:
             result.warnings.append(
-                "Dokument jest bardzo dlugi, tekst zostal obciety do limitu znakow."
+                "Dokument jest bardzo długi, tekst został obcięty do limitu znaków."
             )
         if not result.sections:
             raise EmptyDocumentError(
-                "Dokument HTML nie zawiera tekstu mozliwego do zaindeksowania.",
+                "Dokument HTML nie zawiera tekstu możliwego do zaindeksowania.",
                 details={"plik": path.name},
             )
         if looks_like_garbage(result.all_text(" ")):
             result.warnings.append(
-                "Tekst po dekodowaniu wyglada na uszkodzony, sprawdz kodowanie pliku."
+                "Tekst po dekodowaniu wygląda na uszkodzony, sprawdź kodowanie pliku."
             )
         return result
 

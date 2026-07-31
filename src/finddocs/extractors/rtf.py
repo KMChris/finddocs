@@ -353,10 +353,10 @@ class _Group:
     codepage: int
     uc: int = 1
     ignore: bool = False
-    """Zawartosc grupy nie jest trescia dokumentu."""
+    """Zawartość grupy nie jest treścią dokumentu."""
 
     capture: str | None = None
-    """Klucz metadanej, do ktorej trafia tekst grupy."""
+    """Klucz metadanej, do której trafia tekst grupy."""
 
     in_info: bool = False
     in_fonttbl: bool = False
@@ -435,12 +435,12 @@ class _RtfParser:
         warnings: list[str] = []
         if self._stack or self._depth_overflow:
             warnings.append(
-                "Plik RTF konczy sie przed zamknieciem wszystkich grup, tekst moze byc niepelny."
+                "Plik RTF kończy się przed zamknięciem wszystkich grup, tekst może być niepełny."
             )
         if self._unbalanced:
-            warnings.append("Struktura grup w pliku RTF jest niespojna, tekst moze byc niepelny.")
+            warnings.append("Struktura grup w pliku RTF jest niespójna, tekst może być niepełny.")
         if self._truncated:
-            warnings.append(f"Tekst dokumentu zostal skrocony do {self._max_chars} znakow.")
+            warnings.append(f"Tekst dokumentu został skrócony do {self._max_chars} znaków.")
         return RtfDocument(
             text=_tidy("".join(self._out)),
             metadata=dict(self._meta),
@@ -562,7 +562,7 @@ class _RtfParser:
             self._emit(replacement)
 
     def _emit_unicode(self, param: int | None) -> None:
-        """Obsluguje ``\\uN`` wraz z para zastepcza UTF-16 i pominieciem ``\\ucN`` znakow."""
+        """Obsluguje ``\\uN`` wraz z para zastepcza UTF-16 i pominieciem ``\\ucN`` znaków."""
         code = param if param is not None else 0
         if code < 0:
             code += 0x10000
@@ -785,19 +785,19 @@ def _read_file(path: Path, context: ExtractionContext) -> bytes:
     try:
         size = path.stat().st_size
     except OSError as exc:
-        raise ExtractionError(f"Nie udalo sie odczytac pliku {path.name}.", cause=exc) from exc
+        raise ExtractionError(f"Nie udało się odczytać pliku {path.name}.", cause=exc) from exc
     if size == 0:
         raise EmptyDocumentError(f"Plik {path.name} jest pusty.")
     if size > context.max_bytes:
         raise ExtractionError(
-            f"Plik RTF ma {size} bajtow i przekracza limit {context.max_bytes} bajtow.",
+            f"Plik RTF ma {size} bajtów i przekracza limit {context.max_bytes} bajtów.",
             details={"rozmiar": size, "limit": context.max_bytes},
         )
     try:
         return path.read_bytes()
     except OSError as exc:
         raise CorruptedFileError(
-            f"Nie udalo sie wczytac zawartosci pliku {path.name}.", cause=exc
+            f"Nie udało się wczytać zawartości pliku {path.name}.", cause=exc
         ) from exc
 
 
@@ -808,10 +808,10 @@ def _raise_empty(document: RtfDocument) -> NoReturn:
         )
     if document.picture_count:
         raise EmptyDocumentError(
-            "Dokument RTF zawiera wylacznie obrazy, brak warstwy tekstowej.",
+            "Dokument RTF zawiera wyłącznie obrazy, brak warstwy tekstowej.",
             details={"obrazy": document.picture_count},
         )
-    raise EmptyDocumentError("Dokument RTF nie zawiera tekstu mozliwego do zaindeksowania.")
+    raise EmptyDocumentError("Dokument RTF nie zawiera tekstu możliwego do zaindeksowania.")
 
 
 class RtfExtractor(Extractor):
@@ -832,7 +832,7 @@ class RtfExtractor(Extractor):
             raise
         except Exception as exc:
             raise CorruptedFileError(
-                "Nie udalo sie przetworzyc struktury pliku RTF.", cause=exc
+                "Nie udało się przetworzyć struktury pliku RTF.", cause=exc
             ) from exc
 
         result = ExtractionResult(
@@ -848,12 +848,12 @@ class RtfExtractor(Extractor):
 
         if document.picture_count:
             result.warnings.append(
-                f"Pominieto obrazy osadzone w dokumencie ({document.picture_count}). "
+                f"Pominięto obrazy osadzone w dokumencie ({document.picture_count}). "
                 "Tekst widoczny na obrazach nie zostal zaindeksowany."
             )
         if looks_like_garbage(document.text):
             result.warnings.append(
-                "Odczytany tekst wyglada na uszkodzony albo zapisany w nieznanej stronie kodowej."
+                "Odczytany tekst wygląda na uszkodzony albo zapisany w nieznanej stronie kodowej."
             )
         # RTF nie jest formatem stronicowanym i nie da sie go tutaj zrasteryzowac,
         # dlatego needs_ocr pozostaje False nawet przy dokumentach z obrazami.

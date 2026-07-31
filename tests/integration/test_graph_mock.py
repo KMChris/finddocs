@@ -371,7 +371,7 @@ def test_drugie_401_konczy_sie_bledem_uwierzytelnienia() -> None:
     with pytest.raises(AuthenticationError) as info:
         client.get_json(f"/drives/{DRIVE_ID}/root")
 
-    assert "Zaloguj sie ponownie" in info.value.user_message
+    assert "Zaloguj się ponownie" in info.value.user_message
 
 
 def test_403_daje_czytelny_komunikat_o_uprawnieniach() -> None:
@@ -386,7 +386,7 @@ def test_403_daje_czytelny_komunikat_o_uprawnieniach() -> None:
         client.get_json(f"/drives/{DRIVE_ID}/root")
 
     message = info.value.user_message
-    assert "Brak uprawnien" in message
+    assert "Brak uprawnień" in message
     assert "Files.Read.All" in message
     assert "Sites.Read.All" in message
 

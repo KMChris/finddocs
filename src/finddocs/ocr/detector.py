@@ -56,15 +56,15 @@ class OcrDecision:
 
     def describe(self) -> str:
         base = {
-            OcrReason.IMAGE_FILE: "Plik jest obrazem, wiec tekst trzeba rozpoznac.",
+            OcrReason.IMAGE_FILE: "Plik jest obrazem, więc tekst trzeba rozpoznać.",
             OcrReason.NO_TEXT_LAYER: "Dokument nie ma warstwy tekstowej.",
-            OcrReason.TOO_FEW_CHARACTERS: "Warstwa tekstowa zawiera za malo znakow.",
-            OcrReason.GARBLED_TEXT: "Odczytany tekst wyglada na uszkodzony.",
-            OcrReason.PARSER_REQUESTED: "Parser zglosil potrzebe rozpoznania tekstu.",
-            OcrReason.EXTRACTION_FAILED: "Standardowa ekstrakcja nie powiodla sie.",
-            OcrReason.NOT_NEEDED: "Warstwa tekstowa jest wystarczajaca.",
-            OcrReason.DISABLED: "OCR jest wylaczony w ustawieniach.",
-            OcrReason.UNSUPPORTED_FOR_OCR: "Tego formatu nie da sie zrasteryzowac.",
+            OcrReason.TOO_FEW_CHARACTERS: "Warstwa tekstowa zawiera za mało znaków.",
+            OcrReason.GARBLED_TEXT: "Odczytany tekst wygląda na uszkodzony.",
+            OcrReason.PARSER_REQUESTED: "Parser zgłosił potrzebę rozpoznania tekstu.",
+            OcrReason.EXTRACTION_FAILED: "Standardowa ekstrakcja nie powiodła się.",
+            OcrReason.NOT_NEEDED: "Warstwa tekstowa jest wystarczająca.",
+            OcrReason.DISABLED: "OCR jest wyłączony w ustawieniach.",
+            OcrReason.UNSUPPORTED_FOR_OCR: "Tego formatu nie da się zrasteryzować.",
         }[self.reason]
         return f"{base} {self.detail}".strip()
 
@@ -108,14 +108,14 @@ def decide(
         return OcrDecision(
             True,
             OcrReason.TOO_FEW_CHARACTERS,
-            f"{per_page:.0f} znakow na strone, prog {settings.min_chars_per_page}",
+            f"{per_page:.0f} znaków na stronę, próg {settings.min_chars_per_page}",
         )
 
     if looks_like_garbage(text, min_alpha_ratio=settings.min_alpha_ratio):
         return OcrDecision(
             True,
             OcrReason.GARBLED_TEXT,
-            f"udzial znakow alfanumerycznych {alpha_ratio(text):.2f}",
+            f"udział znaków alfanumerycznych {alpha_ratio(text):.2f}",
         )
 
     if result.needs_ocr:

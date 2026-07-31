@@ -55,7 +55,7 @@ class JobOptions:
     kind: JobKind = JobKind.RESCAN
     source_ids: list[str] = field(default_factory=list)
     force_reindex: bool = False
-    """Przetwarza takze dokumenty niezmienione."""
+    """Przetwarza także dokumenty niezmienione."""
 
     detect_deletions: bool = True
     resume_job_id: str | None = None
@@ -118,11 +118,11 @@ class IndexingJob:
         repository.update_job_state(self.job_id, JobState.RUNNING)
         self.snapshot.state = JobState.RUNNING
         self.snapshot.started_at = self._started
-        self._emit("skanowanie", "Skanowanie zrodel")
+        self._emit("skanowanie", "Skanowanie źródeł")
 
         sources = self._selected_sources()
         if not sources:
-            self._finish(JobState.FAILED, "Nie skonfigurowano zadnego aktywnego zrodla.")
+            self._finish(JobState.FAILED, "Nie skonfigurowano żadnego aktywnego źródła.")
             return self.snapshot
 
         self._workspace = self.paths.new_temp_workspace(prefix=f"{self.job_id}-")
@@ -132,7 +132,7 @@ class IndexingJob:
                 self._run_source(source)
             self._finish(JobState.COMPLETED)
         except JobCancelledError:
-            self._finish(JobState.CANCELLED, "Zadanie zostalo anulowane przez uzytkownika.")
+            self._finish(JobState.CANCELLED, "Zadanie zostało anulowane przez użytkownika.")
         except StorageSpaceError as exc:
             self._finish(JobState.FAILED, exc.user_message)
         except FindDocsError as exc:
@@ -140,7 +140,7 @@ class IndexingJob:
             self._finish(JobState.FAILED, exc.user_message)
         except Exception as exc:
             log.error("job.crashed", error_type=type(exc).__name__)
-            self._finish(JobState.FAILED, f"Nieoczekiwany blad zadania: {type(exc).__name__}.")
+            self._finish(JobState.FAILED, f"Nieoczekiwany błąd zadania: {type(exc).__name__}.")
         finally:
             if self._workspace is not None:
                 shutil.rmtree(self._workspace, ignore_errors=True)
@@ -155,7 +155,7 @@ class IndexingJob:
         connector = self._build_connector(source)
         try:
             status = connector.test_connection()
-            self.snapshot.connection_status = "polaczono" if status.ok else "blad polaczenia"
+            self.snapshot.connection_status = "połączono" if status.ok else "błąd połączenia"
             if not status.ok:
                 raise SourceUnavailableError(status.message)
 
@@ -176,7 +176,7 @@ class IndexingJob:
             processed_before = int(checkpoint["processed"]) if checkpoint is not None else 0
             self.snapshot.processed = max(self.snapshot.processed, processed_before)
 
-            self._emit("indeksowanie", f"Indeksowanie zrodla: {source.label}")
+            self._emit("indeksowanie", f"Indeksowanie źródła: {source.label}")
             discovered = 0
             since_checkpoint = 0
 
@@ -226,7 +226,7 @@ class IndexingJob:
                         doc_id=doc_id,
                         file_name=item.name,
                         source_id=source.source_id,
-                        message=f"Blad przetwarzania: {type(exc).__name__}",
+                        message=f"Błąd przetwarzania: {type(exc).__name__}",
                     )
                     self._emit_progress()
                     continue
@@ -330,7 +330,7 @@ class IndexingJob:
         stale = self.index.repository.stale_documents(source.source_id, scan_id)
         if not stale:
             return
-        self._emit("usuwanie", f"Usuwanie dokumentow skasowanych w zrodle: {len(stale)}")
+        self._emit("usuwanie", f"Usuwanie dokumentów skasowanych w źródle: {len(stale)}")
         for record in stale:
             self.control.checkpoint()
             self.index.writer.delete_document(record.doc_id)

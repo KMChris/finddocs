@@ -97,7 +97,7 @@ class PlainTextExtractor(Extractor):
         data, size_truncated = self._read_bytes(path, context)
         if not data.strip():
             raise EmptyDocumentError(
-                f"Plik {path.name} nie zawiera zadnej tresci.",
+                f"Plik {path.name} nie zawiera żadnej treści.",
                 details={"plik": path.name},
             )
 
@@ -112,10 +112,10 @@ class PlainTextExtractor(Extractor):
         result.warnings.extend(decoded.warnings)
         if size_truncated:
             result.warnings.append(
-                "Plik jest wiekszy niz dozwolony limit, odczytano tylko poczatek tresci."
+                "Plik jest większy niż dozwolony limit, odczytano tylko początek treści."
             )
         if looks_like_garbage(text):
-            result.warnings.append("Tekst wyglada na uszkodzony albo zle zdekodowany")
+            result.warnings.append("Tekst wygląda na uszkodzony albo źle zdekodowany")
 
         normalized = text.replace("\r\n", "\n").replace("\r", "\n")
         self._fill_sections(normalized, context, result)
@@ -134,13 +134,13 @@ class PlainTextExtractor(Extractor):
                 data = handle.read(limit + 1)
         except (FileNotFoundError, PermissionError) as exc:
             raise ExtractionError(
-                f"Brak dostepu do pliku {path.name}.",
+                f"Brak dostępu do pliku {path.name}.",
                 details={"plik": path.name},
                 cause=exc,
             ) from exc
         except OSError as exc:
             raise CorruptedFileError(
-                f"Nie udalo sie odczytac pliku {path.name}.",
+                f"Nie udało się odczytać pliku {path.name}.",
                 details={"plik": path.name},
                 cause=exc,
             ) from exc
@@ -186,7 +186,7 @@ class PlainTextExtractor(Extractor):
                 break
         if limit_reached:
             result.warnings.append(
-                f"Przekroczono limit {context.max_chars} znakow, dalsza tresc zostala pominieta."
+                f"Przekroczono limit {context.max_chars} znaków, dalsza treść została pominięta."
             )
 
 

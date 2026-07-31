@@ -52,7 +52,7 @@ def test_error_with_code_shows_code(qtbot: object, message_boxes: list[QMessageB
 
     assert len(message_boxes) == 1
     assert "Nie udalo sie odczytac pliku." in message_boxes[0].text()
-    assert "Kod bledu: FD-3002" in message_boxes[0].text()
+    assert "Kod błędu: FD-3002" in message_boxes[0].text()
 
 
 @pytest.mark.gui
@@ -135,26 +135,26 @@ def test_format_duration(seconds: float, expected: str) -> None:
 @pytest.mark.parametrize(
     ("count", "expected"),
     [
-        (0, "0 dokumentow"),
+        (0, "0 dokumentów"),
         (1, "1 dokument"),
         (2, "2 dokumenty"),
         (4, "4 dokumenty"),
-        (5, "5 dokumentow"),
-        (11, "11 dokumentow"),
-        (12, "12 dokumentow"),
-        (13, "13 dokumentow"),
-        (14, "14 dokumentow"),
-        (21, "21 dokumentow"),
+        (5, "5 dokumentów"),
+        (11, "11 dokumentów"),
+        (12, "12 dokumentów"),
+        (13, "13 dokumentów"),
+        (14, "14 dokumentów"),
+        (21, "21 dokumentów"),
         (22, "22 dokumenty"),
-        (25, "25 dokumentow"),
+        (25, "25 dokumentów"),
         (102, "102 dokumenty"),
-        (112, "112 dokumentow"),
+        (112, "112 dokumentów"),
     ],
 )
 def test_documents_count(count: int, expected: str) -> None:
     """Odmiana rzeczownika po liczbie zgodna z regulami polskimi."""
     assert i18n.documents_count(count) == expected
-    assert i18n.format_count(count, "dokument", "dokumenty", "dokumentow") == expected
+    assert i18n.format_count(count, "dokument", "dokumenty", "dokumentów") == expected
 
 
 @pytest.mark.gui
@@ -162,7 +162,7 @@ def test_files_count_uses_its_own_forms() -> None:
     """Liczba plikow uzywa form: plik, pliki, plikow."""
     assert i18n.files_count(1) == "1 plik"
     assert i18n.files_count(3) == "3 pliki"
-    assert i18n.files_count(8) == "8 plikow"
+    assert i18n.files_count(8) == "8 plików"
 
 
 # --- kompletnosc slownikow ------------------------------------------------------

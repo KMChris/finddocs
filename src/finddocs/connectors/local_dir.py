@@ -45,7 +45,7 @@ CANCEL_CHECK_INTERVAL = 200
 """Co tyle obejrzanych pozycji sprawdzamy zadanie anulowania."""
 
 MAX_TOP_LEVEL_PROBE = 5000
-"""Gorny limit zliczania pozycji przy tescie polaczenia."""
+"""Górny limit zliczania pozycji przy tescie połączenia."""
 
 HIDDEN_ATTRIBUTES = stat.FILE_ATTRIBUTE_HIDDEN | stat.FILE_ATTRIBUTE_SYSTEM
 """Atrybuty Windows uznawane za oznaczenie pozycji ukrytej."""
@@ -62,10 +62,10 @@ SYSTEM_DIRECTORY_NAMES: frozenset[str] = frozenset(
         "found.000",
     }
 )
-"""Katalogi systemowe Windows, ktorych nie ma sensu przegladac."""
+"""Katalogi systemowe Windows, których nie ma sensu przeglądać."""
 
 FALLBACK_FILE_NAME = "dokument"
-"""Nazwa zastepcza, gdy pozycja nie niesie poprawnej nazwy pliku."""
+"""Nazwa zastępcza, gdy pozycja nie niesie poprawnej nazwy pliku."""
 
 
 # --- funkcje pomocnicze ---------------------------------------------------------
@@ -165,7 +165,7 @@ class LocalDirectoryConnector(SourceConnector):
         """Buduje konektor na podstawie wpisu konfiguracji."""
         if source.kind is not SourceKind.LOCAL_DIR:
             raise ConfigurationError(
-                f"Zrodlo '{source.source_id}' nie jest katalogiem lokalnym, "
+                f"Źródło '{source.source_id}' nie jest katalogiem lokalnym, "
                 f"tylko zrodlem typu '{source.kind.value}'.",
                 details={"source_id": source.source_id},
             )
@@ -194,8 +194,8 @@ class LocalDirectoryConnector(SourceConnector):
     def _configured_root(self) -> Path:
         if self._root is None:
             raise ConfigurationError(
-                f"Zrodlo '{self.label}' nie ma wskazanego katalogu. "
-                "Uzupelnij sciezke w ustawieniach zrodla.",
+                f"Źródło '{self.label}' nie ma wskazanego katalogu. "
+                "Uzupełnij ścieżkę w ustawieniach źródła.",
                 details={"source_id": self.source_id},
             )
         return self._root
@@ -206,13 +206,13 @@ class LocalDirectoryConnector(SourceConnector):
             is_directory = root.is_dir()
         except OSError as exc:
             raise SourceUnavailableError(
-                f"Nie udalo sie odczytac katalogu {root}: {type(exc).__name__}.",
+                f"Nie udało się odczytać katalogu {root}: {type(exc).__name__}.",
                 details={"source_id": self.source_id},
                 cause=exc,
             ) from exc
         if not is_directory:
             raise SourceUnavailableError(
-                f"Katalog {root} nie istnieje albo nie jest dostepny.",
+                f"Katalog {root} nie istnieje albo nie jest dostępny.",
                 details={"source_id": self.source_id},
             )
         return root
@@ -224,7 +224,7 @@ class LocalDirectoryConnector(SourceConnector):
         if self._root is None:
             return ConnectionStatus(
                 ok=False,
-                message="Nie wskazano katalogu zrodlowego. Wybierz katalog w ustawieniach.",
+                message="Nie wskazano katalogu źródłowego. Wybierz katalog w ustawieniach.",
                 details={"katalog": ""},
             )
 
@@ -236,19 +236,19 @@ class LocalDirectoryConnector(SourceConnector):
         except OSError as exc:
             return ConnectionStatus(
                 ok=False,
-                message=f"Nie udalo sie sprawdzic katalogu {root}: {type(exc).__name__}.",
+                message=f"Nie udało się sprawdzić katalogu {root}: {type(exc).__name__}.",
                 details=details,
             )
         if not exists:
             return ConnectionStatus(
                 ok=False,
-                message=f"Katalog {root} nie istnieje albo jest chwilowo niedostepny.",
+                message=f"Katalog {root} nie istnieje albo jest chwilowo niedostępny.",
                 details=details,
             )
         if not is_directory:
             return ConnectionStatus(
                 ok=False,
-                message=f"Sciezka {root} wskazuje plik, a nie katalog.",
+                message=f"Ścieżka {root} wskazuje plik, a nie katalog.",
                 details=details,
             )
 
@@ -257,13 +257,13 @@ class LocalDirectoryConnector(SourceConnector):
         except PermissionError:
             return ConnectionStatus(
                 ok=False,
-                message=f"Brak uprawnien do odczytu katalogu {root}.",
+                message=f"Brak uprawnień do odczytu katalogu {root}.",
                 details=details,
             )
         except OSError as exc:
             return ConnectionStatus(
                 ok=False,
-                message=f"Nie udalo sie odczytac katalogu {root}: {type(exc).__name__}.",
+                message=f"Nie udało się odczytać katalogu {root}: {type(exc).__name__}.",
                 details=details,
             )
 
@@ -272,12 +272,12 @@ class LocalDirectoryConnector(SourceConnector):
         details["licznik_ograniczony"] = truncated
         details["wolne_miejsce_bajty"] = free
         details["wolne_miejsce_opis"] = _format_size(free)
-        suffix = " lub wiecej" if truncated else ""
+        suffix = " lub więcej" if truncated else ""
         log.info("local_dir.connection_ok", source_id=self.source_id, entries=count)
         return ConnectionStatus(
             ok=True,
             message=(
-                f"Katalog jest dostepny. Pozycji na pierwszym poziomie: {count}{suffix}. "
+                f"Katalog jest dostępny. Pozycji na pierwszym poziomie: {count}{suffix}. "
                 f"Wolne miejsce: {_format_size(free)}."
             ),
             details=details,
@@ -494,7 +494,7 @@ class LocalDirectoryConnector(SourceConnector):
     def local_path(self, item: SourceItem) -> Path:
         """Pelna sciezka pliku opisanego przez pozycje zrodla.
 
-        Sciezka wzgledna nie moze wychodzic poza korzen zrodla. Segment '..',
+        Ścieżka wzgledna nie moze wychodzic poza korzen zrodla. Segment '..',
         sciezka pusta i sciezka bezwzgledna sa odrzucane.
         """
         root = self._configured_root()
@@ -503,13 +503,13 @@ class LocalDirectoryConnector(SourceConnector):
         ]
         if not parts or ".." in parts:
             raise ConnectorError(
-                f"Identyfikator '{item.external_id}' nie wskazuje pliku w katalogu zrodla.",
+                f"Identyfikator '{item.external_id}' nie wskazuje pliku w katalogu źródła.",
                 details={"source_id": self.source_id},
             )
         candidate = root.joinpath(*parts)
         if not self._inside_root(candidate, root):
             raise ConnectorError(
-                f"Identyfikator '{item.external_id}' wskazuje poza katalog zrodla.",
+                f"Identyfikator '{item.external_id}' wskazuje poza katalog źródła.",
                 details={"source_id": self.source_id},
             )
         return candidate
@@ -563,7 +563,7 @@ class LocalDirectoryConnector(SourceConnector):
             copied_size = int(target.stat().st_size)
         except OSError as exc:
             raise DownloadError(
-                f"Nie udalo sie odczytac kopii pliku {item.logical_path}.",
+                f"Nie udało się odczytać kopii pliku {item.logical_path}.",
                 details={"source_id": self.source_id, "external_id": item.external_id},
                 cause=exc,
             ) from exc
@@ -579,25 +579,25 @@ class LocalDirectoryConnector(SourceConnector):
             info = source_path.stat()
         except FileNotFoundError as exc:
             raise DownloadError(
-                f"Plik {item.logical_path} nie istnieje juz w katalogu zrodlowym.",
+                f"Plik {item.logical_path} nie istnieje już w katalogu źródłowym.",
                 details={"source_id": self.source_id, "external_id": item.external_id},
                 cause=exc,
             ) from exc
         except PermissionError as exc:
             raise DownloadError(
-                f"Brak uprawnien do odczytu pliku {item.logical_path}.",
+                f"Brak uprawnień do odczytu pliku {item.logical_path}.",
                 details={"source_id": self.source_id, "external_id": item.external_id},
                 cause=exc,
             ) from exc
         except OSError as exc:
             raise DownloadError(
-                f"Nie udalo sie odczytac pliku {item.logical_path}: {type(exc).__name__}.",
+                f"Nie udało się odczytać pliku {item.logical_path}: {type(exc).__name__}.",
                 details={"source_id": self.source_id, "external_id": item.external_id},
                 cause=exc,
             ) from exc
         if not stat.S_ISREG(info.st_mode):
             raise DownloadError(
-                f"Sciezka {item.logical_path} nie wskazuje zwyklego pliku.",
+                f"Ścieżka {item.logical_path} nie wskazuje zwykłego pliku.",
                 details={"source_id": self.source_id, "external_id": item.external_id},
             )
         return info
@@ -608,7 +608,7 @@ class LocalDirectoryConnector(SourceConnector):
             destination.mkdir(parents=True, exist_ok=True)
         except OSError as exc:
             raise TemporaryStorageError(
-                f"Nie udalo sie przygotowac katalogu roboczego {destination}.",
+                f"Nie udało się przygotować katalogu roboczego {destination}.",
                 details={"source_id": self.source_id},
                 cause=exc,
             ) from exc
@@ -632,19 +632,19 @@ class LocalDirectoryConnector(SourceConnector):
             return
         except FileNotFoundError as exc:
             raise DownloadError(
-                f"Plik {item.logical_path} zniknal z katalogu zrodlowego w trakcie kopiowania.",
+                f"Plik {item.logical_path} zniknął z katalogu źródłowego w trakcie kopiowania.",
                 details={"source_id": self.source_id, "external_id": item.external_id},
                 cause=exc,
             ) from exc
         except PermissionError as exc:
             raise DownloadError(
-                f"Brak uprawnien do skopiowania pliku {item.logical_path}.",
+                f"Brak uprawnień do skopiowania pliku {item.logical_path}.",
                 details={"source_id": self.source_id, "external_id": item.external_id},
                 cause=exc,
             ) from exc
         except OSError as exc:
             raise DownloadError(
-                f"Nie udalo sie skopiowac pliku {item.logical_path}: {type(exc).__name__}.",
+                f"Nie udało się skopiować pliku {item.logical_path}: {type(exc).__name__}.",
                 details={"source_id": self.source_id, "external_id": item.external_id},
                 cause=exc,
             ) from exc
@@ -654,13 +654,13 @@ class LocalDirectoryConnector(SourceConnector):
             return sha256_of_file(path)
         except FileNotFoundError as exc:
             raise DownloadError(
-                f"Plik {item.logical_path} zniknal przed policzeniem sumy kontrolnej.",
+                f"Plik {item.logical_path} zniknął przed policzeniem sumy kontrolnej.",
                 details={"source_id": self.source_id, "external_id": item.external_id},
                 cause=exc,
             ) from exc
         except OSError as exc:
             raise DownloadError(
-                f"Nie udalo sie policzyc sumy kontrolnej pliku {item.logical_path}: "
+                f"Nie udało się policzyć sumy kontrolnej pliku {item.logical_path}: "
                 f"{type(exc).__name__}.",
                 details={"source_id": self.source_id, "external_id": item.external_id},
                 cause=exc,

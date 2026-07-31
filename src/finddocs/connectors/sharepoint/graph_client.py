@@ -97,7 +97,7 @@ class GraphClient:
             event_hooks={"request": [self._enforce_policy]},
         )
         self.last_next_link: str | None = None
-        """Ostatni odsylacz nextLink zwrocony przez stronicowana odpowiedz."""
+        """Ostatni odsyłacz nextLink zwrócony przez stronicowana odpowiedź."""
 
     # --- adresy i polityka ------------------------------------------------
 
@@ -138,7 +138,7 @@ class GraphClient:
         attempt = 0
         last_status: int | None = None
         last_retry_after: float | None = None
-        last_reason = "Nie udalo sie wykonac zapytania do Microsoft Graph."
+        last_reason = "Nie udało się wykonać zapytania do Microsoft Graph."
 
         while attempt < max_attempts:
             attempt += 1
@@ -152,7 +152,7 @@ class GraphClient:
                 last_status = None
                 last_reason = (
                     "Brak polaczenia z usluga Microsoft Graph "
-                    f"({type(exc).__name__}). Sprawdz siec firmowa i ustawienia proxy."
+                    f"({type(exc).__name__}). Sprawdź sieć firmowa i ustawienia proxy."
                 )
                 log.warning(
                     "graph.request_failed",
@@ -174,8 +174,8 @@ class GraphClient:
                 response.close()
                 if token_refreshed:
                     raise AuthenticationError(
-                        "Microsoft Graph odrzucil token dostepu. Zaloguj sie ponownie "
-                        f"do zrodla SharePoint. Szczegoly: {detail}"
+                        "Microsoft Graph odrzucił token dostępu. Zaloguj się ponownie "
+                        f"do źródła SharePoint. Szczegóły: {detail}"
                     )
                 token_refreshed = True
                 force_refresh = True
@@ -187,9 +187,9 @@ class GraphClient:
                 detail = self._error_message(response)
                 response.close()
                 raise ConnectorError(
-                    "Brak uprawnien do wskazanego zasobu SharePoint. Konto nie ma "
+                    "Brak uprawnień do wskazanego zasobu SharePoint. Konto nie ma "
                     "przyznanych uprawnien Files.Read.All albo Sites.Read.All, albo "
-                    f"administrator nie wyrazil na nie zgody. Szczegoly: {detail}"
+                    f"administrator nie wyrazil na nie zgody. Szczegóły: {detail}"
                 )
 
             if status in RETRYABLE_STATUSES:
@@ -220,12 +220,12 @@ class GraphClient:
         if last_status == 429:
             raise RateLimitedError(
                 "Microsoft Graph ograniczyl liczbe zapytan i limit nie zostal zwolniony "
-                f"po {max_attempts} probach. Sprobuj ponownie za chwile.",
+                f"po {max_attempts} próbach. Spróbuj ponownie za chwilę.",
                 retry_after=last_retry_after,
                 details={"url": safe_url(url)},
             )
         raise TransientConnectorError(
-            f"Zapytanie do Microsoft Graph nie powiodlo sie po {max_attempts} probach. "
+            f"Zapytanie do Microsoft Graph nie powiodło się po {max_attempts} próbach. "
             f"{last_reason}",
             details={"url": safe_url(url), "status": last_status},
         )
@@ -290,7 +290,7 @@ class GraphClient:
         token_refreshed = False
         force_refresh = False
         attempt = 0
-        last_reason = "Nie udalo sie pobrac pliku ze zrodla."
+        last_reason = "Nie udało się pobrać pliku ze źródła."
 
         try:
             while attempt < max_attempts:
@@ -306,7 +306,7 @@ class GraphClient:
                             if token_refreshed:
                                 raise AuthenticationError(
                                     "Microsoft Graph odrzucil token dostepu przy pobieraniu "
-                                    "pliku. Zaloguj sie ponownie do zrodla SharePoint."
+                                    "pliku. Zaloguj się ponownie do źródła SharePoint."
                                 )
                             token_refreshed = True
                             force_refresh = True
@@ -314,8 +314,8 @@ class GraphClient:
                             continue
                         if status == 403:
                             raise DownloadError(
-                                "Brak uprawnien do pobrania pliku z SharePoint. "
-                                f"Szczegoly: {self._error_message(response)}"
+                                "Brak uprawnień do pobrania pliku z SharePoint. "
+                                f"Szczegóły: {self._error_message(response)}"
                             )
                         if status in RETRYABLE_STATUSES:
                             last_reason = self._error_message(response)
@@ -330,13 +330,13 @@ class GraphClient:
                             break
                         if not response.is_success:
                             raise DownloadError(
-                                f"Serwer odrzucil pobranie pliku (kod {status}). "
-                                f"Szczegoly: {self._error_message(response)}"
+                                f"Serwer odrzucił pobranie pliku (kod {status}). "
+                                f"Szczegóły: {self._error_message(response)}"
                             )
                         written = self._write_stream(response, temp_path, cancel)
                 except httpx.HTTPError as exc:
                     last_reason = (
-                        f"Polaczenie zostalo przerwane ({type(exc).__name__}). "
+                        f"Połączenie zostało przerwane ({type(exc).__name__}). "
                         "Sprawdz siec firmowa i ustawienia proxy."
                     )
                     log.warning(
@@ -351,7 +351,7 @@ class GraphClient:
                     break
                 except OSError as exc:
                     raise DownloadError(
-                        "Nie udalo sie zapisac pobieranego pliku w przestrzeni tymczasowej.",
+                        "Nie udało się zapisać pobieranego pliku w przestrzeni tymczasowej.",
                         cause=exc,
                     ) from exc
 
@@ -366,7 +366,7 @@ class GraphClient:
                 return written
 
             raise DownloadError(
-                f"Nie udalo sie pobrac pliku po {max_attempts} probach. {last_reason}",
+                f"Nie udało się pobrać pliku po {max_attempts} próbach. {last_reason}",
                 details={"url": safe_url(url)},
             )
         finally:
@@ -401,7 +401,7 @@ class GraphClient:
         host = (parsed.hostname or "").strip()
         if not host:
             raise ConnectorError(
-                f"Adres witryny SharePoint jest nieprawidlowy: {safe_url(site_url)}. "
+                f"Adres witryny SharePoint jest nieprawidłowy: {safe_url(site_url)}. "
                 "Poprawny adres wyglada tak: https://firma.sharepoint.com/sites/Nazwa."
             )
         path = quote_path(parsed.path.rstrip("/"))
@@ -434,8 +434,8 @@ class GraphClient:
                 return drive
         available = ", ".join(sorted(str(d.get("name") or "?") for d in drives)) or "brak"
         raise ConnectorError(
-            f"Nie znaleziono biblioteki dokumentow '{wanted}' we wskazanej witrynie. "
-            f"Dostepne biblioteki: {available}."
+            f"Nie znaleziono biblioteki dokumentów '{wanted}' we wskazanej witrynie. "
+            f"Dostępne biblioteki: {available}."
         )
 
     def get_drive(self, drive_id: str) -> dict[str, Any]:
@@ -473,8 +473,8 @@ class GraphClient:
         response = self.request("GET", f"/drives/{drive}/root:/{quote_path(relative)}")
         if response.status_code == 404:
             raise ConnectorError(
-                f"Nie znaleziono katalogu '{relative}' w bibliotece dokumentow. "
-                "Sprawdz sciezke katalogu startowego w ustawieniach zrodla."
+                f"Nie znaleziono katalogu '{relative}' w bibliotece dokumentów. "
+                "Sprawdź ścieżkę katalogu startowego w ustawieniach źródła."
             )
         return self._json_body(response)
 
@@ -569,18 +569,18 @@ class GraphClient:
         """Zamienia odpowiedz na slownik albo rzuca blad z czytelnym komunikatem."""
         if not response.is_success:
             raise ConnectorError(
-                f"Microsoft Graph zwrocil blad {response.status_code}. "
-                f"Szczegoly: {self._error_message(response)}"
+                f"Microsoft Graph zwrócił błąd {response.status_code}. "
+                f"Szczegóły: {self._error_message(response)}"
             )
         try:
             payload = response.json()
         except ValueError as exc:
             raise ConnectorError(
-                "Odpowiedz Microsoft Graph nie jest poprawnym dokumentem JSON.",
+                "Odpowiedź Microsoft Graph nie jest poprawnym dokumentem JSON.",
                 cause=exc,
             ) from exc
         if not isinstance(payload, dict):
-            raise ConnectorError("Odpowiedz Microsoft Graph ma nieoczekiwana strukture.")
+            raise ConnectorError("Odpowiedź Microsoft Graph ma nieoczekiwana strukturę.")
         return payload
 
 

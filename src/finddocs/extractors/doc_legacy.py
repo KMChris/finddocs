@@ -51,7 +51,7 @@ _CHECKPOINT_EVERY = 16
 #: Ile znakow tekstu wystarczy, zeby ocenic jakosc dekodowania.
 _GARBAGE_PROBE_CHARS = 4000
 
-_FALLBACK_WARNING = "Tekst odczytano zapasowym parserem, formatowanie i tabele moga byc uproszczone"
+_FALLBACK_WARNING = "Tekst odczytano zapasowym parserem, formatowanie i tabele moga być uproszczone"
 
 # --- wspolne czyszczenie tekstu Worda ------------------------------------------
 
@@ -231,9 +231,9 @@ _PASSWORD_MARKERS: tuple[str, ...] = (
 _CORRUPTION_MARKERS: tuple[str, ...] = (
     "uszkodz",
     "corrupt",
-    "nie jest prawidlow",
+    "nie jest prawidłow",
     "not a valid",
-    "nieprawidlowy format",
+    "nieprawidłowy format",
     "unreadable",
 )
 
@@ -265,18 +265,18 @@ def _translate_com_error(exc: BaseException, path: Path) -> ExtractionError:
     details: dict[str, Any] = {"plik": path.name, "blad": type(exc).__name__}
     if any(marker in probe for marker in _PASSWORD_MARKERS):
         return PasswordProtectedError(
-            "Dokument Word jest zabezpieczony haslem, nie mozna odczytac jego tresci.",
+            "Dokument Word jest zabezpieczony hasłem, nie można odczytać jego treści.",
             details=details,
             cause=exc,
         )
     if any(marker in probe for marker in _CORRUPTION_MARKERS):
         return CorruptedFileError(
-            "Microsoft Word uznal dokument za uszkodzony lub niekompletny.",
+            "Microsoft Word uznał dokument za uszkodzony lub niekompletny.",
             details=details,
             cause=exc,
         )
     return ExtractionError(
-        "Microsoft Word nie zdolal otworzyc dokumentu.",
+        "Microsoft Word nie zdołał otworzyć dokumentu.",
         details=details,
         cause=exc,
     )
@@ -332,7 +332,7 @@ class LegacyDocComExtractor(Extractor):
     def _probe_environment() -> tuple[bool, str]:
         """Sprawdza system, pakiet pywin32 oraz wpis ProgID Worda w rejestrze."""
         if sys.platform != "win32":
-            return False, "Automatyzacja Microsoft Word dziala tylko w systemie Windows."
+            return False, "Automatyzacja Microsoft Word działa tylko w systemie Windows."
         try:
             import winreg
 
@@ -365,12 +365,12 @@ class LegacyDocComExtractor(Extractor):
         """Otwiera dokument w Wordzie i pobiera z niego tekst oraz metadane."""
         if not context.office_com_enabled:
             raise DependencyUnavailableError(
-                "Automatyzacja Microsoft Word jest wylaczona w konfiguracji aplikacji.",
+                "Automatyzacja Microsoft Word jest wyłączona w konfiguracji aplikacji.",
                 details={"parser": self.name},
             )
         if not self.is_available():
             raise DependencyUnavailableError(
-                self.unavailable_reason() or "Microsoft Word nie jest dostepny.",
+                self.unavailable_reason() or "Microsoft Word nie jest dostępny.",
                 details={"parser": self.name},
             )
         context.checkpoint()
@@ -390,7 +390,7 @@ class LegacyDocComExtractor(Extractor):
         if thread.is_alive():
             self._force_quit(state)
             raise ExtractionTimeoutError(
-                f"Microsoft Word nie odczytal dokumentu w ciagu {timeout:.0f} s.",
+                f"Microsoft Word nie odczytał dokumentu w ciągu {timeout:.0f} s.",
                 details={"parser": self.name, "plik": path.name},
             )
         if state.error is not None:
@@ -401,7 +401,7 @@ class LegacyDocComExtractor(Extractor):
         sections, truncated = _sections_from_text(_clean_word_text(state.text), context)
         if not sections:
             raise EmptyDocumentError(
-                "Dokument Word nie zawiera tekstu mozliwego do zaindeksowania.",
+                "Dokument Word nie zawiera tekstu możliwego do zaindeksowania.",
                 details={"parser": self.name, "plik": path.name},
             )
         result = ExtractionResult(
@@ -411,7 +411,7 @@ class LegacyDocComExtractor(Extractor):
             support_level=self.support_level,
         )
         if truncated:
-            result.warnings.append("Dokument byl bardzo dlugi, tekst przycieto do limitu znakow.")
+            result.warnings.append("Dokument był bardzo długi, tekst przycięto do limitu znaków.")
         return result
 
     # --- praca w watku ---
@@ -513,7 +513,7 @@ class _Piece:
     """Pozycja bajtowa w strumieniu WordDocument."""
 
     chars: int
-    """Liczba znakow zapisanych we fragmencie."""
+    """Liczba znaków zapisanych we fragmencie."""
 
     compressed: bool
     """True: jeden bajt na znak (cp1252). False: UTF-16LE."""
@@ -552,7 +552,7 @@ def _slice_clx(table: bytes, fc_clx: int, lcb_clx: int) -> bytes:
     """Wycina strukture Clx ze strumienia tabeli, sprawdzajac zakres."""
     if fc_clx < 0 or lcb_clx <= 0 or fc_clx + lcb_clx > len(table):
         raise CorruptedFileError(
-            "Tablica fragmentow tekstu wskazuje poza strumien tabeli dokumentu.",
+            "Tablica fragmentow tekstu wskazuje poza strumień tabeli dokumentu.",
             details={"fcClx": fc_clx, "lcbClx": lcb_clx, "rozmiar_tabeli": len(table)},
         )
     return table[fc_clx : fc_clx + lcb_clx]
@@ -626,15 +626,15 @@ def _text_from_pieces(
         parts.append(raw.decode(encoding, errors="replace"))
         total += piece.chars
         if total >= context.max_chars:
-            warnings.append("Dokument byl bardzo dlugi, tekst przycieto do limitu znakow.")
+            warnings.append("Dokument był bardzo długi, tekst przycięto do limitu znaków.")
             break
     if skipped and not parts:
         raise CorruptedFileError(
-            "Wszystkie fragmenty tekstu wskazuja poza zawartosc pliku.",
+            "Wszystkie fragmenty tekstu wskazuja poza zawartość pliku.",
             details={"fragmenty": len(pieces)},
         )
     if skipped:
-        warnings.append(f"Pominieto {skipped} uszkodzonych fragmentow tekstu dokumentu.")
+        warnings.append(f"Pominięto {skipped} uszkodzonych fragmentow tekstu dokumentu.")
     return "".join(parts)
 
 
@@ -642,7 +642,7 @@ def _text_from_range(fib: bytes, fc_min: int, fc_mac: int) -> str:
     """Odczyt zapasowy: caly tekst lezy zwarcie miedzy fcMin a fcMac."""
     if fc_min < 0 or fc_mac <= fc_min or fc_mac > len(fib):
         raise CorruptedFileError(
-            "Zakres tekstu w naglowku dokumentu Word jest nieprawidlowy.",
+            "Zakres tekstu w nagłówku dokumentu Word jest nieprawidłowy.",
             details={"fcMin": fc_min, "fcMac": fc_mac, "rozmiar": len(fib)},
         )
     return fib[fc_min:fc_mac].decode("cp1252", errors="replace")
@@ -695,7 +695,7 @@ class LegacyDocOleExtractor(Extractor):
     def unavailable_reason(self) -> str:
         if self.is_available():
             return ""
-        return "Brak biblioteki olefile wymaganej do odczytu plikow Word 97-2003."
+        return "Brak biblioteki olefile wymaganej do odczytu plików Word 97-2003."
 
     def extract(self, path: Path, context: ExtractionContext) -> ExtractionResult:
         """Odczytuje tekst i metadane pliku .doc bez udzialu Microsoft Word."""
@@ -706,14 +706,14 @@ class LegacyDocOleExtractor(Extractor):
         sections, truncated = _sections_from_text(text, context)
         if not sections:
             raise EmptyDocumentError(
-                "Dokument Word nie zawiera tekstu mozliwego do zaindeksowania.",
+                "Dokument Word nie zawiera tekstu możliwego do zaindeksowania.",
                 details={"parser": self.name, "plik": path.name},
             )
         if truncated:
-            warnings.append("Dokument byl bardzo dlugi, tekst przycieto do limitu znakow.")
+            warnings.append("Dokument był bardzo długi, tekst przycięto do limitu znaków.")
         if looks_like_garbage(_probe_text(sections)):
             warnings.append(
-                "Odczytany tekst wyglada na uszkodzony lub zapisany w nieznanym kodowaniu."
+                "Odczytany tekst wygląda na uszkodzony lub zapisany w nieznanym kodowaniu."
             )
         return ExtractionResult(
             sections=sections,
@@ -729,7 +729,7 @@ class LegacyDocOleExtractor(Extractor):
             import olefile
         except ImportError as exc:
             raise DependencyUnavailableError(
-                "Brak biblioteki olefile wymaganej do odczytu plikow Word 97-2003.",
+                "Brak biblioteki olefile wymaganej do odczytu plików Word 97-2003.",
                 details={"parser": self.name},
                 cause=exc,
             ) from exc
@@ -738,7 +738,7 @@ class LegacyDocOleExtractor(Extractor):
             is_ole = olefile.isOleFile(str(path))
         except _BINARY_ERRORS as exc:
             raise CorruptedFileError(
-                "Nie udalo sie odczytac pliku Word 97-2003.",
+                "Nie udało się odczytać pliku Word 97-2003.",
                 details={"plik": path.name},
                 cause=exc,
             ) from exc
@@ -758,13 +758,13 @@ class LegacyDocOleExtractor(Extractor):
                 fib = bytes(ole.openstream(_WORD_STREAM).read())
                 if len(fib) < _FIB_MIN_SIZE:
                     raise CorruptedFileError(
-                        "Naglowek dokumentu Word jest niekompletny.",
+                        "Nagłówek dokumentu Word jest niekompletny.",
                         details={"plik": path.name, "rozmiar": len(fib)},
                     )
                 flags = int(struct.unpack_from("<H", fib, _OFF_FLAGS)[0])
                 if flags & _FLAG_ENCRYPTED:
                     raise PasswordProtectedError(
-                        "Dokument Word jest zaszyfrowany albo zabezpieczony haslem.",
+                        "Dokument Word jest zaszyfrowany albo zabezpieczony hasłem.",
                         details={"plik": path.name},
                     )
                 table = self._read_table_stream(ole, flags)

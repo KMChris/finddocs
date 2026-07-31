@@ -240,7 +240,7 @@ class JobRunner:
             log.error("runner.job_crashed", error_type=type(exc).__name__)
             snapshot = job.snapshot
             snapshot.state = JobState.FAILED
-            snapshot.message = f"Nieoczekiwany blad: {type(exc).__name__}."
+            snapshot.message = f"Nieoczekiwany błąd: {type(exc).__name__}."
         finally:
             with self._lock:
                 self._current = None

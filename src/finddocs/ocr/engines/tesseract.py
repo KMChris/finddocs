@@ -199,15 +199,15 @@ class TesseractEngine(OcrEngine):
                 )
             except subprocess.TimeoutExpired as exc:
                 raise OcrError(
-                    f"Rozpoznawanie strony {page} przekroczylo limit czasu.", cause=exc
+                    f"Rozpoznawanie strony {page} przekroczyło limit czasu.", cause=exc
                 ) from exc
             except OSError as exc:
-                raise OcrError("Nie udalo sie uruchomic programu Tesseract.", cause=exc) from exc
+                raise OcrError("Nie udało się uruchomić programu Tesseract.", cause=exc) from exc
 
             tsv_path = output_base.with_suffix(".tsv")
             if completed.returncode != 0 or not tsv_path.exists():
                 raise OcrError(
-                    f"Tesseract zakonczyl prace bledem dla strony {page}.",
+                    f"Tesseract zakończył prace błędem dla strony {page}.",
                     details={"returncode": completed.returncode},
                 )
             lines, confidence = _parse_tsv(tsv_path.read_text(encoding="utf-8", errors="replace"))

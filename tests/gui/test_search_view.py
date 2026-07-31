@@ -139,7 +139,7 @@ def test_hybrid_mode_reports_missing_semantic_index(
     view.run_search()
 
     qtbot.waitUntil(lambda: bool(result_cards(view)), timeout=TIMEOUT_MS)  # type: ignore[attr-defined]
-    assert "semantyczny jest niedostepny" in view._summary.text()
+    assert "semantyczny jest niedostępny" in view._summary.text()
 
 
 @pytest.mark.gui

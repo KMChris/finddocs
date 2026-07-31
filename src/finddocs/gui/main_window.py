@@ -134,7 +134,7 @@ class MainWindow(QMainWindow):
         find.triggered.connect(self._focus_search)
         self.addAction(find)
 
-        refresh = QAction("Odswiez", self)
+        refresh = QAction("Odśwież", self)
         refresh.setShortcut(QKeySequence.StandardKey.Refresh)
         refresh.triggered.connect(self.refresh_index_status)
         self.addAction(refresh)
@@ -172,7 +172,7 @@ class MainWindow(QMainWindow):
     def refresh_index_status(self) -> None:
         status = self.context.status_summary()
         if not status:
-            self.index_label.setText("Indeks niedostepny")
+            self.index_label.setText("Indeks niedostępny")
             return
         parts = [
             f"Dokumenty: {status.get('dokumenty_zaindeksowane', 0)}",
@@ -181,7 +181,7 @@ class MainWindow(QMainWindow):
         if status.get("semantyka_dostepna"):
             parts.append(f"Model: {status.get('model')}")
         else:
-            parts.append("Tryb semantyczny niedostepny")
+            parts.append("Tryb semantyczny niedostępny")
         parts.append(i18n.format_bytes(int(status.get("rozmiar_bajty", 0))))
         self.index_label.setText("   |   ".join(parts))
 
@@ -228,8 +228,8 @@ class MainWindow(QMainWindow):
         if runner is not None and runner.is_running:
             confirmed = ask_yes_no(
                 self,
-                "Indeksowanie jest w toku. Zamkniecie aplikacji przerwie zadanie. "
-                "Postep zostanie zachowany i bedzie mozna je wznowic. Zamknac?",
+                "Indeksowanie jest w toku. Zamknięcie aplikacji przerwie zadanie. "
+                "Postęp zostanie zachowany i będzie można je wznowić. Zamknąć?",
             )
             if not confirmed:
                 event.ignore()

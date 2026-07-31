@@ -57,9 +57,9 @@ KNOWN_MODELS: dict[str, ModelDescriptor] = {
         passage_prefix="",
         approx_download_mb=475,
         approx_onnx_int8_mb=120,
-        language_notes="Model trenowany dla jezyka polskiego, zadanie retrieval.",
+        language_notes="Model trenowany dla języka polskiego, zadanie retrieval.",
         recommended=True,
-        notes="Domyslny model aplikacji. NDCG@10 56,38 na benchmarku PIRB.",
+        notes="Domyślny model aplikacji. NDCG@10 56,38 na benchmarku PIRB.",
     ),
     "mmlw-retrieval-roberta-small": ModelDescriptor(
         key="mmlw-retrieval-roberta-small",
@@ -75,8 +75,8 @@ KNOWN_MODELS: dict[str, ModelDescriptor] = {
         passage_prefix="",
         approx_download_mb=180,
         approx_onnx_int8_mb=50,
-        language_notes="Lzejszy wariant tej samej rodziny. Szybszy, nieco slabszy ranking.",
-        notes="Wariant dla komputerow o malej liczbie rdzeni.",
+        language_notes="Lżejszy wariant tej samej rodziny. Szybszy, nieco słabszy ranking.",
+        notes="Wariant dla komputerów o małej liczbie rdzeni.",
     ),
     "multilingual-e5-small": ModelDescriptor(
         key="multilingual-e5-small",
@@ -92,8 +92,8 @@ KNOWN_MODELS: dict[str, ModelDescriptor] = {
         passage_prefix="passage: ",
         approx_download_mb=470,
         approx_onnx_int8_mb=120,
-        language_notes="Model wielojezyczny, polski obslugiwany, ale slabiej niz MMLW.",
-        notes="Punkt odniesienia w porownaniu modeli.",
+        language_notes="Model wielojęzyczny, polski obsługiwany, ale słabiej niż MMLW.",
+        notes="Punkt odniesienia w porównaniu modeli.",
     ),
 }
 
@@ -155,7 +155,7 @@ class LocalModelManifest:
             actual = sha256_of(path)
             if actual != expected:
                 raise ModelIntegrityError(
-                    f"Suma kontrolna pliku {name} nie zgadza sie z manifestem.",
+                    f"Suma kontrolna pliku {name} nie zgadza się z manifestem.",
                     details={"expected": expected, "actual": actual},
                 )
 
@@ -226,7 +226,7 @@ def describe_models() -> list[dict[str, Any]]:
                 "onnx_int8_mb": descriptor.approx_onnx_int8_mb,
                 "zainstalowany": local is not None,
                 "katalog": str(local) if local else "",
-                "domyslny": descriptor.recommended,
+                "domyślny": descriptor.recommended,
                 "uwagi": descriptor.notes,
             }
         )

@@ -291,7 +291,7 @@ def test_msg_zalaczniki_mozna_wylaczyc(make_msg: Callable[..., Path]) -> None:
     result = MsgExtractor().extract(path, ExtractionContext(extract_attachments=False))
 
     assert result.attachments == []
-    assert any("pominiete" in warning for warning in result.warnings)
+    assert any("pominięte" in warning for warning in result.warnings)
 
 
 def test_msg_plik_nie_bedacy_kontenerem_ole(

@@ -148,7 +148,7 @@ class RapidOcrEngine(OcrEngine):
                 fallback["rec_keys_path"] = str(dictionary)
             self._engine = RapidOCR(**fallback)
         except Exception as exc:
-            raise OcrError("Nie udalo sie zainicjowac silnika RapidOCR.", cause=exc) from exc
+            raise OcrError("Nie udało się zainicjować silnika RapidOCR.", cause=exc) from exc
         return self._engine
 
     def warmup(self) -> None:
@@ -180,7 +180,7 @@ class RapidOcrEngine(OcrEngine):
         try:
             result, _elapsed = engine(array)
         except Exception as exc:
-            raise OcrError(f"RapidOCR nie rozpoznal strony {page}.", cause=exc) from exc
+            raise OcrError(f"RapidOCR nie rozpoznał strony {page}.", cause=exc) from exc
 
         lines: list[OcrLine] = []
         confidences: list[float] = []

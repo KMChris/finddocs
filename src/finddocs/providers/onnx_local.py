@@ -85,7 +85,7 @@ class OnnxEmbeddingProvider(EmbeddingProvider):
         active = self._session.get_providers()
         if active != list(ALLOWED_EXECUTION_PROVIDERS):
             raise ProviderError(
-                "ONNX Runtime uruchomil sie z niedozwolonym providerem: " + ", ".join(active)
+                "ONNX Runtime uruchomił się z niedozwolonym providerem: " + ", ".join(active)
             )
         self._input_names = {i.name for i in self._session.get_inputs()}
         self._quantized = model_path.name.endswith(".int8.onnx")
@@ -151,7 +151,7 @@ class OnnxEmbeddingProvider(EmbeddingProvider):
     def _run(self, texts: list[str]) -> np.ndarray:
         session = self._session
         if session is None:
-            raise ProviderError("Sesja modelu zostala juz zamknieta.")
+            raise ProviderError("Sesja modelu została już zamknięta.")
         ids, mask = self._encode(texts)
         feeds: dict[str, np.ndarray] = {"input_ids": ids, "attention_mask": mask}
         if "token_type_ids" in self._input_names:
@@ -217,7 +217,7 @@ def create_local_provider(
     if directory is None:
         descriptor = KNOWN_MODELS.get(model_key)
         hint = (
-            f" Model mozna pobrac z {descriptor.source_url} i wyeksportowac skryptem "
+            f" Model można pobrać z {descriptor.source_url} i wyeksportowac skryptem "
             "tools/export_model_onnx.py."
             if descriptor
             else ""

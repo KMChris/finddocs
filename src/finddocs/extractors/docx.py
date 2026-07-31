@@ -52,7 +52,7 @@ _TAG_TBL_CAPTION = qn("w:tblCaption")
 _TAG_TBL_DESCRIPTION = qn("w:tblDescription")
 _ATTR_VAL = qn("w:val")
 
-#: Prefiksy nazw stylow oznaczajacych naglowek, po zlozeniu znakow diakrytycznych.
+#: Prefiksy nazw stylow oznaczajacych nagłówek, po zlozeniu znakow diakrytycznych.
 _HEADING_PREFIXES: tuple[str, ...] = ("heading", "nagl")
 
 #: Sygnatura kontenera OLE. Zaszyfrowany plik .docx jest zapisany wlasnie tak.
@@ -134,7 +134,7 @@ class _Collector:
         )
 
     def set_heading(self, text: str) -> None:
-        """Zapamietuje biezacy naglowek dziedziczony przez kolejne sekcje."""
+        """Zapamietuje biezacy nagłówek dziedziczony przez kolejne sekcje."""
         cleaned = clean_text(text)
         if cleaned:
             self.heading = cleaned[:_MAX_HEADING_CHARS]
@@ -171,17 +171,17 @@ class DocxExtractor(Extractor):
             AttributeError,
         ) as exc:
             raise CorruptedFileError(
-                "Struktura dokumentu Word jest uszkodzona, nie udalo sie odczytac tresci.",
+                "Struktura dokumentu Word jest uszkodzona, nie udało się odczytać treści.",
                 details={"plik": path.name},
             ) from exc
         except OSError as exc:
             raise ExtractionError(
-                "Nie udalo sie odczytac zawartosci dokumentu Word.",
+                "Nie udało się odczytać zawartości dokumentu Word.",
                 details={"plik": path.name},
             ) from exc
         except Exception as exc:
             raise ExtractionError(
-                "Nieoczekiwany blad podczas odczytu dokumentu Word.",
+                "Nieoczekiwany błąd podczas odczytu dokumentu Word.",
                 details={"plik": path.name, "typ_bledu": type(exc).__name__},
             ) from exc
 
@@ -202,12 +202,12 @@ class DocxExtractor(Extractor):
             result.metadata.page_count = pages
         if collector.truncated:
             result.warnings.append(
-                "Dokument przekroczyl limit dlugosci tekstu, zaindeksowano tylko poczatek."
+                "Dokument przekroczył limit długości tekstu, zaindeksowano tylko początek."
             )
         sample = _sample_text(collector.sections)
         if sample and looks_like_garbage(sample):
             result.warnings.append(
-                "Tekst dokumentu wyglada na uszkodzony, udzial znakow alfanumerycznych jest niski."
+                "Tekst dokumentu wygląda na uszkodzony, udział znaków alfanumerycznych jest niski."
             )
         return result
 
@@ -217,7 +217,7 @@ class DocxExtractor(Extractor):
         """Otwiera pakiet Word i tlumaczy bledy biblioteki na wyjatki FindDocs."""
         if _is_ole_container(path):
             raise PasswordProtectedError(
-                "Dokument Word jest zaszyfrowany lub zabezpieczony haslem.",
+                "Dokument Word jest zaszyfrowany lub zabezpieczony hasłem.",
                 details={"plik": path.name},
             )
         try:
@@ -229,27 +229,27 @@ class DocxExtractor(Extractor):
             ) from exc
         except (zipfile.BadZipFile, KeyError) as exc:
             raise CorruptedFileError(
-                "Archiwum dokumentu Word jest niekompletne, brakuje wymaganych czesci.",
+                "Archiwum dokumentu Word jest niekompletne, brakuje wymaganych części.",
                 details={"plik": path.name},
             ) from exc
         except (OpcError, AttributeError, IndexError) as exc:
             raise CorruptedFileError(
-                "Struktura pakietu Word jest nieprawidlowa.",
+                "Struktura pakietu Word jest nieprawidłowa.",
                 details={"plik": path.name},
             ) from exc
         except ValueError as exc:
             raise ExtractionError(
-                "Nie udalo sie otworzyc dokumentu Word.",
+                "Nie udało się otworzyć dokumentu Word.",
                 details={"plik": path.name},
             ) from exc
         except OSError as exc:
             raise ExtractionError(
-                "Nie udalo sie odczytac pliku dokumentu Word.",
+                "Nie udało się odczytać pliku dokumentu Word.",
                 details={"plik": path.name},
             ) from exc
         except Exception as exc:
             raise ExtractionError(
-                "Nieoczekiwany blad podczas otwierania dokumentu Word.",
+                "Nieoczekiwany błąd podczas otwierania dokumentu Word.",
                 details={"plik": path.name, "typ_bledu": type(exc).__name__},
             ) from exc
 
@@ -262,7 +262,7 @@ class DocxExtractor(Extractor):
                 "Tresc jest prawdopodobnie wstawiona jako obraz."
             )
         else:
-            message = "Dokument Word nie zawiera zadnej tresci tekstowej."
+            message = "Dokument Word nie zawiera żadnej treści tekstowej."
         return EmptyDocumentError(
             message,
             details={"plik": path.name, "obrazy": images, "parser": self.name},
@@ -282,7 +282,7 @@ class DocxExtractor(Extractor):
                 self._add_table(block, collector)
 
     def _add_paragraph(self, paragraph: Paragraph, collector: _Collector) -> None:
-        """Dodaje akapit i aktualizuje biezacy naglowek, gdy akapit jest naglowkiem."""
+        """Dodaje akapit i aktualizuje biezacy nagłówek, gdy akapit jest naglowkiem."""
         text = paragraph.text
         if not text.strip():
             return
@@ -327,7 +327,7 @@ class DocxExtractor(Extractor):
             collector.tick()
             if collector.truncated:
                 return
-            for label, container in (("naglowek", section.header), ("stopka", section.footer)):
+            for label, container in (("nagłówek", section.header), ("stopka", section.footer)):
                 text = _container_text(container)
                 if not text:
                     continue
@@ -372,7 +372,7 @@ class DocxExtractor(Extractor):
             if category:
                 metadata.extra["kategoria"] = category
         except (OpcError, KeyError, ValueError, AttributeError):
-            result.warnings.append("Nie udalo sie odczytac wlasciwosci dokumentu Word.")
+            result.warnings.append("Nie udało się odczytać właściwości dokumentu Word.")
         return metadata
 
 

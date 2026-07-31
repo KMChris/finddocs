@@ -47,7 +47,7 @@ def _migration_001_initial(conn: sqlite3.Connection) -> None:
 
 
 MIGRATIONS: list[Migration] = [
-    Migration(1, "schemat poczatkowy", _migration_001_initial),
+    Migration(1, "schemat początkowy", _migration_001_initial),
 ]
 
 
@@ -80,7 +80,7 @@ def migrate(conn: sqlite3.Connection, *, target: int | None = None) -> int:
     version = current_schema_version(conn)
     if version > goal:
         raise MigrationError(
-            f"Baza ma wersje schematu {version}, nowsza niz obslugiwana {goal}. "
+            f"Baza ma wersje schematu {version}, nowsza niż obsługiwana {goal}. "
             "Zaktualizuj aplikacje albo odbuduj indeks."
         )
     if version == goal:
@@ -106,7 +106,7 @@ def migrate(conn: sqlite3.Connection, *, target: int | None = None) -> int:
         except Exception as exc:
             conn.execute("ROLLBACK")
             raise MigrationError(
-                f"Migracja do wersji {migration.version} nie powiodla sie: {exc}",
+                f"Migracja do wersji {migration.version} nie powiodła się: {exc}",
                 details={"version": migration.version},
                 cause=exc,
             ) from exc
@@ -125,7 +125,7 @@ def migrate(conn: sqlite3.Connection, *, target: int | None = None) -> int:
         )
     except Exception as exc:  # pragma: no cover - zapis metadanych jest trywialny
         conn.execute("ROLLBACK")
-        raise MigrationError("Nie udalo sie zapisac metadanych indeksu.", cause=exc) from exc
+        raise MigrationError("Nie udało się zapisać metadanych indeksu.", cause=exc) from exc
     conn.execute("COMMIT")
 
     return version

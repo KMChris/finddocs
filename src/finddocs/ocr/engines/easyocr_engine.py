@@ -107,7 +107,7 @@ class EasyOcrEngine(OcrEngine):
             self._reader = easyocr.Reader(wanted, **kwargs)
         except Exception as exc:
             raise OcrError(
-                "Nie udalo sie zainicjowac EasyOCR. Sprawdz, czy modele sa pobrane.",
+                "Nie udało się zainicjować EasyOCR. Sprawdź, czy modele są pobrane.",
                 cause=exc,
             ) from exc
         self._languages = wanted
@@ -136,7 +136,7 @@ class EasyOcrEngine(OcrEngine):
         try:
             raw = reader.readtext(array, detail=1, paragraph=False)
         except Exception as exc:
-            raise OcrError(f"EasyOCR nie rozpoznal strony {page}.", cause=exc) from exc
+            raise OcrError(f"EasyOCR nie rozpoznał strony {page}.", cause=exc) from exc
 
         lines: list[OcrLine] = []
         confidences: list[float] = []

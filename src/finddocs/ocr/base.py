@@ -1,6 +1,6 @@
 """Interfejs silnika OCR i struktury wyniku.
 
-Silniki sa wymienne. Aplikacja wybiera pierwszy dostepny wedlug listy priorytetow,
+Silniki sa wymienne. Aplikacja wybiera pierwszy dostępny wedlug listy priorytetow,
 a informacja o tym, ktory silnik zadzialal, trafia do diagnostyki i raportu pokrycia.
 """
 
@@ -124,7 +124,7 @@ class OcrEngine(ABC):
         available = self.is_available()
         return {
             "nazwa": self.name,
-            "dostepny": available,
+            "dostępny": available,
             "powod_niedostepnosci": "" if available else self.unavailable_reason(),
             "wersja": self.version() if available else "",
             "jezyki": self.supported_languages() if available else [],

@@ -159,7 +159,7 @@ class EmlExtractor(Extractor):
         if context.extract_attachments:
             for attachment in self._collect_attachments(message, body_part, context, result):
                 result.attachments.append(attachment)
-                note = clean_text(f"Zalacznik: {attachment.name}")
+                note = clean_text(f"Załącznik: {attachment.name}")
                 if note:
                     sections.append(
                         ExtractedSection(text=note, kind="attachment_note", order=len(sections))
@@ -167,12 +167,12 @@ class EmlExtractor(Extractor):
 
         if not paragraphs and not result.attachments:
             raise EmptyDocumentError(
-                "Wiadomosc e-mail nie zawiera tresci tekstowej ani zalacznikow.",
+                "Wiadomość e-mail nie zawiera treści tekstowej ani załączników.",
                 details={"plik": path.name},
             )
         if not header_text and not result.attachments and looks_like_garbage("\n".join(paragraphs)):
             raise CorruptedFileError(
-                "Plik nie zawiera poprawnej wiadomosci e-mail. Moze byc uszkodzony.",
+                "Plik nie zawiera poprawnej wiadomości e-mail. Może być uszkodzony.",
                 details={"plik": path.name},
             )
 
@@ -189,13 +189,13 @@ class EmlExtractor(Extractor):
                 parsed = BytesParser(EmailMessage, policy=email_policy.default).parse(handle)
         except OSError as exc:
             raise ExtractionError(
-                f"Nie udalo sie odczytac pliku wiadomosci: {path.name}.",
+                f"Nie udało się odczytać pliku wiadomości: {path.name}.",
                 details={"plik": path.name},
                 cause=exc,
             ) from exc
         except Exception as exc:
             raise CorruptedFileError(
-                "Nie udalo sie sparsowac wiadomosci e-mail. Plik moze byc uszkodzony.",
+                "Nie udało się sparsować wiadomości e-mail. Plik może być uszkodzony.",
                 details={"plik": path.name},
                 cause=exc,
             ) from exc
@@ -265,7 +265,7 @@ class EmlExtractor(Extractor):
             if not piece:
                 continue
             if total_chars + len(piece) > context.max_chars:
-                result.warnings.append("Tresc wiadomosci zostala skrocona do limitu znakow.")
+                result.warnings.append("Treść wiadomości została skrócona do limitu znaków.")
                 break
             total_chars += len(piece)
             paragraphs.append(piece)
@@ -304,7 +304,7 @@ class EmlExtractor(Extractor):
             return html_to_text(html)
         except Exception as exc:
             result.warnings.append(
-                f"Nie udalo sie przeksztalcic tresci HTML wiadomosci ({type(exc).__name__})."
+                f"Nie udało się przekształcić treści HTML wiadomości ({type(exc).__name__})."
             )
             return ""
 
@@ -331,16 +331,16 @@ class EmlExtractor(Extractor):
                 continue
             if len(attachments) >= MAX_ATTACHMENTS:
                 result.warnings.append(
-                    f"Wiadomosc ma wiecej niz {MAX_ATTACHMENTS} zalacznikow, "
-                    "pozostale zostaly pominiete."
+                    f"Wiadomość ma więcej niż {MAX_ATTACHMENTS} zalacznikow, "
+                    "pozostałe zostały pominięte."
                 )
                 break
             if total_bytes + len(candidate.data) > MAX_ATTACHMENT_BYTES:
                 if not size_limit_reported:
                     limit_mb = MAX_ATTACHMENT_BYTES // (1024 * 1024)
                     result.warnings.append(
-                        f"Przekroczono laczny limit {limit_mb} MB zalacznikow, "
-                        "czesc z nich zostala pominieta."
+                        f"Przekroczono łączny limit {limit_mb} MB zalacznikow, "
+                        "część z nich została pominięta."
                     )
                     size_limit_reported = True
                 continue
@@ -370,7 +370,7 @@ class EmlExtractor(Extractor):
             return None
 
         extension = mimetypes.guess_extension(content_type) or ".bin"
-        name = _safe_name(filename or "", f"zalacznik-{ordinal}{extension}")
+        name = _safe_name(filename or "", f"załącznik-{ordinal}{extension}")
         return ExtractedAttachment(name=name, mime_type=content_type, data=data)
 
     def _nested_message(self, part: EmailMessage, ordinal: int) -> ExtractedAttachment | None:
@@ -385,7 +385,7 @@ class EmlExtractor(Extractor):
             return None
         if not data:
             return None
-        default_name = f"wiadomosc-{ordinal}"
+        default_name = f"wiadomość-{ordinal}"
         name = _safe_name(part.get_filename() or _header_value(nested, "Subject"), default_name)
         if not name.lower().endswith(".eml"):
             name = f"{name}.eml"

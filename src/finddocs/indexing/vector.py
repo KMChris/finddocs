@@ -114,7 +114,7 @@ class VectorStore:
                 if self.meta.store_version != VECTOR_STORE_VERSION:
                     raise IndexIncompatibleError(
                         "Format indeksu wektorowego pochodzi z innej wersji aplikacji. "
-                        "Wymagana jest przebudowa czesci semantycznej."
+                        "Wymagana jest przebudowa części semantycznej."
                     )
                 if self.meta.dimension != dimension:
                     raise IndexIncompatibleError(
@@ -153,7 +153,7 @@ class VectorStore:
             self.meta = VectorIndexMeta.from_json(self.meta_path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError, TypeError) as exc:
             raise IndexCorruptedError(
-                "Nie udalo sie odczytac metadanych indeksu wektorowego.", cause=exc
+                "Nie udało się odczytać metadanych indeksu wektorowego.", cause=exc
             ) from exc
         try:
             self._index = self.faiss.read_index(str(self.index_path))
@@ -229,12 +229,12 @@ class VectorStore:
             array = np.ascontiguousarray(vectors, dtype="float32")
             if array.ndim != 2 or array.shape[1] != self.meta.dimension:
                 raise IndexCorruptedError(
-                    f"Oczekiwano wektorow o wymiarze {self.meta.dimension}, "
+                    f"Oczekiwano wektorów o wymiarze {self.meta.dimension}, "
                     f"otrzymano ksztalt {array.shape}."
                 )
             if array.shape[0] != len(ids):
                 raise IndexCorruptedError(
-                    "Liczba identyfikatorow nie zgadza sie z liczba wektorow."
+                    "Liczba identyfikatorów nie zgadza się z liczba wektorów."
                 )
             id_array = np.asarray(ids, dtype="int64")
             # ponowne dodanie tego samego identyfikatora oznacza aktualizacje fragmentu

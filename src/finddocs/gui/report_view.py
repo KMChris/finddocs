@@ -10,7 +10,6 @@ from PySide6.QtWidgets import (
     QGridLayout,
     QGroupBox,
     QHBoxLayout,
-    QHeaderView,
     QLabel,
     QPushButton,
     QTableWidget,
@@ -22,6 +21,7 @@ from PySide6.QtWidgets import (
 from finddocs.gui import i18n
 from finddocs.gui.context import AppContext
 from finddocs.gui.dialogs import show_error, show_info
+from finddocs.gui.tables import configure_columns
 from finddocs.gui.workers import CallableTask, thread_pool
 from finddocs.logging_setup import get_logger
 from finddocs.types import CoverageReport
@@ -77,12 +77,12 @@ class ReportView(QWidget):
 
         self.table = QTableWidget(0, 5)
         self.table.setHorizontalHeaderLabels(
-            ["Nazwa", "Lokalizacja", "Status", "Kod bledu", "Komunikat"]
+            ["Nazwa", "Lokalizacja", "Status", "Kod błędu", "Komunikat"]
         )
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.table.verticalHeader().setVisible(False)
-        self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        configure_columns(self.table, (1, 4))
 
         table_title = QLabel(i18n.REPORT_NON_SEARCHABLE)
         table_title.setObjectName("SectionTitle")
@@ -124,26 +124,26 @@ class ReportView(QWidget):
         entries = [
             ("Wykryte pliki", report.discovered),
             ("Zaindeksowane", report.indexed),
-            ("Zaindeksowane czesciowo", report.partial),
-            ("Wymagajace OCR", report.requiring_ocr),
+            ("Zaindeksowane częściowo", report.partial),
+            ("Wymagające OCR", report.requiring_ocr),
             ("OCR udany", report.ocr_succeeded),
             ("OCR nieudany", report.ocr_failed),
-            ("Pominiete", report.skipped),
-            ("Nieobslugiwane", report.unsupported),
+            ("Pominięte", report.skipped),
+            ("Nieobsługiwane", report.unsupported),
             ("Uszkodzone", report.corrupted),
-            ("Zabezpieczone haslem", report.password_protected),
-            ("Bez tresci", report.empty),
-            ("Bledy pobierania", report.download_errors),
-            ("Inne bledy", report.other_errors),
+            ("Zabezpieczone hasłem", report.password_protected),
+            ("Bez treści", report.empty),
+            ("Błędy pobierania", report.download_errors),
+            ("Inne błędy", report.other_errors),
             ("Fragmenty", report.total_chunks),
             ("Wektory", report.total_vectors),
             ("Rozmiar indeksu", i18n.format_bytes(report.index_size_bytes)),
             ("Wersja schematu", report.schema_version),
             ("Wersja aplikacji", report.app_version),
-            ("Model embeddingow", report.model_key or "brak"),
+            ("Model embeddingów", report.model_key or "brak"),
             ("Wymiar wektora", report.model_dimension or "brak"),
             ("Ostatnie skanowanie", report.last_scan_at or "brak"),
-            ("Ostatnie pelne indeksowanie", report.last_full_index_at or "brak"),
+            ("Ostatnie pełne indeksowanie", report.last_full_index_at or "brak"),
         ]
         for position, (label_text, value) in enumerate(entries):
             column = position % 3
@@ -183,7 +183,7 @@ class ReportView(QWidget):
 
     def export(self, fmt: str) -> None:
         if self._report is None:
-            show_info(self, "Najpierw odswiez raport przyciskiem Odswiez.")
+            show_info(self, "Najpierw odśwież raport przyciskiem Odśwież.")
             return
         suffix = "json" if fmt == "json" else "csv"
         default = self.context.paths.reports_dir / f"raport-pokrycia.{suffix}"

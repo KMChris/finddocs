@@ -59,18 +59,18 @@ HYBRID_FULL_ENUMERATION_LIMIT = 5000
 HYBRID_MAX_DOCUMENTS = 1000
 
 SEMANTIC_NOTE = (
-    "Wyniki semantyczne to ranking przyblizony. Lista nie jest kompletnym zbiorem "
-    "dokumentow powiazanych znaczeniowo z zapytaniem."
+    "Wyniki semantyczne to ranking przybliżony. Lista nie jest kompletnym zbiorem "
+    "dokumentów powiązanych znaczeniowo z zapytaniem."
 )
 HYBRID_NOTE = (
-    "Tryb hybrydowy laczy dopasowania doslowne z podobienstwem znaczeniowym. "
-    "Aby miec pewnosc, ze widzisz wszystkie dopasowania doslowne, uzyj trybu Dokladne."
+    "Tryb hybrydowy łączy dopasowania dosłowne z podobieństwem znaczeniowym. "
+    "Aby mieć pewność, że widzisz wszystkie dopasowania dosłowne, użyj trybu Dokładne."
 )
 TRUNCATED_NOTE = (
-    "Zapytanie pasuje do bardzo wielu dokumentow. Lista zostala ograniczona. "
-    "Zaweź zapytanie albo uzyj filtrow."
+    "Zapytanie pasuje do bardzo wielu dokumentów. Lista została ograniczona. "
+    "Zawęź zapytanie albo użyj filtrów."
 )
-NO_SEMANTIC_NOTE = "Indeks semantyczny jest niedostepny. Uzyto wylacznie wyszukiwania dokladnego."
+NO_SEMANTIC_NOTE = "Indeks semantyczny jest niedostępny. Użyto wyłącznie wyszukiwania dokładnego."
 
 
 @dataclass(slots=True)

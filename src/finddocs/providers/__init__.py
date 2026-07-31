@@ -38,7 +38,7 @@ def create_provider(settings: EmbeddingSettings) -> EmbeddingProvider:
             query_prefix=settings.query_prefix,
             passage_prefix=settings.passage_prefix,
         )
-    raise ConfigurationError(f"Nieznany dostawca embeddingow: {settings.provider}")
+    raise ConfigurationError(f"Nieznany dostawca embeddingów: {settings.provider}")
 
 
 __all__ = [

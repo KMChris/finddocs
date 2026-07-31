@@ -55,7 +55,7 @@ MAX_LOG_BYTES = 8 * 1024 * 1024
 #: Nazwy plikow w paczce diagnostycznej.
 BUNDLE_COVERAGE_JSON = "raport-pokrycia.json"
 BUNDLE_COVERAGE_CSV = "raport-pokrycia.csv"
-BUNDLE_ERRORS_CSV = "bledy.csv"
+BUNDLE_ERRORS_CSV = "błędy.csv"
 BUNDLE_ENVIRONMENT_JSON = "srodowisko.json"
 BUNDLE_LOG = "finddocs.log"
 
@@ -64,7 +64,7 @@ BUNDLE_LOG = "finddocs.log"
 
 
 def _json_default(value: Any) -> str:
-    """Zamienia typy nieobslugiwane przez JSON na czytelny tekst."""
+    """Zamienia typy nieobsługiwane przez JSON na czytelny tekst."""
     if isinstance(value, _dt.datetime | _dt.date):
         return value.isoformat()
     if isinstance(value, Path):
@@ -85,7 +85,7 @@ def _write_text(path: Path, text: str, encoding: str) -> Path:
         path.write_text(text, encoding=encoding, newline="")
     except OSError as exc:
         raise FindDocsError(
-            f"Nie udalo sie zapisac pliku raportu {path.name}. Sprawdz uprawnienia "
+            f"Nie udało się zapisać pliku raportu {path.name}. Sprawdz uprawnienia "
             "do katalogu i ilosc wolnego miejsca.",
             details={"sciezka": str(path)},
             cause=exc,
@@ -133,8 +133,8 @@ def coverage_to_dict(report: CoverageReport) -> dict[str, Any]:
             "wymagajace_ocr": report.requiring_ocr,
             "ocr_udany": report.ocr_succeeded,
             "ocr_nieudany": report.ocr_failed,
-            "pominiete": report.skipped,
-            "nieobslugiwane": report.unsupported,
+            "pominięte": report.skipped,
+            "nieobsługiwane": report.unsupported,
             "uszkodzone": report.corrupted,
             "zabezpieczone_haslem": report.password_protected,
             "bez_tresci": report.empty,
@@ -186,29 +186,29 @@ def _coverage_csv_text(report: CoverageReport) -> str:
         ("Data wygenerowania", _stamp(report.generated_at)),
         ("Wersja aplikacji", report.app_version),
         ("Wersja schematu", report.schema_version),
-        ("Model embeddingow", report.model_key or "brak"),
+        ("Model embeddingów", report.model_key or "brak"),
         ("Wymiar wektora", report.model_dimension if report.model_dimension else "brak"),
         ("Dokumenty wykryte", report.discovered),
         ("Dokumenty zaindeksowane", report.indexed),
-        ("Dokumenty zaindeksowane czesciowo", report.partial),
-        ("Dokumenty wymagajace OCR", report.requiring_ocr),
-        ("OCR zakonczony powodzeniem", report.ocr_succeeded),
-        ("OCR zakonczony niepowodzeniem", report.ocr_failed),
-        ("Dokumenty pominiete", report.skipped),
-        ("Formaty nieobslugiwane", report.unsupported),
+        ("Dokumenty zaindeksowane częściowo", report.partial),
+        ("Dokumenty wymagające OCR", report.requiring_ocr),
+        ("OCR zakończony powodzeniem", report.ocr_succeeded),
+        ("OCR zakończony niepowodzeniem", report.ocr_failed),
+        ("Dokumenty pominięte", report.skipped),
+        ("Formaty nieobsługiwane", report.unsupported),
         ("Pliki uszkodzone", report.corrupted),
-        ("Pliki zabezpieczone haslem", report.password_protected),
-        ("Pliki bez tresci", report.empty),
-        ("Bledy pobierania", report.download_errors),
-        ("Inne bledy przetwarzania", report.other_errors),
+        ("Pliki zabezpieczone hasłem", report.password_protected),
+        ("Pliki bez treści", report.empty),
+        ("Błędy pobierania", report.download_errors),
+        ("Inne błędy przetwarzania", report.other_errors),
         ("Dokumenty niewyszukiwalne (razem)", non_searchable_count(report)),
         ("Fragmenty w indeksie", report.total_chunks),
         ("Wektory w indeksie", report.total_vectors),
         ("Rozmiar indeksu (bajty)", report.index_size_bytes),
         ("Rozmiar indeksu", format_bytes(report.index_size_bytes)),
         ("Ostatnie skanowanie", _stamp(report.last_scan_at)),
-        ("Ostatnie pelne indeksowanie", _stamp(report.last_full_index_at)),
-        ("Zbior kompletny", _yes_no(report.is_complete)),
+        ("Ostatnie pełne indeksowanie", _stamp(report.last_full_index_at)),
+        ("Zbiór kompletny", _yes_no(report.is_complete)),
     ]
     for name, value in summary:
         writer.writerow([name, value])
@@ -219,11 +219,11 @@ def _coverage_csv_text(report: CoverageReport) -> str:
         [
             "Identyfikator",
             "Nazwa pliku",
-            "Sciezka logiczna",
+            "Ścieżka logiczna",
             "Rozszerzenie",
             "Status",
             "Opis statusu",
-            "Kod bledu",
+            "Kod błędu",
             "Komunikat",
         ]
     )
@@ -266,7 +266,7 @@ def _errors_csv_text(repository: Repository, limit: int) -> str:
         rows = repository.recent_errors(limit)
     except sqlite3.DatabaseError as exc:
         raise FindDocsError(
-            "Nie udalo sie odczytac dziennika bledow z bazy metadanych.", cause=exc
+            "Nie udało się odczytać dziennika błędów z bazy metadanych.", cause=exc
         ) from exc
 
     buffer = io.StringIO()
@@ -274,14 +274,14 @@ def _errors_csv_text(repository: Repository, limit: int) -> str:
     writer.writerow(
         [
             "Data",
-            "Zrodlo",
+            "Źródło",
             "Identyfikator dokumentu",
             "Nazwa pliku",
             "Etap",
-            "Kod bledu",
+            "Kod błędu",
             "Wyjatek",
             "Komunikat",
-            "Mozna ponowic",
+            "Można ponowić",
         ]
     )
     for row in rows:

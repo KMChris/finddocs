@@ -31,31 +31,31 @@ class DocumentStatus(str, Enum):
     """Przetworzony i wyszukiwalny."""
 
     PARTIAL = "partial"
-    """Tekst zaindeksowany, ale brakuje czesci wektorowej."""
+    """Tekst zaindeksowany, ale brakuje części wektorowej."""
 
     SKIPPED = "skipped"
-    """Swiadomie pominiety, np. zbyt duzy albo filtr rozszerzen."""
+    """Świadomie pominięty, np. zbyt duży albo filtr rozszerzeń."""
 
     UNSUPPORTED = "unsupported"
-    """Format nieobslugiwany."""
+    """Format nieobsługiwany."""
 
     CORRUPTED = "corrupted"
     """Plik uszkodzony."""
 
     PASSWORD_PROTECTED = "password_protected"
-    """Plik zabezpieczony haslem lub zaszyfrowany."""
+    """Plik zabezpieczony hasłem lub zaszyfrowany."""
 
     EMPTY = "empty"
-    """Brak tresci mozliwej do zaindeksowania."""
+    """Brak treści możliwej do zaindeksowania."""
 
     DOWNLOAD_FAILED = "download_failed"
-    """Nie udalo sie pobrac pliku ze zrodla."""
+    """Nie udało się pobrać pliku ze źródła."""
 
     ERROR = "error"
-    """Inny blad przetwarzania."""
+    """Inny błąd przetwarzania."""
 
     DELETED = "deleted"
-    """Usuniety ze zrodla, oczekuje na usuniecie z indeksu."""
+    """Usunięty ze źródła, oczekuje na usunięcie z indeksu."""
 
 
 #: Statusy, przy ktorych dokument nie jest wyszukiwalny.
@@ -78,32 +78,32 @@ class TextOrigin(str, Enum):
     """Pochodzenie tekstu fragmentu."""
 
     NATIVE = "native"
-    """Tekst odczytany bezposrednio z pliku."""
+    """Tekst odczytany bezpośrednio z pliku."""
 
     OCR = "ocr"
     """Tekst rozpoznany przez OCR."""
 
     MIXED = "mixed"
-    """Czesc natywna, czesc z OCR."""
+    """Część natywna, część z OCR."""
 
 
 class SupportLevel(str, Enum):
     """Deklarowany poziom wsparcia formatu."""
 
     FULL = "full"
-    """Pelna ekstrakcja tekstu i metadanych, przetestowana."""
+    """Pełna ekstrakcja tekstu i metadanych, przetestowana."""
 
     GOOD = "good"
-    """Ekstrakcja tekstu dziala, metadane moga byc niepelne."""
+    """Ekstrakcja tekstu działa, metadane moga być niepełne."""
 
     LIMITED = "limited"
-    """Dziala warunkowo, np. zalezy od zewnetrznego komponentu."""
+    """Działa warunkowo, np. zależy od zewnetrznego komponentu."""
 
     EXPERIMENTAL = "experimental"
-    """Obsluga zaimplementowana, ale slabo przetestowana na danych produkcyjnych."""
+    """Obsługa zaimplementowana, ale słabo przetestowana na danych produkcyjnych."""
 
     NONE = "none"
-    """Format rozpoznawany, ale nieobslugiwany."""
+    """Format rozpoznawany, ale nieobsługiwany."""
 
 
 class SearchMode(str, Enum):
@@ -154,30 +154,30 @@ class SourceItem:
     """
 
     source_id: str
-    """Identyfikator konfiguracji zrodla."""
+    """Identyfikator konfiguracji źródła."""
 
     external_id: str
-    """Trwaly identyfikator obiektu w zrodle (driveItem id albo sciezka wzgledna)."""
+    """Trwały identyfikator obiektu w źródle (driveItem id albo ścieżka względna)."""
 
     name: str
     """Nazwa pliku wraz z rozszerzeniem."""
 
     logical_path: str
-    """Czytelna sciezka logiczna w obrebie zrodla, separator '/'."""
+    """Czytelna ścieżka logiczna w obrębie źródła, separator '/'."""
 
     size: int | None = None
     modified_at: _dt.datetime | None = None
     created_at: _dt.datetime | None = None
     etag: str | None = None
     content_hash: str | None = None
-    """Skrot tresci podany przez zrodlo (quickXorHash, sha1 albo wlasny)."""
+    """Skrót treści podany przez źródło (quickXorHash, sha1 albo wlasny)."""
 
     author: str | None = None
     mime_type: str | None = None
     web_url: str | None = None
     parent_url: str | None = None
     library: str | None = None
-    """Nazwa biblioteki dokumentow albo katalogu glownego zrodla."""
+    """Nazwa biblioteki dokumentów albo katalogu głównego źródła."""
 
     is_folder: bool = False
     extra: dict[str, Any] = field(default_factory=dict)
@@ -221,7 +221,7 @@ class ExtractedAttachment:
     name: str
     mime_type: str | None
     data: bytes
-    """Surowa zawartosc zalacznika."""
+    """Surowa zawartość załącznika."""
 
 
 @dataclass(slots=True)
@@ -243,7 +243,7 @@ class ExtractedSection:
     origin: TextOrigin = TextOrigin.NATIVE
     ocr_confidence: float | None = None
     heading: str | None = None
-    """Naglowek dziedziczony przez fragmenty, np. naglowki kolumn tabeli."""
+    """Nagłówek dziedziczony przez fragmenty, np. nagłówki kolumn tabeli."""
 
     extra: dict[str, Any] = field(default_factory=dict)
 
@@ -279,7 +279,7 @@ class ExtractionResult:
     support_level: SupportLevel = SupportLevel.FULL
     warnings: list[str] = field(default_factory=list)
     needs_ocr: bool = False
-    """Parser zglasza, ze warto sprobowac OCR (brak uzytecznej warstwy tekstowej)."""
+    """Parser zglasza, że warto spróbować OCR (brak użytecznej warstwy tekstowej)."""
 
     @property
     def text_length(self) -> int:
@@ -298,13 +298,13 @@ class Chunk:
 
     ordinal: int
     text: str
-    """Tekst prezentowany uzytkownikowi (oryginalny, po delikatnym oczyszczeniu)."""
+    """Tekst prezentowany użytkownikowi (oryginalny, po delikatnym oczyszczeniu)."""
 
     search_text: str
-    """Tekst po normalizacji, uzywany przez indeks pelnotekstowy."""
+    """Tekst po normalizacji, używany przez indeks pełnotekstowy."""
 
     folded_text: str
-    """Tekst po zlozeniu znakow diakrytycznych, uzywany do wyszukiwania odpornego na OCR."""
+    """Tekst po złożeniu znaków diakrytycznych, używany do wyszukiwania odpornego na OCR."""
 
     normalized_tokens: str = ""
     """Znormalizowane identyfikatory, numery, kwoty i daty rozdzielone spacja."""
@@ -469,10 +469,10 @@ class SearchRequest:
     offset: int = 0
     limit: int = 20
     max_chunks_per_document: int = 3
-    """Ile najlepszych fragmentow pokazac dla jednego dokumentu."""
+    """Ile najlepszych fragmentow pokazać dla jednego dokumentu."""
 
     candidate_multiplier: int = 8
-    """Ile razy wiecej kandydatow pobrac przed agregacja i scaleniem."""
+    """Ile razy więcej kandydatów pobrać przed agregacja i scaleniem."""
 
 
 @dataclass(slots=True)
@@ -481,10 +481,10 @@ class SearchResponse:
 
     hits: list[DocumentHit]
     total_documents: int
-    """Laczna liczba dokumentow spelniajacych zapytanie.
+    """Łączna liczba dokumentów spełniających zapytanie.
 
-    Dla trybu dokladnego jest to wartosc dokladna. Dla trybow z udzialem wektorow
-    jest to liczba dokumentow w rozwazanym zbiorze kandydatow.
+    Dla trybu dokładnego jest to wartość dokładna. Dla trybów z udziałem wektorów
+    jest to liczba dokumentów w rozważanym zbiorze kandydatów.
     """
 
     total_is_exact: bool
@@ -516,16 +516,16 @@ class QueryTerm:
 
     kind: TermKind
     raw: str
-    """Fragment zapytania w postaci wpisanej przez uzytkownika."""
+    """Fragment zapytania w postaci wpisanej przez użytkownika."""
 
     normalized: str
-    """Postac znormalizowana, uzywana do dopasowania w indeksie."""
+    """Postać znormalizowana, używana do dopasowania w indeksie."""
 
     variants: tuple[str, ...] = ()
-    """Dodatkowe warianty zapisu, np. numer z myslnikami i ze spacjami."""
+    """Dodatkowe warianty zapisu, np. numer z myślnikami i ze spacjami."""
 
     is_exact_required: bool = False
-    """Element musi wystapic dokladnie, nie wolno zastapic go embeddingiem."""
+    """Element musi wystąpić dokładnie, nie wolno zastąpić go embeddingiem."""
 
     span: tuple[int, int] = (0, 0)
 
@@ -537,7 +537,7 @@ class QueryAnalysis:
     raw_query: str
     normalized_query: str
     semantic_text: str
-    """Czesc zapytania nadajaca sie do embeddingu."""
+    """Część zapytania nadająca się do embeddingu."""
 
     terms: list[QueryTerm] = field(default_factory=list)
     phrases: list[str] = field(default_factory=list)
@@ -577,7 +577,7 @@ class ProgressSnapshot:
     temp_bytes_used: int = 0
     connection_status: str = "nieznany"
     discovery_complete: bool = False
-    """Gdy False, liczba wykrytych plikow jest jeszcze niepelna."""
+    """Gdy False, liczba wykrytych plików jest jeszcze niepełna."""
 
     message: str | None = None
 

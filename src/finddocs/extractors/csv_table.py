@@ -149,7 +149,7 @@ class CsvExtractor(Extractor):
         text, encoding = self._load_text(path, result)
         if not text.strip():
             raise EmptyDocumentError(
-                f"Plik {path.name} nie zawiera zadnej tresci.",
+                f"Plik {path.name} nie zawiera żadnej treści.",
                 details={"plik": path.name, "kodowanie": encoding},
             )
 
@@ -159,7 +159,7 @@ class CsvExtractor(Extractor):
         )
         if not any(section.kind == "table_row" for section in sections):
             raise EmptyDocumentError(
-                f"Plik {path.name} nie zawiera wierszy danych mozliwych do zaindeksowania.",
+                f"Plik {path.name} nie zawiera wierszy danych możliwych do zaindeksowania.",
                 details={"plik": path.name, "separator": delimiter},
             )
 
@@ -183,7 +183,7 @@ class CsvExtractor(Extractor):
             size = path.stat().st_size
         except OSError as exc:
             raise ExtractionError(
-                f"Nie udalo sie odczytac pliku {path.name}.",
+                f"Nie udało się odczytać pliku {path.name}.",
                 details={"plik": path.name},
                 cause=exc,
             ) from exc
@@ -194,7 +194,7 @@ class CsvExtractor(Extractor):
             raw = path.read_bytes()
         except OSError as exc:
             raise ExtractionError(
-                f"Nie udalo sie odczytac pliku {path.name}.",
+                f"Nie udało się odczytać pliku {path.name}.",
                 details={"plik": path.name},
                 cause=exc,
             ) from exc
@@ -203,11 +203,11 @@ class CsvExtractor(Extractor):
         result.warnings.extend(decoded.warnings)
         if decoded.encoding == "latin-1":
             result.warnings.append(
-                "Kodowanie rozpoznano zapasowo jako latin-1, znaki moga byc znieksztalcone."
+                "Kodowanie rozpoznano zapasowo jako latin-1, znaki moga być zniekształcone."
             )
         if not decoded.text and raw:
             raise CorruptedFileError(
-                f"Nie udalo sie zdekodowac pliku {path.name} zadnym ze znanych kodowan.",
+                f"Nie udało się zdekodować pliku {path.name} żadnym ze znanych kodowań.",
                 details={"plik": path.name},
             )
         return decoded.text, decoded.encoding
@@ -272,7 +272,7 @@ class CsvExtractor(Extractor):
                 if max_rows is not None and rows_read >= max_rows:
                     result.warnings.append(
                         f"Przekroczono limit {max_rows} wierszy, "
-                        "dalsza czesc pliku nie zostala zaindeksowana."
+                        "dalsza część pliku nie została zaindeksowana."
                     )
                     break
                 rows_read += 1
@@ -294,7 +294,7 @@ class CsvExtractor(Extractor):
         except csv.Error as exc:
             if not sections:
                 raise CorruptedFileError(
-                    f"Nie udalo sie odczytac struktury pliku {file_name}.",
+                    f"Nie udało się odczytać struktury pliku {file_name}.",
                     details={"plik": file_name, "separator": delimiter},
                     cause=exc,
                 ) from exc

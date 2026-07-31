@@ -124,7 +124,7 @@ class OcrService:
                 return candidate
             problems.append(f"{candidate.name}: {candidate.unavailable_reason()}")
         raise OcrEngineUnavailableError(
-            "Zaden silnik OCR nie jest dostepny. Zainstaluj Tesseract OCR albo "
+            "Żaden silnik OCR nie jest dostępny. Zainstaluj Tesseract OCR albo "
             "dodatek 'ocr-rapid'.",
             details={"probowano": problems},
         )
@@ -226,7 +226,7 @@ class OcrService:
                 image.close()
             if time.monotonic() - page_started > deadline:
                 result.warnings.append(
-                    f"Strona {page_number} przekroczyla zalecany czas rozpoznawania."
+                    f"Strona {page_number} przekroczyła zalecany czas rozpoznawania."
                 )
             if (
                 page_result.confidence is not None
@@ -241,7 +241,7 @@ class OcrService:
             if processed >= self.settings.max_pages_per_document:
                 result.truncated = True
                 result.warnings.append(
-                    f"Przetworzono {processed} stron, limit dokumentu zostal osiagniety."
+                    f"Przetworzono {processed} stron, limit dokumentu został osiągnięty."
                 )
                 break
 

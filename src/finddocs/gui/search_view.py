@@ -5,6 +5,7 @@ from __future__ import annotations
 import datetime as _dt
 
 from PySide6.QtCore import QDate, Qt, Signal
+from PySide6.QtGui import QFont, QFontMetrics
 from PySide6.QtWidgets import (
     QApplication,
     QButtonGroup,
@@ -41,6 +42,9 @@ from finddocs.types import (
 log = get_logger(__name__)
 
 FILTER_ANY = i18n.FILTER_ANY
+
+#: Zapas na obramowanie i wypelnienie przycisku trybu wyszukiwania.
+MODE_BUTTON_PADDING = 44
 
 
 class SearchView(QWidget):
@@ -116,6 +120,19 @@ class SearchView(QWidget):
         row.addWidget(self.cancel_button)
         return container
 
+    def _mode_button_width(self) -> int:
+        """Wspolna szerokosc przyciskow trybu.
+
+        Wybrany tryb jest pisany pogrubieniem, wiec jego napis jest szerszy niz
+        w chwili, gdy Qt liczylo rozmiar przycisku. Bez tego zabiegu pierwsza
+        litera napisu ,,Hybrydowe'' znika po zaznaczeniu trybu.
+        """
+        bold = QFont(self.font())
+        bold.setBold(True)
+        metrics = QFontMetrics(bold)
+        widest = max(metrics.horizontalAdvance(label) for label in i18n.MODE_LABELS.values())
+        return widest + MODE_BUTTON_PADDING
+
     def _build_mode_row(self) -> QWidget:
         container = QWidget()
         row = QHBoxLayout(container)
@@ -125,12 +142,14 @@ class SearchView(QWidget):
         self.mode_group = QButtonGroup(self)
         self.mode_group.setExclusive(True)
         default_mode = SearchMode(self.context.config.search.default_mode)
+        width = self._mode_button_width()
         for index, mode in enumerate(SearchMode):
             button = QPushButton(i18n.MODE_LABELS[mode])
             button.setObjectName("ModeButton")
             button.setCheckable(True)
             button.setToolTip(i18n.MODE_HINTS[mode])
             button.setChecked(mode is default_mode)
+            button.setMinimumWidth(width)
             self.mode_group.addButton(button, index)
             row.addWidget(button)
         self.mode_group.idClicked.connect(lambda _id: self._update_mode_hint())
@@ -371,7 +390,7 @@ class SearchView(QWidget):
 
     def _on_failed(self, code: str, message: str) -> None:
         self._set_busy(False)
-        self._show_empty(f"{message}\n\nKod bledu: {code}")
+        self._show_empty(f"{message}\n\nKod błędu: {code}")
         self.status_message.emit(message)
 
     def _on_cancelled(self) -> None:
@@ -460,7 +479,7 @@ class SearchView(QWidget):
         clipboard = QApplication.clipboard()
         if clipboard is not None:
             clipboard.setText(target)
-        self.status_message.emit("Skopiowano odnosnik do schowka.")
+        self.status_message.emit("Skopiowano odnośnik do schowka.")
 
     def copy_visible_results(self) -> str:
         """Tekstowa wersja biezacej strony wynikow, uzywana przy kopiowaniu."""

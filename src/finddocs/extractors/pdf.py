@@ -118,12 +118,12 @@ def _open_document(path: Path) -> pdfium.PdfDocument:
         message = str(exc).lower()
         if any(marker in message for marker in _PASSWORD_MARKERS):
             raise PasswordProtectedError(
-                "Plik PDF jest zabezpieczony haslem lub uzywa nieobslugiwanego szyfrowania.",
+                "Plik PDF jest zabezpieczony hasłem lub używa nieobsługiwanego szyfrowania.",
                 details={"plik": path.name},
                 cause=exc,
             ) from exc
         raise CorruptedFileError(
-            "Nie udalo sie otworzyc pliku PDF, dane sa uszkodzone lub niekompletne.",
+            "Nie udało się otworzyć pliku PDF, dane są uszkodzone lub niekompletne.",
             details={"plik": path.name},
             cause=exc,
         ) from exc
@@ -135,7 +135,7 @@ def _open_document(path: Path) -> pdfium.PdfDocument:
         ) from exc
     except OSError as exc:
         raise CorruptedFileError(
-            "Blad odczytu pliku PDF z dysku.",
+            "Błąd odczytu pliku PDF z dysku.",
             details={"plik": path.name},
             cause=exc,
         ) from exc
@@ -198,7 +198,7 @@ class PdfExtractor(Extractor):
             if _is_encrypted(pdf):
                 result.metadata.extra["zaszyfrowany"] = True
                 result.warnings.append(
-                    "Dokument jest zaszyfrowany, ale udalo sie go otworzyc bez hasla uzytkownika."
+                    "Dokument jest zaszyfrowany, ale udało się go otworzyć bez hasła użytkownika."
                 )
             limit = min(page_count, MAX_PAGES)
             if page_count > MAX_PAGES:
@@ -260,7 +260,7 @@ class PdfExtractor(Extractor):
                 )
                 break
         if failed_pages:
-            result.warnings.append(f"Nie udalo sie odczytac {failed_pages} stron dokumentu.")
+            result.warnings.append(f"Nie udało się odczytać {failed_pages} stron dokumentu.")
         return total_chars, pages_read
 
     def _read_metadata(self, pdf: pdfium.PdfDocument, page_count: int) -> DocumentMetadata:
@@ -297,27 +297,27 @@ class PdfExtractor(Extractor):
         """Ocenia, czy warstwa tekstowa jest uzyteczna, czy trzeba sprobowac OCR."""
         if pages_read <= 0:
             result.needs_ocr = True
-            result.warnings.append("Dokument PDF nie zawiera zadnej strony do odczytu.")
+            result.warnings.append("Dokument PDF nie zawiera żadnej strony do odczytu.")
             return
         combined = result.all_text()
         if not combined:
             result.needs_ocr = True
             result.warnings.append(
-                "Brak warstwy tekstowej w pliku PDF. Dokument kwalifikuje sie do OCR."
+                "Brak warstwy tekstowej w pliku PDF. Dokument kwalifikuje się do OCR."
             )
             return
         average = total_chars / pages_read
         if average < MIN_CHARS_PER_PAGE:
             result.needs_ocr = True
             result.warnings.append(
-                f"Uboga warstwa tekstowa: srednio {average:.0f} znakow na strone. "
+                f"Uboga warstwa tekstowa: średnio {average:.0f} znakow na strone. "
                 "Dokument kwalifikuje sie do OCR."
             )
             return
         if looks_like_garbage(combined):
             result.needs_ocr = True
             result.warnings.append(
-                "Warstwa tekstowa wyglada na uszkodzona. Dokument kwalifikuje sie do OCR."
+                "Warstwa tekstowa wygląda na uszkodzona. Dokument kwalifikuje się do OCR."
             )
 
 
@@ -355,12 +355,12 @@ def render_pdf_page(
     """
     if page_index < 0:
         raise ExtractionError(
-            "Numer strony do rasteryzacji nie moze byc ujemny.",
+            "Numer strony do rasteryzacji nie może być ujemny.",
             details={"strona": page_index},
         )
     if dpi <= 0:
         raise ExtractionError(
-            "Rozdzielczosc rasteryzacji musi byc dodatnia.",
+            "Rozdzielczość rasteryzacji musi być dodatnia.",
             details={"dpi": dpi},
         )
 
@@ -391,7 +391,7 @@ def render_pdf_page(
                 page.close()
         except (pdfium.PdfiumError, OSError, ValueError) as exc:
             raise CorruptedFileError(
-                f"Nie udalo sie zrasteryzowac strony {page_index + 1} pliku PDF.",
+                f"Nie udało się zrasteryzować strony {page_index + 1} pliku PDF.",
                 details={"plik": path.name, "strona": page_index + 1},
                 cause=exc,
             ) from exc

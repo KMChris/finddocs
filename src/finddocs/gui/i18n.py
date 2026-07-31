@@ -9,69 +9,69 @@ from __future__ import annotations
 from finddocs.types import DocumentStatus, JobState, MatchKind, SearchMode
 
 APP_TITLE = "FindDocs"
-APP_SUBTITLE = "Lokalna wyszukiwarka dokumentow"
+APP_SUBTITLE = "Lokalna wyszukiwarka dokumentów"
 
 # --- nawigacja ---------------------------------------------------------------
 
 NAV_SEARCH = "Wyszukiwanie"
-NAV_SOURCES = "Zrodla i konfiguracja"
+NAV_SOURCES = "Źródła i konfiguracja"
 NAV_INDEXING = "Indeksowanie"
 NAV_REPORT = "Raport pokrycia"
 NAV_DIAGNOSTICS = "Diagnostyka"
 
 # --- ekran wyszukiwania ------------------------------------------------------
 
-SEARCH_PLACEHOLDER = "Wpisz zapytanie, na przyklad: procedura przelewow z 24.07.2015"
+SEARCH_PLACEHOLDER = "Wpisz zapytanie, na przykład: procedura przelewów z 24.07.2015"
 SEARCH_BUTTON = "Szukaj"
 SEARCH_CANCEL = "Przerwij"
 SEARCH_FILTERS = "Filtry"
-SEARCH_FILTERS_CLEAR = "Wyczysc filtry"
-SEARCH_NO_RESULTS = "Brak wynikow dla tego zapytania."
+SEARCH_FILTERS_CLEAR = "Wyczyść filtry"
+SEARCH_NO_RESULTS = "Brak wyników dla tego zapytania."
 SEARCH_EMPTY_STATE = (
-    "Wpisz zapytanie i nacisnij Enter.\n\n"
-    "Tryb Dokladne znajduje wszystkie dokumenty zawierajace podane slowa, numery i daty.\n"
-    "Tryb Semantyczne szuka dokumentow powiazanych znaczeniowo.\n"
-    "Tryb Hybrydowe laczy oba podejscia."
+    "Wpisz zapytanie i naciśnij Enter.\n\n"
+    "Tryb Dokładne znajduje wszystkie dokumenty zawierające podane słowa, numery i daty.\n"
+    "Tryb Semantyczne szuka dokumentów powiązanych znaczeniowo.\n"
+    "Tryb Hybrydowe łączy oba podejścia."
 )
 SEARCH_RUNNING = "Wyszukiwanie w toku..."
 SEARCH_INDEX_EMPTY = (
-    "Indeks jest pusty. Przejdz do ekranu Indeksowanie i uruchom skanowanie zrodla."
+    "Indeks jest pusty. Przejdź do ekranu Indeksowanie i uruchom skanowanie źródła."
 )
 
 MODE_LABELS: dict[SearchMode, str] = {
     SearchMode.HYBRID: "Hybrydowe",
-    SearchMode.EXACT: "Dokladne",
+    SearchMode.EXACT: "Dokładne",
     SearchMode.SEMANTIC: "Semantyczne",
 }
 
 MODE_HINTS: dict[SearchMode, str] = {
-    SearchMode.HYBRID: "Laczy dopasowania doslowne z podobienstwem znaczeniowym.",
-    SearchMode.EXACT: "Zwraca wszystkie dokumenty zawierajace podane wartosci.",
-    SearchMode.SEMANTIC: "Ranking przyblizony. Nie gwarantuje kompletnosci wynikow.",
+    SearchMode.HYBRID: "Łączy dopasowania dosłowne z podobieństwem znaczeniowym.",
+    SearchMode.EXACT: "Zwraca wszystkie dokumenty zawierające podane wartości.",
+    SearchMode.SEMANTIC: "Ranking przybliżony. Nie gwarantuje kompletności wyników.",
 }
 
 MATCH_LABELS: dict[MatchKind, str] = {
-    MatchKind.EXACT: "dopasowanie dokladne",
+    MatchKind.EXACT: "dopasowanie dokładne",
     MatchKind.SEMANTIC: "dopasowanie semantyczne",
     MatchKind.HYBRID: "dopasowanie hybrydowe",
 }
 
-RESULT_OPEN = "Otworz dokument"
-RESULT_OPEN_LOCATION = "Otworz lokalizacje"
-RESULT_COPY_LINK = "Kopiuj odnosnik"
+RESULT_OPEN = "Otwórz dokument"
+RESULT_OPEN_LOCATION = "Otwórz lokalizację"
+RESULT_COPY_LINK = "Kopiuj odnośnik"
 RESULT_OCR_BADGE = "OCR"
-RESULT_MORE_CHUNKS = "Pasujacych fragmentow w tym dokumencie: {count}"
+RESULT_MORE_CHUNKS = "Pasujących fragmentów w tym dokumencie: {count}"
 RESULT_MODIFIED = "Zmodyfikowano: {value}"
 RESULT_INDEXED = "Zaindeksowano: {value}"
 RESULT_AUTHOR = "Autor: {value}"
-RESULT_SCORE = "Sila dopasowania: {value}"
+RESULT_SCORE = "Siła dopasowania: {value}"
 RESULT_SCORE_TOOLTIP = (
-    "Wartosc wzgledna wobec najlepszego wyniku na tej stronie. "
-    "Nie jest to prawdopodobienstwo ani miara bezwzgledna."
+    "Wartość względna wobec najlepszego wyniku na tej stronie. "
+    "Nie jest to prawdopodobieństwo ani miara bezwzględna."
 )
 
 FILTER_EXTENSION = "Typ pliku"
-FILTER_SOURCE = "Zrodlo"
+FILTER_SOURCE = "Źródło"
 FILTER_LIBRARY = "Biblioteka"
 FILTER_AUTHOR = "Autor"
 FILTER_PATH = "Katalog albo lokalizacja"
@@ -81,28 +81,28 @@ FILTER_OCR = "Tylko dokumenty z OCR"
 FILTER_ANY = "wszystkie"
 
 PAGINATION_PREVIOUS = "Poprzednia"
-PAGINATION_NEXT = "Nastepna"
+PAGINATION_NEXT = "Następna"
 PAGINATION_STATUS = "Strona {page} z {pages}"
-RESULTS_COUNT_EXACT = "Znaleziono {count} dokumentow"
-RESULTS_COUNT_APPROX = "Znaleziono co najmniej {count} dokumentow"
+RESULTS_COUNT_EXACT = "Znaleziono {count} dokumentów"
+RESULTS_COUNT_APPROX = "Znaleziono co najmniej {count} dokumentów"
 RESULTS_TOOK = "czas: {ms} ms"
 
 # --- ekran zrodel ------------------------------------------------------------
 
-SOURCES_TITLE = "Zrodla dokumentow"
+SOURCES_TITLE = "Źródła dokumentów"
 SOURCES_ADD_LOCAL = "Dodaj katalog lokalny"
 SOURCES_ADD_SHAREPOINT = "Dodaj SharePoint"
-SOURCES_TEST = "Testuj polaczenie"
-SOURCES_REMOVE = "Usun zrodlo"
-SOURCES_TOGGLE = "Wlacz albo wylacz"
-SOURCES_EMPTY = "Nie skonfigurowano zadnego zrodla."
-SOURCES_DEMO = "Wygeneruj zbior demonstracyjny"
+SOURCES_TEST = "Testuj połączenie"
+SOURCES_REMOVE = "Usuń źródło"
+SOURCES_TOGGLE = "Włącz albo wyłącz"
+SOURCES_EMPTY = "Nie skonfigurowano żadnego źródła."
+SOURCES_DEMO = "Wygeneruj zbiór demonstracyjny"
 SOURCES_SIGN_IN = "Zaloguj do SharePoint"
 SOURCES_SIGN_OUT = "Wyloguj"
 
 STORAGE_TITLE = "Przechowywanie indeksu"
 STORAGE_PATH = "Katalog danych"
-STORAGE_CHANGE = "Zmien katalog"
+STORAGE_CHANGE = "Zmień katalog"
 STORAGE_FREE = "Wolne miejsce: {value}"
 STORAGE_INDEX_SIZE = "Rozmiar indeksu: {value}"
 
@@ -110,8 +110,8 @@ MODEL_TITLE = "Model wyszukiwania semantycznego"
 MODEL_CURRENT = "Model: {value}"
 MODEL_DIMENSION = "Wymiar wektora: {value}"
 MODEL_MISSING = (
-    "Model nie zostal znaleziony. Wyszukiwanie semantyczne i hybrydowe sa niedostepne, "
-    "tryb dokladny dziala normalnie."
+    "Model nie został znaleziony. Wyszukiwanie semantyczne i hybrydowe są niedostępne, "
+    "tryb dokładny działa normalnie."
 )
 
 # --- ekran indeksowania ------------------------------------------------------
@@ -119,29 +119,29 @@ MODEL_MISSING = (
 INDEXING_TITLE = "Indeksowanie"
 INDEXING_START = "Start"
 INDEXING_PAUSE = "Pauza"
-INDEXING_RESUME = "Wznow"
+INDEXING_RESUME = "Wznów"
 INDEXING_CANCEL = "Anuluj"
 INDEXING_RESCAN = "Skanuj ponownie"
-INDEXING_FULL = "Pelne przeindeksowanie"
+INDEXING_FULL = "Pełne przeindeksowanie"
 INDEXING_EXPORT = "Eksportuj raport"
-INDEXING_SHOW_ERRORS = "Pokaz bledy"
-INDEXING_SHOW_SKIPPED = "Pokaz pliki pominiete"
+INDEXING_SHOW_ERRORS = "Pokaż błędy"
+INDEXING_SHOW_SKIPPED = "Pokaż pliki pominięte"
 
 STAGE_LABEL = "Etap"
 STAT_DISCOVERED = "Wykryte pliki"
 STAT_PROCESSED = "Przetworzone"
 STAT_UNCHANGED = "Niezmienione"
-STAT_SKIPPED = "Pominiete"
-STAT_FAILED = "Bledy"
-STAT_DELETED = "Usuniete ze zrodla"
+STAT_SKIPPED = "Pominięte"
+STAT_FAILED = "Błędy"
+STAT_DELETED = "Usunięte ze źródła"
 STAT_OCR = "Pliki z OCR"
 STAT_OCR_PAGES = "Strony OCR"
 STAT_CURRENT = "Przetwarzany plik"
 STAT_ELAPSED = "Czas trwania"
-STAT_CONNECTION = "Polaczenie"
-STAT_TEMP = "Przestrzen tymczasowa"
-PROGRESS_UNKNOWN = "Postep bedzie znany po zakonczeniu wykrywania plikow"
-PROGRESS_APPROXIMATE = "Postep przyblizony: {value}"
+STAT_CONNECTION = "Połączenie"
+STAT_TEMP = "Przestrzeń tymczasowa"
+PROGRESS_UNKNOWN = "Postęp będzie znany po zakończeniu wykrywania plików"
+PROGRESS_APPROXIMATE = "Postęp przybliżony: {value}"
 
 JOB_STATE_LABELS: dict[JobState, str] = {
     JobState.QUEUED: "w kolejce",
@@ -149,13 +149,13 @@ JOB_STATE_LABELS: dict[JobState, str] = {
     JobState.PAUSED: "wstrzymane",
     JobState.CANCELLING: "anulowanie",
     JobState.CANCELLED: "anulowane",
-    JobState.FAILED: "zakonczone bledem",
-    JobState.COMPLETED: "zakonczone",
+    JobState.FAILED: "zakończone błędem",
+    JobState.COMPLETED: "zakończone",
 }
 
 RESUME_PROMPT = (
-    "Poprzednie indeksowanie zostalo przerwane. Czy chcesz je wznowic?\n"
-    "Dokumenty juz przetworzone nie beda przetwarzane ponownie."
+    "Poprzednie indeksowanie zostało przerwane. Czy chcesz je wznowić?\n"
+    "Dokumenty już przetworzone nie będą przetwarzane ponownie."
 )
 RESUME_TITLE = "Przerwane indeksowanie"
 
@@ -164,31 +164,31 @@ RESUME_TITLE = "Przerwane indeksowanie"
 REPORT_TITLE = "Raport pokrycia"
 REPORT_EXPORT_JSON = "Eksportuj do JSON"
 REPORT_EXPORT_CSV = "Eksportuj do CSV"
-REPORT_REFRESH = "Odswiez"
-REPORT_NON_SEARCHABLE = "Dokumenty, ktorych nie mozna wyszukac"
-REPORT_COMPLETE = "Wszystkie wykryte dokumenty sa wyszukiwalne."
+REPORT_REFRESH = "Odśwież"
+REPORT_NON_SEARCHABLE = "Dokumenty, których nie można wyszukać"
+REPORT_COMPLETE = "Wszystkie wykryte dokumenty są wyszukiwalne."
 REPORT_INCOMPLETE = (
-    "Zbior nie jest kompletny. Nie mozna wyszukac {count} dokumentow. "
-    "Szczegoly znajduja sie na liscie ponizej."
+    "Zbiór nie jest kompletny. Nie można wyszukać {count} dokumentów. "
+    "Szczegóły znajdują się na liście poniżej."
 )
 
 # --- diagnostyka -------------------------------------------------------------
 
 DIAG_TITLE = "Diagnostyka"
-DIAG_ENVIRONMENT = "Srodowisko"
+DIAG_ENVIRONMENT = "Środowisko"
 DIAG_COMPONENTS = "Komponenty"
 DIAG_INDEX = "Indeks"
-DIAG_CONSISTENCY = "Spojnosc indeksu"
-DIAG_NETWORK = "Polityka polaczen sieciowych"
+DIAG_CONSISTENCY = "Spójność indeksu"
+DIAG_NETWORK = "Polityka połączeń sieciowych"
 DIAG_EXPORT_BUNDLE = "Eksportuj pakiet diagnostyczny"
-DIAG_OPEN_LOGS = "Otworz katalog logow"
-DIAG_CHECK = "Sprawdz spojnosc"
+DIAG_OPEN_LOGS = "Otwórz katalog logów"
+DIAG_CHECK = "Sprawdź spójność"
 DIAG_COMPACT = "Kompaktuj indeks wektorowy"
-DIAG_BACKUP = "Wykonaj kopie indeksu"
+DIAG_BACKUP = "Wykonaj kopię indeksu"
 DIAG_LOG_QUERIES = "Zapisuj zapytania w logu diagnostycznym"
 DIAG_LOG_QUERIES_HINT = (
-    "Domyslnie wylaczone. Wlacz tylko na czas diagnozy. Zapytania zostana zapisane "
-    "wylacznie w lokalnym pliku logu."
+    "Domyślnie wyłączone. Włącz tylko na czas diagnozy. Zapytania zostaną zapisane "
+    "wyłącznie w lokalnym pliku logu."
 )
 
 # --- statusy dokumentow ------------------------------------------------------
@@ -196,15 +196,15 @@ DIAG_LOG_QUERIES_HINT = (
 STATUS_LABELS: dict[DocumentStatus, str] = {
     DocumentStatus.PENDING: "oczekuje",
     DocumentStatus.INDEXED: "zaindeksowany",
-    DocumentStatus.PARTIAL: "zaindeksowany czesciowo",
-    DocumentStatus.SKIPPED: "pominiety",
-    DocumentStatus.UNSUPPORTED: "format nieobslugiwany",
+    DocumentStatus.PARTIAL: "zaindeksowany częściowo",
+    DocumentStatus.SKIPPED: "pominięty",
+    DocumentStatus.UNSUPPORTED: "format nieobsługiwany",
     DocumentStatus.CORRUPTED: "plik uszkodzony",
-    DocumentStatus.PASSWORD_PROTECTED: "zabezpieczony haslem",
-    DocumentStatus.EMPTY: "brak tresci",
-    DocumentStatus.DOWNLOAD_FAILED: "blad pobierania",
-    DocumentStatus.ERROR: "blad przetwarzania",
-    DocumentStatus.DELETED: "usuniety ze zrodla",
+    DocumentStatus.PASSWORD_PROTECTED: "zabezpieczony hasłem",
+    DocumentStatus.EMPTY: "brak treści",
+    DocumentStatus.DOWNLOAD_FAILED: "błąd pobierania",
+    DocumentStatus.ERROR: "błąd przetwarzania",
+    DocumentStatus.DELETED: "usunięty ze źródła",
 }
 
 # --- komunikaty ogolne -------------------------------------------------------
@@ -213,34 +213,34 @@ BUTTON_OK = "OK"
 BUTTON_CANCEL = "Anuluj"
 BUTTON_CLOSE = "Zamknij"
 BUTTON_SAVE = "Zapisz"
-BUTTON_BROWSE = "Przegladaj..."
+BUTTON_BROWSE = "Przeglądaj..."
 
-ERROR_TITLE = "Wystapil blad"
-WARNING_TITLE = "Ostrzezenie"
+ERROR_TITLE = "Wystąpił błąd"
+WARNING_TITLE = "Ostrzeżenie"
 INFO_TITLE = "Informacja"
 CONFIRM_TITLE = "Potwierdzenie"
 
 CONFIRM_REMOVE_SOURCE = (
-    "Czy na pewno usunac zrodlo '{label}'?\nDokumenty z tego zrodla zostana usuniete z indeksu."
+    "Czy na pewno usunąć źródło {label}?\nDokumenty z tego źródła zostaną usunięte z indeksu."
 )
 CONFIRM_FULL_REINDEX = (
-    "Pelne przeindeksowanie przetworzy wszystkie dokumenty od nowa. "
-    "Moze to potrwac dlugo. Kontynuowac?"
+    "Pełne przeindeksowanie przetworzy wszystkie dokumenty od nowa. "
+    "Może to potrwać długo. Kontynuować?"
 )
 
 STARTUP_ERROR = (
-    "Nie udalo sie uruchomic aplikacji.\n\n{message}\n\nSzczegoly zapisano w pliku logu:\n{log}"
+    "Nie udało się uruchomić aplikacji.\n\n{message}\n\nSzczegóły zapisano w pliku logu:\n{log}"
 )
 
 INDEX_INCOMPATIBLE_TITLE = "Indeks wymaga przebudowy"
 INDEX_INCOMPATIBLE = (
-    "Konfiguracja aplikacji zmienila sie od czasu zbudowania indeksu.\n\n{details}\n\n"
-    "Do czasu przebudowy dostepne jest wyszukiwanie dokladne."
+    "Konfiguracja aplikacji zmieniła się od czasu zbudowania indeksu.\n\n{details}\n\n"
+    "Do czasu przebudowy dostępne jest wyszukiwanie dokładne."
 )
 
 STARTUP_NOTES_TITLE = "Stan indeksu"
 STARTUP_NOTES = (
-    "Aplikacja jest gotowa do pracy, ale nie wszystkie funkcje sa dostepne.\n\n{details}"
+    "Aplikacja jest gotowa do pracy, ale nie wszystkie funkcje są dostępne.\n\n{details}"
 )
 
 
@@ -283,11 +283,11 @@ def format_count(count: int, one: str, few: str, many: str) -> str:
 
 
 def documents_count(count: int) -> str:
-    return format_count(count, "dokument", "dokumenty", "dokumentow")
+    return format_count(count, "dokument", "dokumenty", "dokumentów")
 
 
 def files_count(count: int) -> str:
-    return format_count(count, "plik", "pliki", "plikow")
+    return format_count(count, "plik", "pliki", "plików")
 
 
 __all__ = [

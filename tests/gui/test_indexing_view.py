@@ -258,7 +258,7 @@ def test_completion_reports_summary(indexing_view: IndexingView, fake_runner: Fa
     indexing_view._on_completed(_snapshot(state=JobState.COMPLETED, processed=7))
 
     assert indexing_view.progress_bar.value() == 100
-    assert any("Przetworzono 7 dokumentow" in message for message in messages)
+    assert any("Przetworzono 7 dokumentów" in message for message in messages)
 
 
 # --- tabele ---------------------------------------------------------------------
@@ -296,4 +296,4 @@ def test_tables_are_filled_from_repository(
     statuses = {
         view.skipped_table.item(row, 2).text() for row in range(view.skipped_table.rowCount())
     }
-    assert statuses == {"brak tresci"}
+    assert statuses == {"brak treści"}

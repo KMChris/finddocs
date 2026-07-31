@@ -120,10 +120,10 @@ def check_consistency(
     )
 
     if orphans:
-        problems.append(f"Znaleziono {orphans} fragmentow bez dokumentu nadrzednego.")
+        problems.append(f"Znaleziono {orphans} fragmentow bez dokumentu nadrzędnego.")
     if without_chunks:
         warnings.append(
-            f"{without_chunks} dokumentow ma status 'zaindeksowany', ale nie ma fragmentow."
+            f"{without_chunks} dokumentów ma status 'zaindeksowany', ale nie ma fragmentów."
         )
 
     vectors_in_store = 0
@@ -138,7 +138,7 @@ def check_consistency(
             )
         if vector_store.needs_compaction():
             warnings.append(
-                "Indeks wektorowy zawiera duzo usunietych wpisow. Zalecana kompaktacja."
+                "Indeks wektorowy zawiera dużo usuniętych wpisow. Zalecana kompaktacja."
             )
     elif chunks_without_vectors:
         warnings.append(
@@ -217,15 +217,15 @@ def backup_index(paths: AppPaths, *, label: str | None = None) -> Path:
     stamp = label or _dt.datetime.now().astimezone().strftime("%Y%m%d-%H%M%S")
     target = paths.backup_dir / f"index-{stamp}"
     if target.exists():
-        raise StorageSpaceError(f"Katalog kopii {target} juz istnieje.")
+        raise StorageSpaceError(f"Katalog kopii {target} już istnieje.")
 
     source_size = paths.index_size_bytes()
     free = paths.free_space_bytes()
     if free < source_size * SPACE_SAFETY_FACTOR:
         raise StorageSpaceError(
-            "Za malo miejsca na dysku, zeby wykonac kopie indeksu. "
-            f"Potrzeba okolo {_mb(source_size * SPACE_SAFETY_FACTOR)} MB, "
-            f"dostepne {_mb(free)} MB."
+            "Za mało miejsca na dysku, żeby wykonać kopię indeksu. "
+            f"Potrzeba około {_mb(source_size * SPACE_SAFETY_FACTOR)} MB, "
+            f"dostępne {_mb(free)} MB."
         )
 
     target.mkdir(parents=True, exist_ok=True)
@@ -366,8 +366,8 @@ def ensure_free_space(paths: AppPaths, required_bytes: int) -> None:
     free = paths.free_space_bytes()
     if free < required_bytes:
         raise StorageSpaceError(
-            f"Za malo miejsca na dysku. Potrzeba {_mb(required_bytes)} MB, "
-            f"dostepne {_mb(free)} MB.",
+            f"Za mało miejsca na dysku. Potrzeba {_mb(required_bytes)} MB, "
+            f"dostępne {_mb(free)} MB.",
             details={"required": required_bytes, "available": free},
         )
 

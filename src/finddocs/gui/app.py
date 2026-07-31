@@ -46,7 +46,7 @@ def _show_startup_error(message: str, log_path: Path) -> None:
         app = existing if isinstance(existing, QApplication) else QApplication(sys.argv[:1])
         box = QMessageBox()
         box.setIcon(QMessageBox.Icon.Critical)
-        box.setWindowTitle(f"{APP_NAME}: blad uruchomienia")
+        box.setWindowTitle(f"{APP_NAME}: błąd uruchomienia")
         box.setText(text)
         box.exec()
         del app
@@ -82,7 +82,7 @@ def main(argv: list[str] | None = None) -> int:
         from finddocs.gui.theme import apply_theme
     except ImportError as exc:  # pragma: no cover - brak Qt to blad instalacji
         _show_startup_error(
-            f"Brakuje bibliotek interfejsu graficznego (PySide6). Szczegoly: {exc}",
+            f"Brakuje bibliotek interfejsu graficznego (PySide6). Szczegóły: {exc}",
             paths.log_file,
         )
         return 1

@@ -29,7 +29,7 @@ def build_authenticator(
 ) -> GraphAuthenticator:
     """Tworzy obiekt uwierzytelniajacy dla zrodla SharePoint."""
     if source.kind is not SourceKind.SHAREPOINT:
-        raise ConfigurationError(f"Zrodlo {source.source_id} nie jest zrodlem SharePoint.")
+        raise ConfigurationError(f"Źródło {source.source_id} nie jest źródłem SharePoint.")
     store = credential_store or create_credential_store(paths.config_dir)
     return GraphAuthenticator(source.sharepoint, store, source.source_id, policy)
 

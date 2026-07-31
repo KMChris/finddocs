@@ -105,8 +105,8 @@ class GraphAuthenticator:
             scopes.append(candidate)
         if not scopes:
             raise AuthenticationError(
-                "Nie skonfigurowano zadnego zakresu uprawnien do Microsoft Graph. "
-                "Uzupelnij pole 'scopes' w ustawieniach zrodla, na przyklad Files.Read.All."
+                "Nie skonfigurowano żadnego zakresu uprawnień do Microsoft Graph. "
+                "Uzupełnij pole 'scopes' w ustawieniach źródła, na przykład Files.Read.All."
             )
         return scopes
 
@@ -128,8 +128,8 @@ class GraphAuthenticator:
         client_id = self._settings.client_id.strip()
         if not client_id:
             raise AuthenticationError(
-                "Nie skonfigurowano identyfikatora aplikacji (client_id) dla zrodla SharePoint. "
-                "Uzupelnij go w ustawieniach zrodla."
+                "Nie skonfigurowano identyfikatora aplikacji (client_id) dla źródła SharePoint. "
+                "Uzupełnij go w ustawieniach źródła."
             )
         self.check_endpoints()
         try:
@@ -140,7 +140,7 @@ class GraphAuthenticator:
             )
         except ValueError as exc:
             raise AuthenticationError(
-                "Adres uslugi logowania albo identyfikator tenanta jest nieprawidlowy: "
+                "Adres usługi logowania albo identyfikator tenanta jest nieprawidłowy: "
                 f"{redact_text(str(exc))}",
                 cause=exc,
             ) from exc
@@ -260,7 +260,7 @@ class GraphAuthenticator:
             ) from exc
         if not isinstance(flow, dict) or not flow.get("user_code"):
             raise AuthenticationError(
-                "Usluga logowania nie zwrocila kodu urzadzenia: "
+                "Usługa logowania nie zwróciła kodu urządzenia: "
                 f"{self._describe_error(flow if isinstance(flow, dict) else None)}"
             )
         verification_uri = str(flow.get("verification_uri") or flow.get("verification_url") or "")
@@ -276,7 +276,7 @@ class GraphAuthenticator:
             ) from exc
         finally:
             self._persist_cache()
-        return self._token_from_result(result, "logowanie kodem urzadzenia")
+        return self._token_from_result(result, "logowanie kodem urządzenia")
 
     def get_token(self, *, force_refresh: bool = False) -> str:
         """Zwraca wazny token dostepu, w razie potrzeby prosi uzytkownika o logowanie."""
@@ -291,7 +291,7 @@ class GraphAuthenticator:
         if flow == AUTH_FLOW_INTERACTIVE:
             return self.acquire_token_interactive()
         raise AuthenticationError(
-            f"Nieznany tryb logowania '{flow}'. Dozwolone wartosci to: "
+            f"Nieznany tryb logowania '{flow}'. Dozwolone wartości to: "
             f"{AUTH_FLOW_INTERACTIVE}, {AUTH_FLOW_DEVICE_CODE}."
         )
 
@@ -340,21 +340,21 @@ class GraphAuthenticator:
         Kod jest jednorazowym poswiadczeniem, wiec nie trafia do logow.
         """
         log.info("auth.device_code_ready", source_id=self._source_id, uri=verification_uri)
-        sys.stderr.write(f"Otworz strone {verification_uri} i wpisz kod logowania: {user_code}\n")
+        sys.stderr.write(f"Otwórz stronę {verification_uri} i wpisz kod logowania: {user_code}\n")
         sys.stderr.flush()
 
     def _token_from_result(self, result: Any, operation: str) -> str:
         """Wyciaga token z odpowiedzi MSAL albo rzuca czytelny blad."""
         if not isinstance(result, dict):
             raise AuthenticationError(
-                f"Usluga logowania nie zwrocila odpowiedzi ({operation}). Sprobuj ponownie."
+                f"Usługa logowania nie zwróciła odpowiedzi ({operation}). Spróbuj ponownie."
             )
         token = result.get("access_token")
         if isinstance(token, str) and token:
             log.info("auth.token_acquired", source_id=self._source_id, flow=operation)
             return token
         raise AuthenticationError(
-            f"Uwierzytelnienie nie powiodlo sie ({operation}): {self._describe_error(result)}",
+            f"Uwierzytelnienie nie powiodło się ({operation}): {self._describe_error(result)}",
             details={"error": str(result.get("error") or "")},
         )
 
@@ -362,10 +362,10 @@ class GraphAuthenticator:
     def _describe_error(result: dict[str, Any] | None) -> str:
         """Buduje opis bledu na podstawie odpowiedzi MSAL, bez danych wrazliwych."""
         if not result:
-            return "brak szczegolow odpowiedzi."
+            return "brak szczegółów odpowiedzi."
         description = result.get("error_description") or result.get("error") or ""
         text = str(description).strip().replace("\r", " ").replace("\n", " ")
-        return redact_text(text) if text else "brak szczegolow odpowiedzi."
+        return redact_text(text) if text else "brak szczegółów odpowiedzi."
 
 
 __all__ = [

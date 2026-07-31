@@ -103,8 +103,8 @@ class IndexService:
         conn = self.db.connection
         if not check_fts5(conn):
             raise IndexIncompatibleError(
-                "Biblioteka SQLite w tym srodowisku nie ma modulu FTS5. "
-                "Wyszukiwanie pelnotekstowe nie zadziala."
+                "Biblioteka SQLite w tym środowisku nie ma modułu FTS5. "
+                "Wyszukiwanie pełnotekstowe nie zadziała."
             )
         migrate(conn)
 
@@ -115,7 +115,7 @@ class IndexService:
         )
         if not state["fts_zgodny"]:
             message = (
-                "Konfiguracja normalizacji albo fragmentacji zmienila sie od czasu "
+                "Konfiguracja normalizacji albo fragmentacji zmieniła się od czasu "
                 "zbudowania indeksu. Wymagana jest przebudowa indeksu."
             )
             if not allow_rebuild_prompt:
@@ -145,8 +145,8 @@ class IndexService:
         except ProviderError as exc:
             self.provider = None
             self._notes.append(
-                f"Wyszukiwanie semantyczne jest niedostepne: {exc.user_message} "
-                "Tryb dokladny dziala normalnie."
+                f"Wyszukiwanie semantyczne jest niedostępne: {exc.user_message} "
+                "Tryb dokładny działa normalnie."
             )
             log.warning("index.provider_unavailable", error_code=exc.code)
             return
@@ -161,7 +161,7 @@ class IndexService:
             )
         except IndexIncompatibleError as exc:
             self._notes.append(
-                f"{exc.user_message} Do czasu przebudowy dziala wyszukiwanie dokladne."
+                f"{exc.user_message} Do czasu przebudowy działa wyszukiwanie dokładne."
             )
             self._rebuild_required = True
             log.warning("index.vector_incompatible", error_code=exc.code)
@@ -169,8 +169,8 @@ class IndexService:
             return
         if not vector_compatible:
             self._notes.append(
-                "Indeks wektorowy zostal zbudowany inna konfiguracja modelu. "
-                "Zalecana jest przebudowa czesci semantycznej."
+                "Indeks wektorowy został zbudowany inną konfiguracją modelu. "
+                "Zalecana jest przebudowa części semantycznej."
             )
             self._rebuild_required = True
         self.vector_store = store

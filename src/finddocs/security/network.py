@@ -26,10 +26,10 @@ class EgressCategory(str, Enum):
     """Microsoft Graph i Entra ID, potrzebne do pracy z SharePoint."""
 
     MODEL_DOWNLOAD = "model_download"
-    """Jednorazowe pobranie modeli z adresow zapisanych w manifescie."""
+    """Jednorazowe pobranie modeli z adresow zapisanych w manifeście."""
 
     INTERNAL_API = "internal_api"
-    """Wewnetrzne API organizacji (przyszly provider embeddingow na GPU)."""
+    """Wewnetrzne API organizacji (przyszły provider embeddingów na GPU)."""
 
 
 DEFAULT_ALLOWLIST: dict[EgressCategory, tuple[str, ...]] = {
@@ -96,17 +96,17 @@ class NetworkPolicy:
             if scheme == "https" or self.allow_plain_http_localhost:
                 return host
             raise NetworkPolicyError(
-                "Polaczenia http z localhost sa wylaczone w biezacej konfiguracji."
+                "Połączenia http z localhost są wyłączone w bieżącej konfiguracji."
             )
 
         if scheme not in ALLOWED_SCHEMES:
             raise NetworkPolicyError(
-                f"Dozwolone jest wylacznie polaczenie https. Adres uzywa schematu '{scheme}'."
+                f"Dozwolone jest wyłącznie połączenie https. Adres używa schematu '{scheme}'."
             )
 
         if category not in self.enabled_categories:
             raise NetworkPolicyError(
-                f"Kategoria polaczen '{category.value}' jest wylaczona. "
+                f"Kategoria połączeń '{category.value}' jest wylaczona. "
                 "Wlacz ja w konfiguracji, jesli organizacja na to pozwala."
             )
 

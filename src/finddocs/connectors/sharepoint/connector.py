@@ -223,13 +223,13 @@ class SharePointConnector(SourceConnector):
         if not self._site_id:
             if not self._settings.site_url.strip():
                 raise ConnectorError(
-                    "Zrodlo SharePoint nie ma wskazanej witryny. Podaj adres witryny "
+                    "Źródło SharePoint nie ma wskazanej witryny. Podaj adres witryny "
                     "w rodzaju https://firma.sharepoint.com/sites/Nazwa."
                 )
             site = self._client.resolve_site(self._settings.site_url)
             self._site_id = str(site.get("id") or "").strip()
             if not self._site_id:
-                raise ConnectorError("Microsoft Graph nie zwrocil identyfikatora witryny.")
+                raise ConnectorError("Microsoft Graph nie zwrócił identyfikatora witryny.")
             self._site_name = str(site.get("displayName") or site.get("name") or "").strip()
             self._site_web_url = str(site.get("webUrl") or self._settings.site_url).strip()
         if not self._drive_id:
@@ -237,7 +237,7 @@ class SharePointConnector(SourceConnector):
             self._drive_id = str(drive.get("id") or "").strip()
             if not self._drive_id:
                 raise ConnectorError(
-                    "Microsoft Graph nie zwrocil identyfikatora biblioteki dokumentow."
+                    "Microsoft Graph nie zwrócił identyfikatora biblioteki dokumentów."
                 )
             self._drive_name = str(drive.get("name") or self._settings.drive_name).strip()
             self._drive_web_url = str(drive.get("webUrl") or "").strip()
@@ -263,7 +263,7 @@ class SharePointConnector(SourceConnector):
             root_id = str(root.get("id") or "").strip()
             if not root_id:
                 raise ConnectorError(
-                    "Microsoft Graph nie zwrocil identyfikatora katalogu startowego."
+                    "Microsoft Graph nie zwrócił identyfikatora katalogu startowego."
                 )
             counted = 0
             truncated = False
@@ -280,13 +280,13 @@ class SharePointConnector(SourceConnector):
             )
         except AuthenticationError as exc:
             return self._failure(
-                "Uwierzytelnienie wygaslo albo zostalo odrzucone. Zaloguj sie ponownie "
-                f"do zrodla SharePoint. {exc.user_message}",
+                "Uwierzytelnienie wygasło albo zostało odrzucone. Zaloguj się ponownie "
+                f"do źródła SharePoint. {exc.user_message}",
                 exc,
             )
         except RateLimitedError as exc:
             return self._failure(
-                f"Microsoft Graph chwilowo ogranicza liczbe zapytan. {exc.user_message}", exc
+                f"Microsoft Graph chwilowo ogranicza liczbę zapytań. {exc.user_message}", exc
             )
         except TransientConnectorError as exc:
             return self._failure(
@@ -297,22 +297,22 @@ class SharePointConnector(SourceConnector):
         except ConnectorError as exc:
             return self._failure(exc.user_message, exc)
         except FindDocsError as exc:
-            return self._failure(f"Nie udalo sie polaczyc ze zrodlem. {exc.user_message}", exc)
+            return self._failure(f"Nie udało się połączyć ze źródłem. {exc.user_message}", exc)
 
         site_label = self._site_name or self._site_web_url or self._site_id
-        library_label = self._drive_name or "(biblioteka domyslna)"
-        suffix = " lub wiecej" if truncated else ""
+        library_label = self._drive_name or "(biblioteka domyślna)"
+        suffix = " lub więcej" if truncated else ""
         return ConnectionStatus(
             ok=True,
             message=(
-                f"Polaczono z witryna '{site_label}', biblioteka '{library_label}'. "
+                f"Połączono z witryna '{site_label}', biblioteka '{library_label}'. "
                 f"Elementow na pierwszym poziomie: {counted}{suffix}."
             ),
             details={
                 "witryna": site_label,
                 "biblioteka": library_label,
                 "elementow_pierwszego_poziomu": counted,
-                "katalog_startowy": self._settings.folder_path.strip("/") or "(korzen)",
+                "katalog_startowy": self._settings.folder_path.strip("/") or "(korzeń)",
                 "konto": self._settings.tenant_id or "organizations",
             },
         )
@@ -346,7 +346,7 @@ class SharePointConnector(SourceConnector):
         root = self._client.get_item_by_path(self._drive_id, start)
         root_id = str(root.get("id") or "").strip()
         if not root_id:
-            raise ConnectorError("Microsoft Graph nie zwrocil identyfikatora katalogu startowego.")
+            raise ConnectorError("Microsoft Graph nie zwrócił identyfikatora katalogu startowego.")
         pending: list[_Folder] = [
             _Folder(
                 item_id=root_id,
@@ -455,7 +455,7 @@ class SharePointConnector(SourceConnector):
         lowered_name = item.name.lower()
         for pattern in self._exclude_globs:
             if fnmatch.fnmatch(lowered_path, pattern) or fnmatch.fnmatch(lowered_name, pattern):
-                return "dopasowanie do wzorca wykluczajacego"
+                return "dopasowanie do wzorca wykluczającego"
         if self._max_bytes and item.size is not None and item.size > self._max_bytes:
             return "plik przekracza dozwolony rozmiar"
         return None
@@ -474,7 +474,7 @@ class SharePointConnector(SourceConnector):
         if not item.external_id:
             raise ConnectorError(
                 f"Dokument '{item.name}' nie ma identyfikatora SharePoint, "
-                "nie mozna go pobrac. Uruchom ponowne skanowanie zrodla."
+                "nie można go pobrać. Uruchom ponowne skanowanie źródła."
             )
         destination.mkdir(parents=True, exist_ok=True)
         target = destination / safe_filename(item.name)
@@ -515,7 +515,7 @@ class SharePointConnector(SourceConnector):
             {
                 "witryna": self._site_web_url or self._site_id,
                 "biblioteka": self._drive_name,
-                "katalog_startowy": self._settings.folder_path.strip("/") or "(korzen)",
+                "katalog_startowy": self._settings.folder_path.strip("/") or "(korzeń)",
                 "rekurencyjnie": self._settings.recursive,
             }
         )

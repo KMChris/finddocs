@@ -15,7 +15,6 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QGroupBox,
     QHBoxLayout,
-    QHeaderView,
     QLabel,
     QLineEdit,
     QPushButton,
@@ -34,6 +33,7 @@ from finddocs.connectors.base import SourceConnector
 from finddocs.gui import i18n
 from finddocs.gui.context import AppContext
 from finddocs.gui.dialogs import ask_yes_no, show_error, show_info, show_warning
+from finddocs.gui.tables import configure_columns
 from finddocs.gui.workers import CallableTask, thread_pool
 from finddocs.logging_setup import get_logger
 from finddocs.providers.model_manifest import describe_models
@@ -63,32 +63,32 @@ class SharePointDialog(QDialog):
         self.folder_edit = QLineEdit(settings.folder_path)
         self.folder_edit.setPlaceholderText("opcjonalnie, np. Procedury/2024")
         self.tenant_edit = QLineEdit(settings.tenant_id)
-        self.tenant_edit.setPlaceholderText("identyfikator dzierzawy Entra ID")
+        self.tenant_edit.setPlaceholderText("identyfikator dzierżawy Entra ID")
         self.client_edit = QLineEdit(settings.client_id)
         self.client_edit.setPlaceholderText("identyfikator aplikacji zarejestrowanej w Entra ID")
         self.flow_combo = QComboBox()
-        self.flow_combo.addItem("Logowanie w oknie przegladarki", "interactive")
-        self.flow_combo.addItem("Kod urzadzenia", "device_code")
+        self.flow_combo.addItem("Logowanie w oknie przeglądarki", "interactive")
+        self.flow_combo.addItem("Kod urządzenia", "device_code")
         position = self.flow_combo.findData(settings.auth_flow)
         self.flow_combo.setCurrentIndex(max(0, position))
         self.recursive_check = QCheckBox("Przeszukuj podkatalogi")
         self.recursive_check.setChecked(settings.recursive)
 
-        form.addRow("Nazwa zrodla", self.label_edit)
+        form.addRow("Nazwa źródła", self.label_edit)
         form.addRow("Adres witryny", self.site_edit)
-        form.addRow("Biblioteka dokumentow", self.library_edit)
+        form.addRow("Biblioteka dokumentów", self.library_edit)
         form.addRow("Katalog startowy", self.folder_edit)
-        form.addRow("Dzierzawa (tenant)", self.tenant_edit)
+        form.addRow("Dzierżawa (tenant)", self.tenant_edit)
         form.addRow("Aplikacja (client id)", self.client_edit)
-        form.addRow("Sposob logowania", self.flow_combo)
+        form.addRow("Sposób logowania", self.flow_combo)
         form.addRow("", self.recursive_check)
         layout.addLayout(form)
 
         hint = QLabel(
-            "Aplikacja laczy sie z SharePoint przez Microsoft Graph. Administrator musi "
-            "zarejestrowac aplikacje w Entra ID i nadac uprawnienia delegowane "
-            "Files.Read.All oraz Sites.Read.All. Tokeny sa przechowywane w Menedzerze "
-            "poswiadczen Windows i nie trafiaja do plikow konfiguracyjnych."
+            "Aplikacja łączy się z SharePoint przez Microsoft Graph. Administrator musi "
+            "zarejestrować aplikację w Entra ID i nadać uprawnienia delegowane "
+            "Files.Read.All oraz Sites.Read.All. Tokeny są przechowywane w Menedżerze "
+            "poświadczeń Windows i nie trafiają do plików konfiguracyjnych."
         )
         hint.setObjectName("Hint")
         hint.setWordWrap(True)
@@ -111,13 +111,13 @@ class SharePointDialog(QDialog):
         if not self.library_edit.text().strip():
             missing.append("nazwa biblioteki")
         if not self.tenant_edit.text().strip():
-            missing.append("identyfikator dzierzawy")
+            missing.append("identyfikator dzierżawy")
         if not self.client_edit.text().strip():
             missing.append("identyfikator aplikacji")
         if missing:
             show_warning(
                 self,
-                "Uzupelnij pola: " + ", ".join(missing) + ".",
+                "Uzupełnij pola: " + ", ".join(missing) + ".",
             )
             return
         self.accept()
@@ -179,7 +179,7 @@ class SourcesView(QWidget):
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.table.verticalHeader().setVisible(False)
-        self.table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
+        configure_columns(self.table, (2,))
         layout.addWidget(self.table)
 
         buttons = QHBoxLayout()
@@ -233,7 +233,7 @@ class SourcesView(QWidget):
         change = QPushButton(i18n.STORAGE_CHANGE)
         change.clicked.connect(self.change_storage)
         row.addWidget(change)
-        open_button = QPushButton("Otworz katalog")
+        open_button = QPushButton("Otwórz katalog")
         open_button.clicked.connect(lambda: self.context.open_path(self.context.paths.root))
         row.addWidget(open_button)
         row.addStretch(1)
@@ -252,7 +252,7 @@ class SourcesView(QWidget):
         self.model_info.setWordWrap(True)
         layout.addWidget(self.model_info)
 
-        self.quantized_check = QCheckBox("Uzyj wersji skwantyzowanej (szybsza, mniejszy plik)")
+        self.quantized_check = QCheckBox("Użyj wersji skwantyzowanej (szybsza, mniejszy plik)")
         self.quantized_check.setChecked(self.context.config.embedding.quantized)
         layout.addWidget(self.quantized_check)
 
@@ -292,7 +292,7 @@ class SourcesView(QWidget):
         self.model_combo.clear()
         installed_any = False
         for model in describe_models():
-            suffix = " (zainstalowany)" if model["zainstalowany"] else " (brak plikow)"
+            suffix = " (zainstalowany)" if model["zainstalowany"] else " (brak plików)"
             installed_any = installed_any or bool(model["zainstalowany"])
             self.model_combo.addItem(str(model["nazwa"]) + suffix, model["klucz"])
         position = self.model_combo.findData(self.context.config.embedding.model_key)
@@ -305,7 +305,7 @@ class SourcesView(QWidget):
             self.model_info.setText(
                 f"{i18n.MODEL_CURRENT.format(value=info.model_key)}\n"
                 f"{i18n.MODEL_DIMENSION.format(value=info.dimension)}\n"
-                f"Licencja: {info.license_name}, srodowisko: {info.runtime}"
+                f"Licencja: {info.license_name}, środowisko: {info.runtime}"
             )
         else:
             self.model_info.setText(i18n.MODEL_MISSING)
@@ -339,7 +339,7 @@ class SourcesView(QWidget):
         self.context.save()
         self.refresh()
         self.sources_changed.emit()
-        self.status_message.emit(f"Dodano zrodlo: {source.label}")
+        self.status_message.emit(f"Dodano źródło: {source.label}")
 
     def add_sharepoint_source(self) -> None:
         dialog = SharePointDialog(self)
@@ -351,13 +351,13 @@ class SourcesView(QWidget):
         self.refresh()
         self.sources_changed.emit()
         self.status_message.emit(
-            "Dodano zrodlo SharePoint. Uzyj przycisku Testuj polaczenie, zeby sie zalogowac."
+            "Dodano źródło SharePoint. Użyj przycisku Testuj połączenie, żeby się zalogować."
         )
 
     def test_selected(self) -> None:
         source = self._selected_source()
         if source is None:
-            show_info(self, "Wybierz zrodlo z listy.")
+            show_info(self, "Wybierz źródło z listy.")
             return
 
         def work() -> str:
@@ -373,11 +373,11 @@ class SourcesView(QWidget):
                 status = connector.test_connection()
             finally:
                 connector.close()
-            prefix = "Polaczenie dziala. " if status.ok else "Polaczenie nie dziala. "
+            prefix = "Połączenie działa. " if status.ok else "Połączenie nie działa. "
             return prefix + status.message
 
-        self.status_message.emit("Sprawdzanie polaczenia...")
-        task = CallableTask(work, label="test polaczenia")
+        self.status_message.emit("Sprawdzanie połączenia...")
+        task = CallableTask(work, label="test połączenia")
         task.signals.finished.connect(lambda message: show_info(self, str(message)))
         task.signals.failed.connect(
             lambda code, message: show_error(self, f"{message}\n\nKod: {code}")
@@ -411,7 +411,7 @@ class SourcesView(QWidget):
         self.context.save()
         self.refresh()
         self.sources_changed.emit()
-        self.status_message.emit(f"Usunieto zrodlo {source.label}.")
+        self.status_message.emit(f"Usunięto źródło {source.label}.")
 
     def generate_demo(self) -> None:
         def work() -> str:
@@ -421,16 +421,16 @@ class SourcesView(QWidget):
             source = SourceConfig(
                 source_id="demo",
                 kind=SourceKind.LOCAL_DIR,
-                label="Zbior demonstracyjny",
+                label="Zbiór demonstracyjny",
                 local=LocalDirSourceSettings(root_path=str(info.root)),
                 exclude_globs=["manifest.json"],
             )
             self.context.config = self.context.config.with_source(source)
             self.context.save()
-            return f"Utworzono zbior demonstracyjny: {info.files} plikow w {info.root}"
+            return f"Utworzono zbiór demonstracyjny: {info.files} plików w {info.root}"
 
         self.status_message.emit("Generowanie zbioru demonstracyjnego...")
-        task = CallableTask(work, label="zbior demonstracyjny")
+        task = CallableTask(work, label="zbiór demonstracyjny")
 
         def done(message: object) -> None:
             self.refresh()
@@ -469,9 +469,9 @@ class SourcesView(QWidget):
         if changed:
             show_info(
                 self,
-                "Zmiana modelu wymaga przebudowy czesci semantycznej indeksu.\n"
-                "Uruchom pelne przeindeksowanie na ekranie Indeksowanie.\n"
-                "Do tego czasu wyszukiwanie dokladne dziala bez zmian.",
+                "Zmiana modelu wymaga przebudowy części semantycznej indeksu.\n"
+                "Uruchom pełne przeindeksowanie na ekranie Indeksowanie.\n"
+                "Do tego czasu wyszukiwanie dokładne działa bez zmian.",
             )
         self.refresh()
 

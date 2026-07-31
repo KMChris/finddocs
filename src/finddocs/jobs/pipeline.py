@@ -205,7 +205,7 @@ class DocumentPipeline:
             )
         except Exception as exc:
             log.error("pipeline.unexpected_error", doc_id=doc_id, error_type=type(exc).__name__)
-            message = f"Nieoczekiwany blad przetwarzania: {type(exc).__name__}."
+            message = f"Nieoczekiwany błąd przetwarzania: {type(exc).__name__}."
             self._fail(doc_id, DocumentStatus.ERROR, "FD-3000", message, stage="process", item=item)
             return DocumentOutcome(
                 doc_id=doc_id,
@@ -246,7 +246,7 @@ class DocumentPipeline:
                 last = exc
                 self.retry.sleep(attempt + 1, control)
         raise DownloadError(
-            "Nie udalo sie pobrac pliku po kilku probach.",
+            "Nie udało się pobrać pliku po kilku próbach.",
             details={"file_name": item.name},
             cause=last,
         )
@@ -285,7 +285,7 @@ class DocumentPipeline:
             extraction_error = exc
         except Exception as exc:
             extraction_error = ExtractionError(
-                "Parser zakonczyl prace nieoczekiwanym bledem.", cause=exc
+                "Parser zakończył prace nieoczekiwanym błędem.", cause=exc
             )
 
         warnings: list[str] = list(result.warnings) if result else []
@@ -327,12 +327,12 @@ class DocumentPipeline:
             except FindDocsError as exc:
                 # Tu trafiaja takze bledy rasteryzacji, np. uszkodzony plik PDF,
                 # ktorego nie da sie otworzyc. Nie moga zatrzymac calego zadania.
-                warnings.append(f"OCR nie powiodl sie: {exc.user_message}")
+                warnings.append(f"OCR nie powiódł się: {exc.user_message}")
                 if extraction_error is None:
                     extraction_error = exc
                 log.warning("pipeline.ocr_failed", doc_id=doc_id, code=exc.code)
             except Exception as exc:
-                warnings.append("OCR nie powiodl sie z powodu nieoczekiwanego bledu.")
+                warnings.append("OCR nie powiódł się z powodu nieoczekiwanego błędu.")
                 log.warning("pipeline.ocr_crashed", doc_id=doc_id, error_type=type(exc).__name__)
 
         if not sections:
@@ -356,7 +356,7 @@ class DocumentPipeline:
                 doc_id,
                 DocumentStatus.EMPTY,
                 "FD-3004",
-                "Dokument nie zawiera tresci mozliwej do zaindeksowania.",
+                "Dokument nie zawiera treści możliwej do zaindeksowania.",
                 stage="chunk",
                 item=item,
             )
@@ -458,7 +458,7 @@ class DocumentPipeline:
         control: JobControl,
         scan_id: int,
     ) -> None:
-        """Indeksuje zalaczniki wiadomosci jako osobne dokumenty podrzedne."""
+        """Indeksuje załączniki wiadomosci jako osobne dokumenty podrzedne."""
         for attachment in attachments:
             control.checkpoint()
             name = attachment.name
@@ -519,7 +519,7 @@ class DocumentPipeline:
                     child_id,
                     DocumentStatus.ERROR,
                     "FD-3000",
-                    f"Nie udalo sie przetworzyc zalacznika: {type(exc).__name__}.",
+                    f"Nie udało się przetworzyć załącznika: {type(exc).__name__}.",
                     stage="attachment",
                     item=None,
                     file_name=name,
@@ -539,7 +539,7 @@ class DocumentPipeline:
         return (
             DocumentStatus.EMPTY,
             "FD-3004",
-            f"Nie udalo sie odczytac tresci dokumentu. {ocr_detail}".strip(),
+            f"Nie udało się odczytać treści dokumentu. {ocr_detail}".strip(),
         )
 
     def _fail(

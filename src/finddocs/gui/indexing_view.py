@@ -8,7 +8,6 @@ from PySide6.QtWidgets import (
     QGridLayout,
     QGroupBox,
     QHBoxLayout,
-    QHeaderView,
     QLabel,
     QProgressBar,
     QPushButton,
@@ -22,6 +21,7 @@ from PySide6.QtWidgets import (
 from finddocs.gui import i18n
 from finddocs.gui.context import AppContext
 from finddocs.gui.dialogs import ask_yes_no, show_error, show_info, show_warning
+from finddocs.gui.tables import configure_columns, format_stamp
 from finddocs.gui.workers import CallableTask, ProgressBridge, thread_pool
 from finddocs.jobs.indexing_job import JobOptions
 from finddocs.logging_setup import get_logger
@@ -157,24 +157,27 @@ class IndexingView(QWidget):
 
     def _build_tables(self) -> QWidget:
         tabs = QTabWidget()
-        self.error_table = self._make_table(["Plik", "Etap", "Kod", "Komunikat", "Czas"])
-        self.skipped_table = self._make_table(["Plik", "Lokalizacja", "Status", "Powod"])
+        self.error_table = self._make_table(
+            ["Plik", "Etap", "Kod", "Komunikat", "Czas"], stretch=(0, 3)
+        )
+        self.skipped_table = self._make_table(
+            ["Plik", "Lokalizacja", "Status", "Powód"], stretch=(0, 1, 3)
+        )
         tabs.addTab(self.error_table, i18n.INDEXING_SHOW_ERRORS)
         tabs.addTab(self.skipped_table, i18n.INDEXING_SHOW_SKIPPED)
         tabs.currentChanged.connect(lambda _index: self.refresh_tables())
         self._tabs = tabs
         return tabs
 
-    def _make_table(self, headers: list[str]) -> QTableWidget:
+    def _make_table(self, headers: list[str], *, stretch: tuple[int, ...]) -> QTableWidget:
+        """Tabela, w ktorej kolumny opisowe dostaja wolne miejsce, a krotkie tyle, ile trzeba."""
         table = QTableWidget(0, len(headers))
         table.setHorizontalHeaderLabels(headers)
         table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         table.setAlternatingRowColors(False)
         table.verticalHeader().setVisible(False)
-        header = table.horizontalHeader()
-        header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
-        header.setStretchLastSection(True)
+        configure_columns(table, stretch)
         return table
 
     # --- akcje ------------------------------------------------------------
@@ -196,7 +199,7 @@ class IndexingView(QWidget):
             return
         runner = self.context.require_runner()
         if runner.is_running:
-            show_info(self, "Indeksowanie juz trwa. Poczekaj albo je anuluj.")
+            show_info(self, "Indeksowanie już trwa. Poczekaj albo je anuluj.")
             return
         runner.on_progress(self.bridge.publish)
         runner.on_completed(self.bridge.publish_completion)
@@ -294,15 +297,15 @@ class IndexingView(QWidget):
         if snapshot.state is JobState.COMPLETED:
             self.progress_bar.setValue(100)
             self.status_message.emit(
-                f"Indeksowanie zakonczone. Przetworzono {snapshot.processed} dokumentow."
+                f"Indeksowanie zakończone. Przetworzono {snapshot.processed} dokumentów."
             )
         elif snapshot.state is JobState.CANCELLED:
-            self.status_message.emit("Indeksowanie anulowane. Mozna je wznowic pozniej.")
+            self.status_message.emit("Indeksowanie anulowane. Można je wznowić później.")
         else:
-            self.status_message.emit(snapshot.message or "Indeksowanie zakonczone bledem.")
+            self.status_message.emit(snapshot.message or "Indeksowanie zakończone błędem.")
             show_error(
                 self,
-                snapshot.message or "Indeksowanie zakonczylo sie bledem.",
+                snapshot.message or "Indeksowanie zakończyło się błędem.",
             )
         self.refresh_tables()
         self.index_changed.emit()
@@ -339,7 +342,7 @@ class IndexingView(QWidget):
                 str(row["stage"] or ""),
                 str(row["code"] or ""),
                 str(row["message"] or ""),
-                str(row["created_at"] or ""),
+                format_stamp(str(row["created_at"] or "")),
             ]
             for column, value in enumerate(values):
                 self.error_table.setItem(position, column, QTableWidgetItem(value))

@@ -46,7 +46,7 @@ class ExtractionContext:
 
         if time.monotonic() - self.started_at > self.timeout_seconds:
             raise ExtractionTimeoutError(
-                f"Odczyt dokumentu przekroczyl limit {self.timeout_seconds:.0f} s."
+                f"Odczyt dokumentu przekroczył limit {self.timeout_seconds:.0f} s."
             )
 
     def checkpoint(self) -> None:
@@ -96,7 +96,7 @@ class Extractor(ABC):
             "nazwa": self.name,
             "rozszerzenia": list(self.extensions),
             "poziom_wsparcia": self.support_level.value,
-            "dostepny": self.is_available(),
+            "dostępny": self.is_available(),
             "powod_niedostepnosci": self.unavailable_reason(),
         }
 

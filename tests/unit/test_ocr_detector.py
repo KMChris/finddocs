@@ -96,7 +96,7 @@ def test_ocr_wylaczony_w_ustawieniach(ustawienia):
 
     assert decyzja.needed is False
     assert decyzja.reason is OcrReason.DISABLED
-    assert "wylaczony" in decyzja.describe()
+    assert "wyłączony" in decyzja.describe()
 
 
 def test_format_nierasteryzowalny_nie_idzie_do_ocr():

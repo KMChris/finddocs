@@ -93,13 +93,13 @@ class DecodedText:
     text: str
     encoding: str
     replaced: bool = False
-    """True, gdy czesc bajtow zastapiono znakiem zastepczym."""
+    """True, gdy część bajtów zastąpiono znakiem zastępczym."""
 
     @property
     def warnings(self) -> list[str]:
         if not self.replaced:
             return []
-        return ["Nie udalo sie jednoznacznie rozpoznac kodowania, czesc znakow zastapiono."]
+        return ["Nie udało się jednoznacznie rozpoznać kodowania, część znaków zastąpiono."]
 
 
 def canonical_encoding(name: str) -> str:

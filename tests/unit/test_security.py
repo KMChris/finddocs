@@ -51,8 +51,8 @@ def test_redact_mapping_usuwa_naglowek_autoryzacji():
 def test_redact_mapping_zamienia_tresc_na_dlugosc():
     wynik = redact_mapping({"text": "tresc dokumentu", "snippet": "fragment"})
 
-    assert wynik["text"] == "<15 znakow>"
-    assert wynik["snippet"] == "<8 znakow>"
+    assert wynik["text"] == "<15 znaków>"
+    assert wynik["snippet"] == "<8 znaków>"
 
 
 def test_redact_mapping_zostawia_pola_diagnostyczne():
@@ -111,7 +111,7 @@ def test_redact_text_przycina_bardzo_dlugie_wartosci():
     wynik = redact_text("x" * 300)
 
     assert len(wynik) < 300
-    assert wynik.endswith("znakow]")
+    assert wynik.endswith("znaków]")
 
 
 def test_redact_text_nie_rusza_zwyklego_komunikatu():
@@ -127,7 +127,7 @@ def test_safe_url_usuwa_parametry_zapytania():
     wynik = safe_url(adres)
 
     assert "SEKRET" not in wynik
-    assert wynik == "https://graph.microsoft.com/v1.0/drives/x/items/y/content?[parametry usuniete]"
+    assert wynik == "https://graph.microsoft.com/v1.0/drives/x/items/y/content?[parametry usunięte]"
 
 
 def test_safe_url_usuwa_fragment_i_zostawia_adres_bez_parametrow():
@@ -206,7 +206,7 @@ def test_komunikaty_bledow_sa_po_polsku():
     polityka.enable(EgressCategory.MICROSOFT_GRAPH)
     with pytest.raises(NetworkPolicyError) as zly_schemat:
         polityka.check("http://graph.microsoft.com/v1.0/me", EgressCategory.MICROSOFT_GRAPH)
-    assert "Dozwolone jest wylacznie polaczenie https" in zly_schemat.value.user_message
+    assert "Dozwolone jest wyłącznie połączenie https" in zly_schemat.value.user_message
 
     with pytest.raises(NetworkPolicyError) as zly_host:
         polityka.check("https://example.com/x", EgressCategory.MICROSOFT_GRAPH)

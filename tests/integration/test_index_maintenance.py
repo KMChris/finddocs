@@ -135,7 +135,7 @@ def test_baza_z_nowsza_wersja_konczy_sie_bledem_migracji(tmp_path: Path) -> None
         with pytest.raises(MigrationError) as info:
             migrate(conn)
 
-        assert "nowsza niz obslugiwana" in info.value.user_message
+        assert "nowsza niż obsługiwana" in info.value.user_message
     finally:
         conn.close()
 
@@ -202,7 +202,7 @@ def test_check_consistency_wykrywa_osierocone_fragmenty(index_service: IndexServ
 
     assert raport.orphan_chunks == 2
     assert raport.is_healthy is False
-    assert any("bez dokumentu nadrzednego" in problem for problem in raport.problems)
+    assert any("bez dokumentu nadrzędnego" in problem for problem in raport.problems)
 
 
 # --- kopia zapasowa --------------------------------------------------------------
@@ -422,7 +422,7 @@ def test_ensure_free_space_rzuca_storage_space_error(
     with pytest.raises(StorageSpaceError) as info:
         ensure_free_space(tmp_home, 200 * 1024 * 1024)
 
-    assert "Za malo miejsca" in info.value.user_message
+    assert "Za mało miejsca" in info.value.user_message
     assert info.value.details["available"] == 5 * 1024 * 1024
 
 
@@ -436,7 +436,7 @@ def test_backup_index_rzuca_gdy_brakuje_miejsca(
     with pytest.raises(StorageSpaceError) as info:
         backup_index(tmp_home, label="kopia-bez-miejsca")
 
-    assert "Za malo miejsca" in info.value.user_message
+    assert "Za mało miejsca" in info.value.user_message
 
 
 def test_database_wykrywa_uszkodzenie_indeksu_fts(index_service: IndexService) -> None:

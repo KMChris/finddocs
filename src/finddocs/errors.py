@@ -13,7 +13,7 @@ class FindDocsError(Exception):
     """Bazowy wyjatek aplikacji."""
 
     code: str = "FD-0000"
-    default_message: str = "Wystapil nieoczekiwany blad aplikacji."
+    default_message: str = "Wystąpił nieoczekiwany błąd aplikacji."
 
     def __init__(
         self,
@@ -42,7 +42,7 @@ class FindDocsError(Exception):
 
 class ConfigurationError(FindDocsError):
     code = "FD-1001"
-    default_message = "Konfiguracja aplikacji jest nieprawidlowa."
+    default_message = "Konfiguracja aplikacji jest nieprawidłowa."
 
 
 class StorageSpaceError(FindDocsError):
@@ -52,17 +52,17 @@ class StorageSpaceError(FindDocsError):
 
 class TemporaryStorageError(FindDocsError):
     code = "FD-1003"
-    default_message = "Nie udalo sie przygotowac przestrzeni tymczasowej."
+    default_message = "Nie udało się przygotować przestrzeni tymczasowej."
 
 
 class DependencyUnavailableError(FindDocsError):
     code = "FD-1004"
-    default_message = "Wymagany komponent nie jest dostepny w tym systemie."
+    default_message = "Wymagany komponent nie jest dostępny w tym systemie."
 
 
 class NetworkPolicyError(FindDocsError):
     code = "FD-1005"
-    default_message = "Polaczenie sieciowe zostalo zablokowane przez polityke aplikacji."
+    default_message = "Połączenie sieciowe zostało zablokowane przez politykę aplikacji."
 
 
 # --- zrodla danych -------------------------------------------------------------
@@ -70,29 +70,29 @@ class NetworkPolicyError(FindDocsError):
 
 class ConnectorError(FindDocsError):
     code = "FD-2000"
-    default_message = "Blad zrodla dokumentow."
+    default_message = "Błąd źródła dokumentów."
 
 
 class SourceUnavailableError(ConnectorError):
     code = "FD-2001"
-    default_message = "Zrodlo dokumentow jest niedostepne."
+    default_message = "Źródło dokumentów jest niedostępne."
 
 
 class AuthenticationError(ConnectorError):
     code = "FD-2002"
-    default_message = "Uwierzytelnienie nie powiodlo sie."
+    default_message = "Uwierzytelnienie nie powiodło się."
 
 
 class TransientConnectorError(ConnectorError):
     """Blad przejsciowy: warto ponowic probe."""
 
     code = "FD-2003"
-    default_message = "Chwilowy problem z polaczeniem. Sprobuj ponownie."
+    default_message = "Chwilowy problem z połączeniem. Spróbuj ponownie."
 
 
 class RateLimitedError(TransientConnectorError):
     code = "FD-2004"
-    default_message = "Zrodlo ograniczylo liczbe zapytan. Aplikacja odczeka i ponowi probe."
+    default_message = "Źródło ograniczyło liczbę zapytań. Aplikacja odczeka i ponowi próbę."
 
     def __init__(
         self,
@@ -108,7 +108,7 @@ class RateLimitedError(TransientConnectorError):
 
 class DownloadError(ConnectorError):
     code = "FD-2005"
-    default_message = "Nie udalo sie pobrac pliku ze zrodla."
+    default_message = "Nie udało się pobrać pliku ze źródła."
 
 
 # --- ekstrakcja ----------------------------------------------------------------
@@ -116,12 +116,12 @@ class DownloadError(ConnectorError):
 
 class ExtractionError(FindDocsError):
     code = "FD-3000"
-    default_message = "Nie udalo sie odczytac tresci dokumentu."
+    default_message = "Nie udało się odczytać treści dokumentu."
 
 
 class UnsupportedFormatError(ExtractionError):
     code = "FD-3001"
-    default_message = "Format pliku nie jest obslugiwany."
+    default_message = "Format pliku nie jest obsługiwany."
 
 
 class CorruptedFileError(ExtractionError):
@@ -131,12 +131,12 @@ class CorruptedFileError(ExtractionError):
 
 class PasswordProtectedError(ExtractionError):
     code = "FD-3003"
-    default_message = "Plik jest zabezpieczony haslem."
+    default_message = "Plik jest zabezpieczony hasłem."
 
 
 class EmptyDocumentError(ExtractionError):
     code = "FD-3004"
-    default_message = "Dokument nie zawiera tresci mozliwej do zaindeksowania."
+    default_message = "Dokument nie zawiera treści możliwej do zaindeksowania."
 
 
 class ExtractionTimeoutError(ExtractionError):
@@ -149,17 +149,17 @@ class ExtractionTimeoutError(ExtractionError):
 
 class OcrError(FindDocsError):
     code = "FD-4000"
-    default_message = "Blad rozpoznawania tekstu (OCR)."
+    default_message = "Błąd rozpoznawania tekstu (OCR)."
 
 
 class OcrEngineUnavailableError(OcrError):
     code = "FD-4001"
-    default_message = "Zaden silnik OCR nie jest dostepny."
+    default_message = "Żaden silnik OCR nie jest dostępny."
 
 
 class OcrCancelledError(OcrError):
     code = "FD-4002"
-    default_message = "Rozpoznawanie tekstu zostalo przerwane."
+    default_message = "Rozpoznawanie tekstu zostało przerwane."
 
 
 # --- indeks --------------------------------------------------------------------
@@ -167,13 +167,13 @@ class OcrCancelledError(OcrError):
 
 class IndexError_(FindDocsError):
     code = "FD-5000"
-    default_message = "Blad indeksu."
+    default_message = "Błąd indeksu."
 
 
 class IndexIncompatibleError(IndexError_):
     code = "FD-5001"
     default_message = (
-        "Istniejacy indeks nie jest zgodny z biezaca konfiguracja. Wymagana jest przebudowa."
+        "Istniejący indeks nie jest zgodny z bieżąca konfiguracja. Wymagana jest przebudowa."
     )
 
 
@@ -184,7 +184,7 @@ class IndexCorruptedError(IndexError_):
 
 class MigrationError(IndexError_):
     code = "FD-5003"
-    default_message = "Migracja schematu indeksu nie powiodla sie."
+    default_message = "Migracja schematu indeksu nie powiodła się."
 
 
 # --- embeddingi ----------------------------------------------------------------
@@ -192,12 +192,12 @@ class MigrationError(IndexError_):
 
 class ProviderError(FindDocsError):
     code = "FD-6000"
-    default_message = "Blad dostawcy embeddingow."
+    default_message = "Błąd dostawcy embeddingów."
 
 
 class ModelNotAvailableError(ProviderError):
     code = "FD-6001"
-    default_message = "Model embeddingow nie jest dostepny lokalnie."
+    default_message = "Model embeddingów nie jest dostępny lokalnie."
 
 
 class ModelIntegrityError(ProviderError):
@@ -210,17 +210,17 @@ class ModelIntegrityError(ProviderError):
 
 class SearchError(FindDocsError):
     code = "FD-7000"
-    default_message = "Blad wyszukiwania."
+    default_message = "Błąd wyszukiwania."
 
 
 class QuerySyntaxError(SearchError):
     code = "FD-7001"
-    default_message = "Zapytanie ma nieprawidlowa skladnie."
+    default_message = "Zapytanie ma nieprawidłowa składnię."
 
 
 class SearchCancelledError(SearchError):
     code = "FD-7002"
-    default_message = "Wyszukiwanie zostalo przerwane."
+    default_message = "Wyszukiwanie zostało przerwane."
 
 
 # --- zadania -------------------------------------------------------------------
@@ -228,17 +228,17 @@ class SearchCancelledError(SearchError):
 
 class JobError(FindDocsError):
     code = "FD-8000"
-    default_message = "Blad zadania w tle."
+    default_message = "Błąd zadania w tle."
 
 
 class JobCancelledError(JobError):
     code = "FD-8001"
-    default_message = "Zadanie zostalo anulowane."
+    default_message = "Zadanie zostało anulowane."
 
 
 class CredentialStoreError(FindDocsError):
     code = "FD-9001"
-    default_message = "Nie udalo sie zapisac lub odczytac poswiadczen."
+    default_message = "Nie udało się zapisać lub odczytać poświadczeń."
 
 
 __all__ = [
