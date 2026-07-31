@@ -303,15 +303,19 @@ class FtsIndex:
         if query.is_empty() or limit <= 0:
             return []
         condition = build_filter_sql(filters)
+        # SQLite nie pozwala uzyc bm25 w zapytaniu z GROUP BY. Ranking liczymy wiec
+        # w wyrazeniu CTE oznaczonym jako MATERIALIZED, zeby planer go nie splaszczyl,
+        # a agregacje na poziomie dokumentu robimy warstwe wyzej.
         sql = (
-            "SELECT c.doc_id AS doc_id,"
-            "       MIN(bm25(chunks_fts, ?, ?)) AS score,"
-            "       COUNT(*) AS matching_chunks"
-            " FROM chunks_fts"
-            " JOIN chunks c ON c.chunk_id = chunks_fts.rowid"
-            " JOIN documents d ON d.doc_id = c.doc_id"
-            " WHERE chunks_fts MATCH ? AND " + condition.sql + " GROUP BY c.doc_id"
-            " ORDER BY score ASC, c.doc_id ASC"
+            "WITH matched AS MATERIALIZED ("
+            "  SELECT c.doc_id AS doc_id, bm25(chunks_fts, ?, ?) AS score"
+            "  FROM chunks_fts"
+            "  JOIN chunks c ON c.chunk_id = chunks_fts.rowid"
+            "  JOIN documents d ON d.doc_id = c.doc_id"
+            "  WHERE chunks_fts MATCH ? AND " + condition.sql + ")"
+            " SELECT doc_id, MIN(score) AS score, COUNT(*) AS matching_chunks"
+            " FROM matched GROUP BY doc_id"
+            " ORDER BY score ASC, doc_id ASC"
             " LIMIT ? OFFSET ?"
         )
         params: list[Any] = [
@@ -390,21 +394,23 @@ class FtsIndex:
         if query.is_empty() or not doc_ids:
             return {}
         placeholders = ",".join("?" * len(doc_ids))
+        # Funkcja bm25 musi zostac policzona w najglebszym zapytaniu, bo SQLite nie
+        # pozwala uzywac jej razem z funkcjami okna ani z GROUP BY.
         sql = (
-            "SELECT chunk_id, doc_id, score FROM ("
+            "WITH matched AS MATERIALIZED ("
             "  SELECT chunks_fts.rowid AS chunk_id, c.doc_id AS doc_id,"
-            "         bm25(chunks_fts, ?, ?) AS score,"
-            "         ROW_NUMBER() OVER ("
-            "             PARTITION BY c.doc_id ORDER BY bm25(chunks_fts, ?, ?) ASC"
-            "         ) AS rn"
+            "         bm25(chunks_fts, ?, ?) AS score"
             "  FROM chunks_fts"
             "  JOIN chunks c ON c.chunk_id = chunks_fts.rowid"
             f"  WHERE chunks_fts MATCH ? AND c.doc_id IN ({placeholders})"
+            ")"
+            " SELECT chunk_id, doc_id, score FROM ("
+            "  SELECT chunk_id, doc_id, score,"
+            "         ROW_NUMBER() OVER (PARTITION BY doc_id ORDER BY score ASC) AS rn"
+            "  FROM matched"
             ") WHERE rn <= ? ORDER BY doc_id, score ASC"
         )
         params: list[Any] = [
-            BM25_WEIGHT_FOLDED,
-            BM25_WEIGHT_NORM,
             BM25_WEIGHT_FOLDED,
             BM25_WEIGHT_NORM,
             query.expression,

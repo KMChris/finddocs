@@ -206,14 +206,34 @@ class IndexingJob:
                     self._emit_progress()
                     continue
 
-                outcome = self._pipeline.process(
-                    connector,
-                    item,
-                    doc_id,
-                    workspace=self._require_workspace(),
-                    control=self.control,
-                    scan_id=scan_id,
-                )
+                try:
+                    outcome = self._pipeline.process(
+                        connector,
+                        item,
+                        doc_id,
+                        workspace=self._require_workspace(),
+                        control=self.control,
+                        scan_id=scan_id,
+                    )
+                except (JobCancelledError, StorageSpaceError):
+                    raise
+                except Exception as exc:  # noqa: BLE001 - ostatnia bariera dla jednego pliku
+                    log.error(
+                        "job.document_failed",
+                        doc_id=doc_id,
+                        error_type=type(exc).__name__,
+                    )
+                    self.snapshot.failed += 1
+                    self.index.repository.log_error(
+                        stage="pipeline",
+                        code="FD-8002",
+                        doc_id=doc_id,
+                        file_name=item.name,
+                        source_id=source.source_id,
+                        message=f"Blad przetwarzania: {type(exc).__name__}",
+                    )
+                    self._emit_progress()
+                    continue
                 self._apply_outcome(outcome)
                 since_checkpoint += 1
 
@@ -276,7 +296,11 @@ class IndexingJob:
         status = outcome.status  # type: ignore[attr-defined]
         if status in {DocumentStatus.INDEXED, DocumentStatus.PARTIAL}:
             self.snapshot.processed += 1
-        elif status is DocumentStatus.SKIPPED:
+        elif status in {
+            DocumentStatus.SKIPPED,
+            DocumentStatus.EMPTY,
+            DocumentStatus.UNSUPPORTED,
+        }:
             self.snapshot.skipped += 1
         else:
             self.snapshot.failed += 1

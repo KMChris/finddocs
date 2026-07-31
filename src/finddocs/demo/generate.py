@@ -405,6 +405,16 @@ _PDF_LEFT: Final = 56
 _PDF_LINES_PER_PAGE: Final = 46
 _PDF_WRAP_WIDTH: Final = 92
 
+#: Znak z obszaru prywatnego zastepujacy spacje, ktorych nie wolno zlamac.
+_KEEP_TOGETHER: Final = chr(0xE000)
+
+#: Frazy, ktore musza zostac w jednej linii, zeby zapytania dokladne dzialaly.
+_UNBREAKABLE: Final[tuple[str, ...]] = (
+    ACCOUNT_SPACED,
+    ACCOUNT_B_SPACED,
+    ACCOUNT_TECH_SPACED,
+)
+
 
 def _pdf_encode_line(text: str) -> bytes:
     """Koduje jedna linie tekstu do postaci literalu PDF."""
@@ -503,14 +513,21 @@ def _assemble_pdf(objects: list[bytes], *, root: int, info: int | None = None) -
 
 
 def _pdf_wrap(paragraphs: list[str]) -> list[str]:
-    """Lamie akapity na linie mieszczace sie na stronie."""
+    """Lamie akapity na linie mieszczace sie na stronie.
+
+    Numery rachunkow sa chronione przed podzialem, zeby zapytania dokladne
+    trafialy na ciagly zapis numeru w jednej linii.
+    """
     lines: list[str] = []
     for paragraph in paragraphs:
         if not paragraph:
             lines.append("")
             continue
-        wrapped = textwrap.wrap(paragraph, width=_PDF_WRAP_WIDTH)
-        lines.extend(wrapped or [""])
+        guarded = paragraph
+        for phrase in _UNBREAKABLE:
+            guarded = guarded.replace(phrase, phrase.replace(" ", _KEEP_TOGETHER))
+        wrapped = textwrap.wrap(guarded, width=_PDF_WRAP_WIDTH)
+        lines.extend(line.replace(_KEEP_TOGETHER, " ") for line in wrapped or [""])
         lines.append("")
     return lines
 
@@ -566,9 +583,7 @@ def build_text_pdf(title: str, paragraphs: list[str], *, created: _dt.datetime) 
 
 def build_image_pdf(jpeg: bytes, *, width: int, height: int) -> bytes:
     """Buduje dokument PDF z osadzonym obrazem JPEG, bez warstwy tekstowej."""
-    content = (
-        f"q {_PDF_PAGE_WIDTH} 0 0 {_PDF_PAGE_HEIGHT} 0 0 cm /Im1 Do Q\n"
-    ).encode("latin-1")
+    content = (f"q {_PDF_PAGE_WIDTH} 0 0 {_PDF_PAGE_HEIGHT} 0 0 cm /Im1 Do Q\n").encode("latin-1")
     image_dict = (
         f"<< /Type /XObject /Subtype /Image /Width {width} /Height {height} "
         f"/ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length {len(jpeg)} >>"
@@ -986,8 +1001,11 @@ def _build_umowy(root: Path) -> None:
             "pomiędzy oboma klientami banku.",
             "Spłata rat następuje z rachunku poręczyciela " + ACCOUNT_DASHED + " w przypadku "
             "braku środków na rachunku kredytobiorcy " + ACCOUNT_B_SPACED + ".",
-            "Umowę w imieniu kredytobiorcy podpisał " + PERSON_D + ", a ze strony banku "
-            + PERSON_C + ".",
+            "Umowę w imieniu kredytobiorcy podpisał "
+            + PERSON_D
+            + ", a ze strony banku "
+            + PERSON_C
+            + ".",
             "Zabezpieczeniem kredytu jest weksel własny in blanco wraz z deklaracją wekslową.",
             DISCLAIMER,
         ],
@@ -1014,17 +1032,14 @@ def _build_umowy(root: Path) -> None:
         [
             "POROZUMIENIE ROZLICZENIOWE",
             "",
-            f"zawarte w dniu 24 lipca 2015 r. (24.07.2015) pomiędzy {CLIENT_A} "
-            f"a {CLIENT_B}.",
+            f"zawarte w dniu 24 lipca 2015 r. (24.07.2015) pomiędzy {CLIENT_A} a {CLIENT_B}",
             "",
             f"1. Strony ustalają, że rozliczenia wzajemne są prowadzone przez rachunek "
-            f"{ACCOUNT_SPACED} prowadzony przez {BANK}.",
+            f"{ACCOUNT_SPACED} prowadzony przez {BANK}",
             f"2. Podstawą rozliczenia jest faktura {INVOICE_ID} wystawiona za usługi "
             "wykonane w lipcu 2015 r.",
-            "3. Kwota bezsporna wynosi 12 400,00 zł i zostanie zapłacona w terminie "
-            "siedmiu dni.",
-            "4. Kwota sporna 314 zł dotyczy opłaty dodatkowej i podlega dalszym "
-            "uzgodnieniom.",
+            "3. Kwota bezsporna wynosi 12 400,00 zł i zostanie zapłacona w terminie siedmiu dni.",
+            "4. Kwota sporna 314 zł dotyczy opłaty dodatkowej i podlega dalszym uzgodnieniom.",
             "5. Porozumienie nie zmienia zabezpieczeń ustanowionych w umowie kredytu "
             f"{CONTRACT_CREDIT}.",
             "",
@@ -1037,6 +1052,13 @@ def _build_umowy(root: Path) -> None:
     target = root / "umowy" / "porozumienie-rozliczeniowe.pdf"
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_bytes(pdf)
+
+
+def _disclaimer_row(columns: int) -> list[str]:
+    """Wiersz stopki tabeli z informacja o fikcyjnosci danych."""
+    row = [""] * columns
+    row[1 if columns > 1 else 0] = DISCLAIMER
+    return row
 
 
 def _transaction_columns() -> list[str]:
@@ -1115,6 +1137,7 @@ def _build_transakcje(root: Path, rng: random.Random) -> None:
                 ),
             ]
         )
+    rows_a_2015.append(_disclaimer_row(len(header)))
     _write_csv(root / "transakcje" / "klientA" / "transakcje-2015-07.csv", header, rows_a_2015)
 
     rows_a_2007: list[list[str]] = [
@@ -1159,6 +1182,7 @@ def _build_transakcje(root: Path, rng: random.Random) -> None:
             BANK,
         ],
     ]
+    rows_a_2007.append(_disclaimer_row(len(header)))
     _write_csv(
         root / "transakcje" / "klientA" / "transakcje-2007-05.csv",
         header,
@@ -1224,9 +1248,17 @@ def _build_transakcje(root: Path, rng: random.Random) -> None:
                 ),
             ]
         )
+    rows_b_2015.append(_disclaimer_row(len(header)))
     _write_csv(root / "transakcje" / "klientB" / "transakcje-2015-07.csv", header, rows_b_2015)
 
     kontrahenci = [
+        [
+            CLIENT_B,
+            "00-B-9902",
+            ACCOUNT_B_SPACED,
+            "podmiot zestawienia",
+            "2005-04-12",
+        ],
         [
             CLIENT_A,
             "00-A-4471",
@@ -1291,9 +1323,7 @@ def _build_korespondencja(root: Path) -> None:
         sender=f"{BANK} <powiadomienia@bank-testowy.example>",
         recipients=[f"Księgowość {CLIENT_A} <ksiegowosc@acme-polska.example>"],
         subject="Potwierdzenie przelewu z dnia 24.07.2015",
-        moment=_dt.datetime(
-            2015, 7, 24, 10, 12, tzinfo=_dt.timezone(_dt.timedelta(hours=2))
-        ),
+        moment=_dt.datetime(2015, 7, 24, 10, 12, tzinfo=_dt.timezone(_dt.timedelta(hours=2))),
         body=[
             "Dzień dobry,",
             "",
@@ -1318,9 +1348,7 @@ def _build_korespondencja(root: Path) -> None:
         sender=f"{PERSON_A} <jan.kowalski@acme-polska.example>",
         recipients=[f"{PERSON_B} <anna.nowak@bank-testowy.example>"],
         subject="Zapytanie o księgowania z 05.05.2007",
-        moment=_dt.datetime(
-            2007, 5, 6, 8, 41, tzinfo=_dt.timezone(_dt.timedelta(hours=2))
-        ),
+        moment=_dt.datetime(2007, 5, 6, 8, 41, tzinfo=_dt.timezone(_dt.timedelta(hours=2))),
         body=[
             "Dzień dobry Pani Anno,",
             "",
@@ -1478,16 +1506,13 @@ def _build_problemy(root: Path, rng: random.Random) -> None:
     broken += bytes(rng.randrange(256) for _ in range(4096))
     (folder / "uszkodzony-raport.pdf").write_bytes(bytes(broken))
     (folder / "pusty-dokument.txt").write_bytes(b"")
-    _write_text(
-        folder / "dane-eksportu.xyz",
-        [
-            "FDX1;eksport;2015-07-31",
-            "@@nagłówek@@;wersja=2;strona=1",
-            "rekord|0001|wartość=124,50|status=OK",
-            "rekord|0002|wartość=98,00|status=OK",
-            "@@stopka@@;suma=222,50",
-        ],
-    )
+    # Wlasny format binarny nieznany aplikacji: bajty zerowe wykluczaja heurystyke tekstowa.
+    export = bytearray(b"FDX\x01\x00\x02\x00\x00")
+    for record in range(1, 25):
+        export += struct.pack("<HHI", record, rng.randrange(1, 900), rng.randrange(1, 10**6))
+        export += b"\x00\x1f"
+    export += b"\x00\x00FDXEND\x00"
+    (folder / "dane-eksportu.xyz").write_bytes(bytes(export))
     document_xml = (
         '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
         '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
@@ -1552,15 +1577,19 @@ def reference_queries() -> list[DemoQuery]:
         _query(
             "24.07.2015",
             "exact",
-            (DOC_PROC_PRZELEWY, DOC_POROZUMIENIE, DOC_MAIL_POTWIERDZENIE, DOC_RAPORT_XLSX,
-             DOC_RAPORT_HTML),
+            (
+                DOC_PROC_PRZELEWY,
+                DOC_POROZUMIENIE,
+                DOC_MAIL_POTWIERDZENIE,
+                DOC_RAPORT_XLSX,
+                DOC_RAPORT_HTML,
+            ),
             "Data w formacie dziennym, uzywana w procedurze przelewow.",
         ),
         _query(
             "2015-07-24",
             "exact",
-            (DOC_PROC_PRZELEWY, DOC_TRX_A_2015, DOC_TRX_B_2015, DOC_MAIL_POTWIERDZENIE,
-             DOC_RAPORT_CSV),
+            (DOC_PROC_PRZELEWY, DOC_TRX_A_2015, DOC_TRX_B_2015, DOC_MAIL_POTWIERDZENIE),
             "Ta sama data w formacie ISO, glownie w plikach transakcyjnych.",
         ),
         _query(
@@ -1572,8 +1601,13 @@ def reference_queries() -> list[DemoQuery]:
         _query(
             "05.05.2007",
             "exact",
-            (DOC_PROC_KSIEGOWANIE, DOC_ANEKS, DOC_TRX_A_2007, DOC_MAIL_ZAPYTANIE,
-             DOC_UMOWA_RACHUNKU),
+            (
+                DOC_PROC_KSIEGOWANIE,
+                DOC_ANEKS,
+                DOC_TRX_A_2007,
+                DOC_MAIL_ZAPYTANIE,
+                DOC_UMOWA_RACHUNKU,
+            ),
             "Data zdarzenia z 2007 roku, kluczowa dla zapytania o przebieg dnia.",
         ),
         _query(
@@ -1603,16 +1637,34 @@ def reference_queries() -> list[DemoQuery]:
         _query(
             CLIENT_A,
             "exact",
-            (DOC_PROC_AML, DOC_UMOWA_RACHUNKU, DOC_UMOWA_KREDYTU, DOC_ANEKS, DOC_POROZUMIENIE,
-             DOC_TRX_A_2007, DOC_TRX_B_2015, DOC_TRX_B_XLSX, DOC_MAIL_POTWIERDZENIE,
-             DOC_MAIL_ZAPYTANIE, DOC_RAPORT_CSV, DOC_RAPORT_HTML),
+            (
+                DOC_PROC_AML,
+                DOC_UMOWA_RACHUNKU,
+                DOC_UMOWA_KREDYTU,
+                DOC_ANEKS,
+                DOC_POROZUMIENIE,
+                DOC_TRX_A_2007,
+                DOC_TRX_B_2015,
+                DOC_TRX_B_XLSX,
+                DOC_MAIL_POTWIERDZENIE,
+                DOC_MAIL_ZAPYTANIE,
+                DOC_RAPORT_CSV,
+                DOC_RAPORT_HTML,
+            ),
             "Pelna nazwa klienta A jako fraza z kropkami i skrotami.",
         ),
         _query(
             "Nowak-Bud",
             "exact",
-            (DOC_PROC_AML, DOC_UMOWA_KREDYTU, DOC_POROZUMIENIE, DOC_TRX_A_2015,
-             DOC_TRX_B_XLSX, DOC_MAIL_ZAPYTANIE, DOC_RAPORT_CSV),
+            (
+                DOC_PROC_AML,
+                DOC_UMOWA_KREDYTU,
+                DOC_POROZUMIENIE,
+                DOC_TRX_A_2015,
+                DOC_TRX_B_XLSX,
+                DOC_MAIL_ZAPYTANIE,
+                DOC_RAPORT_CSV,
+            ),
             "Nazwa klienta B z myslnikiem w srodku wyrazu.",
         ),
         _query(
@@ -1624,8 +1676,13 @@ def reference_queries() -> list[DemoQuery]:
         _query(
             "314,00",
             "exact",
-            (DOC_PROC_REKLAMACJE, DOC_TRX_A_2015, DOC_TRX_A_2007, DOC_MAIL_ZAPYTANIE,
-             DOC_RAPORT_XLSX),
+            (
+                DOC_PROC_REKLAMACJE,
+                DOC_TRX_A_2015,
+                DOC_TRX_A_2007,
+                DOC_MAIL_ZAPYTANIE,
+                DOC_RAPORT_XLSX,
+            ),
             "Ta sama kwota w zapisie ksiegowym z przecinkiem dziesietnym.",
         ),
         _query(
@@ -1638,7 +1695,7 @@ def reference_queries() -> list[DemoQuery]:
             "płatność kartą",
             "exact",
             (DOC_PROC_REKLAMACJE, DOC_TRX_A_2015, DOC_RAPORT_XLSX, DOC_RAPORT_HTML),
-            "Frazа z polskimi znakami, w dokumentach wystepuje z wielkiej litery.",
+            "Fraza z polskimi znakami, w dokumentach wystepuje z wielkiej litery.",
         ),
         _query(
             "polecenie przelewu",
@@ -1661,8 +1718,7 @@ def reference_queries() -> list[DemoQuery]:
         _query(
             CONTRACT_CREDIT,
             "exact",
-            (DOC_UMOWA_KREDYTU, DOC_POROZUMIENIE, DOC_TRX_B_2015, DOC_TRX_B_XLSX,
-             DOC_RAPORT_CSV),
+            (DOC_UMOWA_KREDYTU, DOC_POROZUMIENIE, DOC_TRX_B_2015, DOC_TRX_B_XLSX, DOC_RAPORT_CSV),
             "Numer umowy kredytowej z ukosnikami.",
         ),
         _query(
@@ -1746,8 +1802,13 @@ def reference_queries() -> list[DemoQuery]:
         _query(
             f"Wyszukaj wszystkie transakcje z rachunku {ACCOUNT_SPACED}",
             "hybrid",
-            (DOC_TRX_A_2015, DOC_TRX_B_2015, DOC_RAPORT_XLSX, DOC_RAPORT_CSV,
-             DOC_MAIL_POTWIERDZENIE),
+            (
+                DOC_TRX_A_2015,
+                DOC_TRX_B_2015,
+                DOC_RAPORT_XLSX,
+                DOC_RAPORT_CSV,
+                DOC_MAIL_POTWIERDZENIE,
+            ),
             "Zapytanie ze specyfikacji: numer rachunku w zdaniu naturalnym.",
         ),
         _query(
@@ -1759,8 +1820,7 @@ def reference_queries() -> list[DemoQuery]:
         _query(
             "Czy klient A miał powiązania z klientem B?",
             "hybrid",
-            (DOC_RAPORT_CSV, DOC_UMOWA_KREDYTU, DOC_PROC_AML, DOC_TRX_B_XLSX,
-             DOC_POROZUMIENIE),
+            (DOC_RAPORT_CSV, DOC_UMOWA_KREDYTU, DOC_PROC_AML, DOC_TRX_B_XLSX, DOC_POROZUMIENIE),
             "Zapytanie ze specyfikacji: powiazania miedzy podmiotami.",
         ),
         _query(
@@ -1964,9 +2024,11 @@ def load_manifest(root: Path) -> DemoCorpusInfo | None:
         log.warning("demo.manifest_invalid", katalog=str(root))
         return None
     queries_raw = raw.get("zapytania_referencyjne", [])
-    queries = [
-        _query_from_dict(item) for item in queries_raw if isinstance(item, dict)
-    ] if isinstance(queries_raw, list) else []
+    queries = (
+        [_query_from_dict(item) for item in queries_raw if isinstance(item, dict)]
+        if isinstance(queries_raw, list)
+        else []
+    )
     extensions_raw = raw.get("pliki_wg_rozszerzenia", {})
     extensions = (
         {str(k): int(v) for k, v in extensions_raw.items()}

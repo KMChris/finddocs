@@ -188,6 +188,29 @@ class DocumentPipeline:
                 scan_id=scan_id,
                 workspace=workspace,
             )
+        except (JobCancelledError, StorageSpaceError):
+            raise
+        except FindDocsError as exc:
+            status = STATUS_BY_ERROR.get(type(exc), DocumentStatus.ERROR)
+            self._fail(doc_id, status, exc.code, exc.user_message, stage="process", item=item)
+            return DocumentOutcome(
+                doc_id=doc_id,
+                status=status,
+                error_code=exc.code,
+                error_message=exc.user_message,
+            )
+        except Exception as exc:  # noqa: BLE001 - blad jednego pliku nie konczy zadania
+            log.error(
+                "pipeline.unexpected_error", doc_id=doc_id, error_type=type(exc).__name__
+            )
+            message = f"Nieoczekiwany blad przetwarzania: {type(exc).__name__}."
+            self._fail(doc_id, DocumentStatus.ERROR, "FD-3000", message, stage="process", item=item)
+            return DocumentOutcome(
+                doc_id=doc_id,
+                status=DocumentStatus.ERROR,
+                error_code="FD-3000",
+                error_message=message,
+            )
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
 
@@ -299,9 +322,16 @@ class DocumentPipeline:
             except OcrEngineUnavailableError as exc:
                 warnings.append(exc.user_message)
                 log.warning("pipeline.ocr_unavailable", doc_id=doc_id)
-            except OcrError as exc:
+            except FindDocsError as exc:
+                # Tu trafiaja takze bledy rasteryzacji, np. uszkodzony plik PDF,
+                # ktorego nie da sie otworzyc. Nie moga zatrzymac calego zadania.
                 warnings.append(f"OCR nie powiodl sie: {exc.user_message}")
+                if extraction_error is None:
+                    extraction_error = exc
                 log.warning("pipeline.ocr_failed", doc_id=doc_id, code=exc.code)
+            except Exception as exc:  # noqa: BLE001 - silnik OCR moze zglosic dowolny blad
+                warnings.append("OCR nie powiodl sie z powodu nieoczekiwanego bledu.")
+                log.warning("pipeline.ocr_crashed", doc_id=doc_id, error_type=type(exc).__name__)
 
         if not sections:
             status, code, message = self._classify_failure(extraction_error, decision.describe())

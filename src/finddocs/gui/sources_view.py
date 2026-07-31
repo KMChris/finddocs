@@ -433,6 +433,7 @@ class SourcesView(QWidget):
                 kind=SourceKind.LOCAL_DIR,
                 label="Zbior demonstracyjny",
                 local=LocalDirSourceSettings(root_path=str(info.root)),
+                exclude_globs=["manifest.json"],
             )
             self.context.config = self.context.config.with_source(source)
             self.context.save()

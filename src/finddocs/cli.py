@@ -204,6 +204,7 @@ def cmd_demo(args: argparse.Namespace) -> int:
             kind=SourceKind.LOCAL_DIR,
             label="Zbior demonstracyjny",
             local=LocalDirSourceSettings(root_path=str(info.root)),
+            exclude_globs=["manifest.json"],
         )
         config = config.with_source(source)
         save_config(config, paths.config_file)
