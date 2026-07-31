@@ -387,11 +387,11 @@ def test_mark_all_for_reindex_kasuje_fragmenty_i_ustawia_status(
 
     assert liczba == 2
     assert index_service.repository.count_chunks() == 0
-    statusy = {
-        str(r["status"]) for r in index_service.db.query_all("SELECT status FROM documents")
-    }
+    statusy = {str(r["status"]) for r in index_service.db.query_all("SELECT status FROM documents")}
     assert statusy == {DocumentStatus.PENDING.value}
-    klucze = [r["change_key"] for r in index_service.db.query_all("SELECT change_key FROM documents")]
+    klucze = [
+        r["change_key"] for r in index_service.db.query_all("SELECT change_key FROM documents")
+    ]
     assert klucze == [None, None]
 
 
@@ -405,9 +405,7 @@ def test_mark_all_for_reindex_tylko_wektory_zachowuje_fragmenty(
     assert liczba == 1
     assert index_service.repository.count_chunks() == 2
     assert index_service.repository.count_vectors() == 0
-    statusy = {
-        str(r["status"]) for r in index_service.db.query_all("SELECT status FROM documents")
-    }
+    statusy = {str(r["status"]) for r in index_service.db.query_all("SELECT status FROM documents")}
     assert statusy == {DocumentStatus.INDEXED.value}
 
 

@@ -246,13 +246,9 @@ def test_budowa_source_item_z_drive_item() -> None:
     assert item.content_hash == "SKROT123"
     assert item.author == "Anna Kowalska"
     assert item.library == "Dokumenty"
-    assert item.web_url == (
-        "https://contoso.sharepoint.com/sites/Finanse/Dokumenty/umowa-2024.pdf"
-    )
+    assert item.web_url == ("https://contoso.sharepoint.com/sites/Finanse/Dokumenty/umowa-2024.pdf")
     assert item.created_at == _dt.datetime(2024, 3, 1, 8, 15, tzinfo=_dt.UTC)
-    assert item.modified_at == _dt.datetime(
-        2024, 5, 12, 11, 30, 45, 123456, tzinfo=_dt.UTC
-    )
+    assert item.modified_at == _dt.datetime(2024, 5, 12, 11, 30, 45, 123456, tzinfo=_dt.UTC)
     assert item.extra == {"drive_id": DRIVE_ID, "site_id": "site-1"}
 
 
@@ -453,7 +449,9 @@ def test_download_ponawia_po_503(tmp_path: Path) -> None:
 
 
 def test_polityka_blokuje_host_spoza_listy() -> None:
-    def handler(request: httpx.Request) -> httpx.Response:  # pragma: no cover - nie powinien zadzialac
+    def handler(
+        request: httpx.Request,
+    ) -> httpx.Response:  # pragma: no cover - nie powinien zadzialac
         raise AssertionError("Zapytanie nie powinno opuscic klienta.")
 
     client = build_client(handler)

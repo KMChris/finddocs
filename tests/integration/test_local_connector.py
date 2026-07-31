@@ -110,7 +110,11 @@ def test_filtr_rozszerzen_dozwolonych(tree: Path) -> None:
     connector = build_connector(tree, include_extensions=[".txt"])
     items = list(connector.iter_items())
 
-    assert paths_of(items) == ["a-umowa.txt", "archiwum/e-stara-umowa.txt", "podkatalog/c-notatka.txt"]
+    assert paths_of(items) == [
+        "a-umowa.txt",
+        "archiwum/e-stara-umowa.txt",
+        "podkatalog/c-notatka.txt",
+    ]
 
 
 def test_filtr_rozszerzen_wykluczonych(tree: Path) -> None:

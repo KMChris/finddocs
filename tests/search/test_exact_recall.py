@@ -9,13 +9,13 @@ wszystkich 17. Nie wolno ukrywac wynikow ani stosowac limitu w rodzaju
 from __future__ import annotations
 
 import pytest
+
 from conftest import (
     ACCOUNT_DOCUMENTS,
     ACCOUNT_VARIANTS,
     COMMON_WORD,
     SearchCorpus,
 )
-
 from finddocs.types import SearchFilters, SearchMode
 
 PAGE = 5
@@ -126,7 +126,9 @@ def test_filtr_nie_psuje_kompletnosci(corpus: SearchCorpus) -> None:
     assert expected, "korpus nie ma dokumentow z numerem rachunku w formacie pdf"
 
     response = corpus.search(ACCOUNT_VARIANTS[0], mode=SearchMode.EXACT, filters=filters, limit=100)
-    collected = corpus.paginate(ACCOUNT_VARIANTS[0], mode=SearchMode.EXACT, filters=filters, limit=2)
+    collected = corpus.paginate(
+        ACCOUNT_VARIANTS[0], mode=SearchMode.EXACT, filters=filters, limit=2
+    )
 
     assert response.total_documents == len(expected)
     assert set(collected) == expected

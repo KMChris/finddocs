@@ -18,6 +18,17 @@ from finddocs.indexing.service import IndexService
 from finddocs.providers.model_manifest import find_model_dir
 
 
+@pytest.fixture(autouse=True)
+def _interactive_dialogs(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Kasuje FINDDOCS_NO_DIALOG, zeby wynik testu nie zalezal od srodowiska.
+
+    Zmienna wylacza okna modalne w tescie dymnym zbudowanej aplikacji. Gdyby
+    zostala ustawiona w powloce, testy interfejsu przestalyby widziec komunikaty.
+    Test sprawdzajacy samo wyciszenie ustawia ja sobie sam.
+    """
+    monkeypatch.delenv("FINDDOCS_NO_DIALOG", raising=False)
+
+
 @pytest.fixture
 def tmp_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AppPaths:
     """Katalog danych aplikacji przeniesiony do tmp_path. Zwraca gotowe AppPaths."""

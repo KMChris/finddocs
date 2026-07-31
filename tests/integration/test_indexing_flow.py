@@ -86,9 +86,7 @@ def test_pierwsze_indeksowanie_liczy_wykryte_przetworzone_i_bledy(
     assert snapshot.unchanged == 0
     assert snapshot.discovery_complete is True
 
-    assert document_statuses(index_service) == dict.fromkeys(
-        CORPUS, DocumentStatus.INDEXED.value
-    )
+    assert document_statuses(index_service) == dict.fromkeys(CORPUS, DocumentStatus.INDEXED.value)
     assert index_service.repository.count_chunks() >= len(CORPUS)
     assert exact_search_count(index_service, "kolczatka") == 1
 
@@ -283,9 +281,7 @@ def test_checkpoint_pozwala_dokonczyc_przerwane_zadanie(
     assert drugi.discovered == len(pliki) - 2
     assert drugi.processed == len(pliki)
 
-    assert document_statuses(index_service) == dict.fromkeys(
-        pliki, DocumentStatus.INDEXED.value
-    )
+    assert document_statuses(index_service) == dict.fromkeys(pliki, DocumentStatus.INDEXED.value)
     proby = index_service.db.query_all("SELECT name, attempt_count FROM documents")
     # Kazdy dokument zostal przetworzony dokladnie raz, nic nie liczylo sie dwa razy.
     assert {int(row["attempt_count"]) for row in proby} == {1}

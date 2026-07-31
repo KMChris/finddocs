@@ -8,6 +8,7 @@ wraz z polityka ponawiania prob.
 from __future__ import annotations
 
 import hashlib
+import itertools
 import random
 import threading
 import time
@@ -37,16 +38,13 @@ from finddocs.types import (
 #: Dokumenty uzywane w testach bledow.
 CORPUS: dict[str, str] = {
     "alfa.txt": (
-        "Notatka pierwsza z przegladu procedur.\n"
-        "Slowo rozpoznawcze tego dokumentu to kolczatka.\n"
+        "Notatka pierwsza z przegladu procedur.\nSlowo rozpoznawcze tego dokumentu to kolczatka.\n"
     ),
     "beta.txt": (
-        "Notatka druga z przegladu procedur.\n"
-        "Slowo rozpoznawcze tego dokumentu to wiewiorka.\n"
+        "Notatka druga z przegladu procedur.\nSlowo rozpoznawcze tego dokumentu to wiewiorka.\n"
     ),
     "gamma.txt": (
-        "Notatka trzecia z przegladu procedur.\n"
-        "Slowo rozpoznawcze tego dokumentu to jezozwierz.\n"
+        "Notatka trzecia z przegladu procedur.\nSlowo rozpoznawcze tego dokumentu to jezozwierz.\n"
     ),
 }
 
@@ -66,13 +64,14 @@ def corpus(tmp_path: Path) -> Path:
 def test_brak_miejsca_konczy_zadanie_stanem_failed(
     indexing_config: Callable[..., AppConfig],
     index_service: IndexService,
+    run_job: Callable[..., ProgressSnapshot],
     corpus: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     config = indexing_config(corpus)
     monkeypatch.setattr(AppPaths, "free_space_bytes", lambda self: 16 * 1024 * 1024)
 
-    snapshot = run_indexing_job(config, index_service)
+    snapshot = run_job(config, index_service)
 
     assert snapshot.state is JobState.FAILED
     assert snapshot.message is not None
@@ -97,6 +96,8 @@ def test_brak_miejsca_konczy_zadanie_stanem_failed(
 def test_uszkodzony_plik_tymczasowy_nie_przerywa_zadania(
     indexing_config: Callable[..., AppConfig],
     index_service: IndexService,
+    run_job: Callable[..., ProgressSnapshot],
+    document_statuses: Callable[[IndexService], dict[str, str]],
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -129,7 +130,7 @@ def test_uszkodzony_plik_tymczasowy_nie_przerywa_zadania(
 
     monkeypatch.setattr(LocalDirectoryConnector, "fetch", zepsute_pobranie)
 
-    snapshot = run_indexing_job(config, index_service)
+    snapshot = run_job(config, index_service)
 
     assert snapshot.state is JobState.COMPLETED
     assert snapshot.discovered == 2
@@ -147,6 +148,8 @@ def test_uszkodzony_plik_tymczasowy_nie_przerywa_zadania(
 def test_blad_jednego_parsera_nie_zatrzymuje_pozostalych(
     indexing_config: Callable[..., AppConfig],
     index_service: IndexService,
+    run_job: Callable[..., ProgressSnapshot],
+    document_statuses: Callable[[IndexService], dict[str, str]],
     corpus: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -169,7 +172,7 @@ def test_blad_jednego_parsera_nie_zatrzymuje_pozostalych(
 
     monkeypatch.setattr(ExtractorRegistry, "extract", wybuchowy)
 
-    snapshot = run_indexing_job(config, index_service)
+    snapshot = run_job(config, index_service)
 
     assert snapshot.state is JobState.COMPLETED
     assert snapshot.processed == len(CORPUS) - 1
@@ -241,7 +244,7 @@ def test_job_control_anulowanie_przerywa_oczekiwanie() -> None:
     def robotnik() -> None:
         try:
             control.wait_if_paused()
-        except BaseException as exc:  # noqa: BLE001 - zapisujemy wyjatek do asercji
+        except BaseException as exc:
             blad.append(exc)
 
     watek = threading.Thread(target=robotnik, name="anulowanie-test")
@@ -281,7 +284,7 @@ def test_retry_policy_opoznienia_rosna_wykladniczo_i_sa_ograniczone() -> None:
     opoznienia = [policy.delay_for(numer) for numer in range(1, 7)]
 
     assert opoznienia == [0.0, 2.0, 4.0, 8.0, 10.0, 10.0]
-    assert all(b >= a for a, b in zip(opoznienia, opoznienia[1:], strict=True))
+    assert all(b >= a for a, b in itertools.pairwise(opoznienia))
     assert max(opoznienia) <= policy.max_delay
 
 

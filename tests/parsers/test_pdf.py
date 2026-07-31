@@ -43,9 +43,7 @@ def test_sekcje_odpowiadaja_stronom(multipage_pdf: Path, context: ExtractionCont
     assert result.total_pages >= 2
     assert result.metadata.page_count == result.total_pages
     assert all(section.kind == "page" for section in result.sections)
-    assert [section.page for section in result.sections] == list(
-        range(1, len(result.sections) + 1)
-    )
+    assert [section.page for section in result.sections] == list(range(1, len(result.sections) + 1))
     assert_polish(result.all_text())
 
 
@@ -102,9 +100,7 @@ def test_uszkodzony_plik(broken_pdf: Path, context: ExtractionContext) -> None:
     assert info.value.code == "FD-3002"
 
 
-def test_pusty_plik(
-    write_file: Callable[[str, bytes], Path], context: ExtractionContext
-) -> None:
+def test_pusty_plik(write_file: Callable[[str, bytes], Path], context: ExtractionContext) -> None:
     """Plik zerowej dlugosci z rozszerzeniem pdf tez jest bledem odczytu."""
     path = write_file("pusty.pdf", b"")
 

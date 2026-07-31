@@ -37,8 +37,32 @@ def test_startup_note_is_shown_without_model(
 ) -> None:
     """Brak modelu jest zglaszany przy starcie jako uwaga, a nie jako blad."""
     assert main_window.context.startup_notes
+    # Konstruktor nie otwiera zadnego okna, inaczej okno modalne wisialoby nad pustym
+    # ekranem. Komunikaty pokazuje dopiero jawne wywolanie po ``show()``.
+    assert message_boxes == []
+
+    main_window.run_startup_checks()
+
     assert message_boxes, "Uwagi startowe powinny pojawic sie w oknie komunikatu."
-    assert "wyszukiwanie dokladne" in message_boxes[0].text()
+    text = message_boxes[0].text()
+    assert "Tryb dokladny dziala normalnie" in text
+    # Brak modelu nie uniewaznia indeksu pelnotekstowego, wiec nie straszymy przebudowa.
+    assert main_window.context.rebuild_required is False
+    assert message_boxes[0].windowTitle() == i18n.STARTUP_NOTES_TITLE
+
+
+@pytest.mark.gui
+def test_startup_notes_suppressed_in_headless_mode(
+    main_window: MainWindow,
+    message_boxes: list[QMessageBox],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Z ``FINDDOCS_NO_DIALOG=1`` okna nie blokuja uruchomienia bez uzytkownika."""
+    monkeypatch.setenv("FINDDOCS_NO_DIALOG", "1")
+
+    main_window.run_startup_checks()
+
+    assert message_boxes == []
 
 
 @pytest.mark.gui

@@ -139,9 +139,7 @@ def exact_search_count() -> Callable[[IndexService, str], int]:
     """Zwraca funkcje liczaca dokumenty znalezione w trybie dokladnym."""
 
     def count(index: IndexService, query: str) -> int:
-        response = SearchService(index).search(
-            SearchRequest(query=query, mode=SearchMode.EXACT)
-        )
+        response = SearchService(index).search(SearchRequest(query=query, mode=SearchMode.EXACT))
         return response.total_documents
 
     return count

@@ -345,7 +345,9 @@ DOC_WORD_STREAM = "WordDocument"
 DOC_TABLE_STREAM = "1Table"
 
 
-def build_word_fib(pieces: list[tuple[str, bool]], *, encrypted: bool = False) -> tuple[bytes, bytes]:
+def build_word_fib(
+    pieces: list[tuple[str, bool]], *, encrypted: bool = False
+) -> tuple[bytes, bytes]:
     """Sklada strumienie WordDocument i 1Table dla pliku .doc.
 
     ``pieces`` to lista par (tekst, czy_jednobajtowy). Fragment jednobajtowy jest

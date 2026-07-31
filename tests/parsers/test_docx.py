@@ -41,9 +41,7 @@ def test_polskie_znaki_w_tabeli(sample_docx: Path, context: ExtractionContext) -
     assert_polish(result.all_text())
 
 
-def test_naglowek_tabeli_i_numeracja_wierszy(
-    sample_docx: Path, context: ExtractionContext
-) -> None:
+def test_naglowek_tabeli_i_numeracja_wierszy(sample_docx: Path, context: ExtractionContext) -> None:
     """Pierwszy wiersz tabeli jest naglowkiem, a wiersze danych numerowane od dwojki."""
     result = DocxExtractor().extract(sample_docx, context)
 
@@ -106,9 +104,7 @@ def test_uszkodzony_zip(
     assert info.value.code == "FD-3002"
 
 
-def test_archiwum_bez_czesci_worda(
-    docs_dir: Path, context: ExtractionContext
-) -> None:
+def test_archiwum_bez_czesci_worda(docs_dir: Path, context: ExtractionContext) -> None:
     """Poprawne archiwum ZIP bez czesci word/document.xml nie jest pakietem Word."""
     path = docs_dir / "obce.docx"
     with zipfile.ZipFile(path, "w") as archive:

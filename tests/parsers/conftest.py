@@ -80,7 +80,9 @@ def make_text_pdf(write_file: Callable[[str, bytes], Path]) -> Callable[..., Pat
     """Tworzy PDF z warstwa tekstowa i metadanymi."""
     from finddocs.demo.generate import build_text_pdf
 
-    def _make(name: str = "umowa.pdf", paragraphs: list[str] | None = None, **kwargs: object) -> Path:
+    def _make(
+        name: str = "umowa.pdf", paragraphs: list[str] | None = None, **kwargs: object
+    ) -> Path:
         title = str(kwargs.get("title", "Umowa testowa"))
         content = paragraphs if paragraphs is not None else _default_pdf_paragraphs()
         return write_file(name, build_text_pdf(title, content, created=FIXED_MOMENT))
@@ -443,7 +445,9 @@ def make_protected_zip(docs_dir: Path) -> Callable[..., Path]:
     """Tworzy archiwum ZIP z klasycznym szyfrowaniem kazdego wpisu."""
     from finddocs.demo.generate import write_protected_zip
 
-    def _make(name: str = "zabezpieczony.zip", entries: list[tuple[str, bytes]] | None = None) -> Path:
+    def _make(
+        name: str = "zabezpieczony.zip", entries: list[tuple[str, bytes]] | None = None
+    ) -> Path:
         target = docs_dir / name
         write_protected_zip(
             target,
