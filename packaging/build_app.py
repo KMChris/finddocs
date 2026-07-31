@@ -81,13 +81,15 @@ def find_model(model_key: str) -> Path | None:
     return None
 
 
-def run_pyinstaller(*, console: bool, model_dir: Path | None) -> Path:
+def run_pyinstaller(*, console: bool, model_dir: Path | None, full_precision: bool = False) -> Path:
     print("[3/6] Uruchamianie PyInstaller")
     env = dict(os.environ)
     env["FINDDOCS_BUILD_CONSOLE"] = "1" if console else "0"
     if model_dir is not None:
         env["FINDDOCS_BUNDLE_MODEL"] = str(model_dir)
-        print(f"    Dolaczam model: {model_dir}")
+        env["FINDDOCS_BUNDLE_QUANTIZED"] = "0" if full_precision else "1"
+        wariant = "FP32 i INT8" if full_precision else "INT8"
+        print(f"    Dolaczam model ({wariant}): {model_dir}")
     command = [
         sys.executable,
         "-m",
@@ -173,6 +175,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--with-model", action="store_true", help="dolacz model embeddingow do pakietu"
     )
+    parser.add_argument(
+        "--full-precision-model",
+        action="store_true",
+        help="dolacz takze wagi FP32 modelu, pakiet urosnie o okolo 470 MB",
+    )
     parser.add_argument("--model-key", default=DEFAULT_MODEL_KEY)
     parser.add_argument(
         "--console", action="store_true", help="wariant z konsola, tylko do diagnostyki"
@@ -192,7 +199,9 @@ def main(argv: list[str] | None = None) -> int:
                 "tools/export_model_onnx.py albo pomin opcje --with-model."
             )
 
-    app_dir = run_pyinstaller(console=args.console, model_dir=model_dir)
+    app_dir = run_pyinstaller(
+        console=args.console, model_dir=model_dir, full_precision=args.full_precision_model
+    )
     copy_extra_files(app_dir)
 
     ok = True

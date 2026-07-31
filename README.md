@@ -101,6 +101,11 @@ wykonywalnym i wykonuje test dymny. Drugie buduje instalator przy pomocy
 Inno Setup 6. Gdy Inno Setup nie jest zainstalowany, skrypt wypisuje instrukcję
 instalacji zamiast kończyć pracę bez komunikatu.
 
+Rozmiary wyniku: 409 MB bez modelu, 534 MB z modelem w wersji INT8,
+191 MB dla samego instalatora. Przełącznik `--full-precision-model` dokłada
+wagi FP32, co powiększa pakiet o około 470 MB i nie jest potrzebne do
+domyślnej konfiguracji.
+
 ## Architektura w skrócie
 
 ```

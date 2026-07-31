@@ -35,10 +35,18 @@ datas = [
     (str(RESOURCES), "finddocs/resources"),
 ]
 
+# Model dolaczamy plik po pliku, zeby pominac warianty wag, ktorych aplikacja
+# nie uzywa. Katalog modelu zawiera zwykle i wersje FP32, i skwantyzowana INT8;
+# dolaczenie obu podwaja rozmiar instalatora bez zadnego zysku.
+MODEL_SKIP = {"model.onnx"} if os.environ.get("FINDDOCS_BUNDLE_QUANTIZED", "1") == "1" else set()
+
 if MODEL_DIR:
     model_path = Path(MODEL_DIR)
     if model_path.is_dir():
-        datas.append((str(model_path), f"finddocs/resources/models/{model_path.parent.name}"))
+        target = f"finddocs/resources/models/{model_path.parent.name}"
+        for item in sorted(model_path.iterdir()):
+            if item.is_file() and item.name not in MODEL_SKIP:
+                datas.append((str(item), target))
 
 binaries = []
 binaries += collect_dynamic_libs("onnxruntime")

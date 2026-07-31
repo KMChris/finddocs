@@ -52,8 +52,12 @@ Dobre:
 
 Kosztowne:
 
-* katalog aplikacji ma około 409 MB w 948 plikach. To cena za zależności
-  binarne, a przy trybie onefile byłaby podobna, tylko ukryta;
+* katalog aplikacji ma około 409 MB w 974 plikach bez modelu i 534 MB w 982
+  plikach z modelem. Instalator zajmuje 191 MB. To cena za zależności binarne,
+  a przy trybie onefile byłaby podobna, tylko ukryta;
+* katalog modelu zawiera zarówno wagi FP32, jak i INT8. Do pakietu trafiają
+  domyślnie tylko INT8, bo dołączenie obu podwoiłoby rozmiar bez żadnego zysku.
+  Wagi FP32 dokłada przełącznik `--full-precision-model`;
 * PyInstaller wymaga jawnej pomocy przy zależnościach binarnych. Konkretny
   przypadek: numpy 2.x nie jest zbierany w całości domyślnie, a objawia się to
   błędem `No module named 'numpy._core._exceptions'`, którego komunikat myli,

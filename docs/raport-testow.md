@@ -6,13 +6,13 @@ Stan na 31 lipca 2026, wersja aplikacji 0.1.0.
 
 | Miara | Wartość |
 | --- | --- |
-| Liczba testów | 734 |
-| Wynik | 734 zaliczone, 0 niezaliczonych, 0 pominiętych |
+| Liczba testów | 836 |
+| Wynik | 836 zaliczonych, 0 niezaliczonych, 0 pominiętych |
 | Czas przebiegu | 26 s |
 | Pokrycie kodu `src/finddocs` | 73 procent instrukcji |
 | Kontrola stylu (`ruff check`) | bez zastrzeżeń |
-| Formatowanie (`ruff format --check`) | 145 plików zgodnych |
-| Kontrola typów (`mypy src`) | bez zastrzeżeń, 102 pliki |
+| Formatowanie (`ruff format --check`) | 147 plików zgodnych |
+| Kontrola typów (`mypy src`) | bez zastrzeżeń, 103 pliki |
 
 Uruchomienie:
 
@@ -137,7 +137,7 @@ Scenariusze wymagane przez specyfikację i ich pokrycie:
 | brak miejsca na dysku | `test_disk_and_errors.py` |
 | migracja indeksu | `test_index_maintenance.py` |
 
-### Testy interfejsu: 93
+### Testy interfejsu: 195
 
 Uruchamiane przez `pytest-qt` w trybie `offscreen`, bez widocznego okna.
 
@@ -149,6 +149,14 @@ Uruchamiane przez `pytest-qt` w trybie `offscreen`, bez widocznego okna.
 | `test_indexing_view.py` | 10 | start, pauza, wznowienie, anulowanie, liczniki |
 | `test_first_run.py` | 8 | pierwsze uruchomienie, nawigacja, pasek stanu |
 | `test_report_and_diagnostics.py` | 7 | raport pokrycia i diagnostyka w interfejsie |
+| `test_polish_text.py` | 102 | poprawna polszczyzna napisów w całym pakiecie |
+
+Ostatni plik zasługuje na słowo wyjaśnienia. Wymaganie mówi, że interfejs jest
+po polsku, a polszczyzna bez znaków diakrytycznych nią nie jest. Test przechodzi
+po wszystkich modułach pakietu, wyciąga z nich napisy widoczne dla użytkownika
+(pomijając nazwy zdarzeń logu, klucze i ścieżki) i sprawdza, czy nie zawierają
+form pozbawionych ogonków. Zatrzymuje regresję przy dopisywaniu nowych
+komunikatów.
 
 ## Pokrycie kodu
 
@@ -212,7 +220,10 @@ Poza suitą automatyczną wykonano przebieg na zbiorze demonstracyjnym:
 | data, trzy zapisy | 10 dokumentów w każdym zapisie, czas 4 ms |
 | polskie znaki z ogonkami i bez | identyczne wyniki, także dla litery `ł` |
 | tryb hybrydowy | `procedura-przelewow-2015.docx` na pierwszym miejscu tam, gdzie tryb dokładny nie znajduje nic |
-| test dymny zbudowanej aplikacji | aplikacja uruchamia się i zamyka poprawnie |
+| test dymny zbudowanej aplikacji | aplikacja uruchamia się i zamyka poprawnie, kod wyjścia 0 |
+| pakiet bez modelu | 974 pliki, 409 MB |
+| pakiet z modelem INT8 | 982 pliki, 534 MB, w logu `provider.loaded` |
+| instalator Inno Setup | `FindDocs-0.1.0-instalator.exe`, 191 MB |
 
 Dwa błędy w zbiorze demonstracyjnym są celowe: uszkodzony PDF i dokument
 zabezpieczony hasłem. Sprawdzają izolację błędów.
@@ -248,7 +259,6 @@ nieinteraktywnym.
 | **połączenie z prawdziwą dzierżawą SharePoint** | brak danych dostępowych w środowisku, w którym powstała ta wersja |
 | odczyt `.doc` i `.xls` przez Microsoft Office | wymaga zainstalowanego pakietu Office |
 | Tesseract, EasyOCR, RapidOCR jako silniki rzeczywiste | wymagają instalacji, testowany jest interfejs i logika aplikacji |
-| instalator Inno Setup | Inno Setup nie jest zainstalowany w środowisku budowania |
 | zbiory rzędu setek tysięcy dokumentów | brak takiego zbioru testowego |
 | dostępność dla czytników ekranu | poza zakresem tej wersji |
 | test penetracyjny i audyt zewnętrzny | poza zakresem tej wersji |
