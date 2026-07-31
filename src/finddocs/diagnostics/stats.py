@@ -212,16 +212,19 @@ def _onnxruntime_info() -> dict[str, Any]:
     Lista jest informacja o srodowisku, a nie o wyborze aplikacji: sesje sa
     tworzone zawsze z jawna lista zawierajaca wylacznie CPUExecutionProvider.
     """
+    from finddocs.providers.onnx_local import ALLOWED_EXECUTION_PROVIDERS
+
     try:
         import onnxruntime
     except ImportError:
-        return {"wersja": None, "providery": [], "dostępny": False}
+        return {"wersja": None, "providery_w_srodowisku": [], "dostępny": False}
     providers = list(onnxruntime.get_available_providers())
     return {
         "wersja": str(getattr(onnxruntime, "__version__", "")),
-        "providery": providers,
+        "providery_w_srodowisku": providers,
+        "provider_uzywany_przez_aplikacje": ", ".join(ALLOWED_EXECUTION_PROVIDERS),
         "dostępny": True,
-        "widoczny_tylko_cpu": providers == ["CPUExecutionProvider"],
+        "srodowisko_ma_tylko_cpu": providers == list(ALLOWED_EXECUTION_PROVIDERS),
     }
 
 
