@@ -28,7 +28,7 @@ dependencies = [
     "openpyxl==3.1.5",
     "xlrd==2.0.1",
     "olefile==0.47",
-    "pillow==11.1.0",
+    "pillow==12.3.0",
     "charset-normalizer==3.4.1",
     "numpy>=1.26,<3",
     "onnxruntime==1.20.1",
