@@ -19,6 +19,9 @@ from finddocs.security.redaction import redact_mapping
 from finddocs.version import APP_VERSION
 
 _configured = False
+#: True, gdy logowanie ustawil samoczynnie ``get_logger``, a nie jawne wywolanie.
+#: Taka konfiguracja nie ma pliku logu, wiec pierwsze jawne wywolanie musi ja zastapic.
+_configured_implicitly = False
 
 
 def _redaction_processor(
@@ -44,10 +47,16 @@ def configure_logging(
     max_bytes: int = 20 * 1024 * 1024,
     backup_count: int = 5,
     force: bool = False,
+    _implicit: bool = False,
 ) -> None:
-    """Ustawia logowanie aplikacji. Wywolanie wielokrotne jest bezpieczne."""
-    global _configured
-    if _configured and not force:
+    """Ustawia logowanie aplikacji. Wywolanie wielokrotne jest bezpieczne.
+
+    Moduly tworza loggery przy imporcie, wiec ``get_logger`` czesto ustawia
+    logowanie zanim aplikacja pozna sciezke pliku logu. Taka konfiguracja jest
+    tymczasowa: pierwsze jawne wywolanie ja zastepuje i dopina plik.
+    """
+    global _configured, _configured_implicitly
+    if _configured and not force and not (_configured_implicitly and not _implicit):
         return
 
     numeric_level = getattr(logging, level.upper(), logging.INFO)
@@ -102,12 +111,13 @@ def configure_logging(
         cache_logger_on_first_use=True,
     )
     _configured = True
+    _configured_implicitly = _implicit
 
 
 def get_logger(name: str) -> structlog.stdlib.BoundLogger:
     """Zwraca logger o podanej nazwie. Konfiguruje logowanie, jesli trzeba."""
     if not _configured:
-        configure_logging(log_file=None, console=False)
+        configure_logging(log_file=None, console=False, _implicit=True)
     return structlog.get_logger(name)  # type: ignore[no-any-return]
 
 

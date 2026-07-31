@@ -88,8 +88,6 @@ class MainWindow(QMainWindow):
         self._build_shortcuts()
         self.nav.setCurrentRow(0)
         self.refresh_index_status()
-        self._show_startup_notes()
-        self._offer_resume()
 
     # --- budowa -----------------------------------------------------------
 
@@ -187,16 +185,29 @@ class MainWindow(QMainWindow):
         parts.append(i18n.format_bytes(int(status.get("rozmiar_bajty", 0))))
         self.index_label.setText("   |   ".join(parts))
 
+    def run_startup_checks(self) -> None:
+        """Pokazuje komunikaty startowe wymagajace decyzji uzytkownika.
+
+        Metode wywolujemy dopiero po ``show()``. Okna modalne otwarte w
+        konstruktorze wisialyby nad pustym ekranem i blokowalyby proces
+        w trybach nieinteraktywnych.
+        """
+        self._show_startup_notes()
+        self._offer_resume()
+
     def _show_startup_notes(self) -> None:
         notes = self.context.startup_notes
         if not notes:
             return
         details = "\n".join(f"- {note}" for note in notes)
-        show_info(
-            self,
-            i18n.INDEX_INCOMPATIBLE.format(details=details),
-            i18n.INDEX_INCOMPATIBLE_TITLE,
-        )
+        if self.context.rebuild_required:
+            show_info(
+                self,
+                i18n.INDEX_INCOMPATIBLE.format(details=details),
+                i18n.INDEX_INCOMPATIBLE_TITLE,
+            )
+            return
+        show_info(self, i18n.STARTUP_NOTES.format(details=details), i18n.STARTUP_NOTES_TITLE)
 
     def _offer_resume(self) -> None:
         runner = self.context.runner

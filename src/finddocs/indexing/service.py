@@ -91,6 +91,7 @@ class IndexService:
         self.provider: EmbeddingProvider | None = None
         self._writer: IndexWriter | None = None
         self._notes: list[str] = []
+        self._rebuild_required = False
         self._opened = False
 
     # --- otwieranie -------------------------------------------------------
@@ -120,6 +121,7 @@ class IndexService:
             if not allow_rebuild_prompt:
                 raise IndexIncompatibleError(message)
             self._notes.append(message)
+            self._rebuild_required = True
 
         if load_provider:
             self._load_provider(vector_compatible=bool(state["wektory_zgodne"]))
@@ -161,6 +163,7 @@ class IndexService:
             self._notes.append(
                 f"{exc.user_message} Do czasu przebudowy dziala wyszukiwanie dokladne."
             )
+            self._rebuild_required = True
             log.warning("index.vector_incompatible", error_code=exc.code)
             self.vector_store = None
             return
@@ -169,6 +172,7 @@ class IndexService:
                 "Indeks wektorowy zostal zbudowany inna konfiguracja modelu. "
                 "Zalecana jest przebudowa czesci semantycznej."
             )
+            self._rebuild_required = True
         self.vector_store = store
 
     # --- dostep -----------------------------------------------------------
@@ -186,6 +190,15 @@ class IndexService:
     @property
     def notes(self) -> list[str]:
         return list(self._notes)
+
+    @property
+    def rebuild_required(self) -> bool:
+        """Czy uwagi startowe wymagaja przebudowy indeksu.
+
+        Brak modelu embeddingow uwagą jest, ale przebudowy nie wymaga: indeks
+        pelnotekstowy pozostaje poprawny, wylacza sie tylko tryb semantyczny.
+        """
+        return self._rebuild_required
 
     def status(self) -> IndexStatus:
         """Zbiera stan indeksu na potrzeby interfejsu."""

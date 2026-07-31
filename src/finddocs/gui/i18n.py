@@ -238,6 +238,11 @@ INDEX_INCOMPATIBLE = (
     "Do czasu przebudowy dostepne jest wyszukiwanie dokladne."
 )
 
+STARTUP_NOTES_TITLE = "Stan indeksu"
+STARTUP_NOTES = (
+    "Aplikacja jest gotowa do pracy, ale nie wszystkie funkcje sa dostepne.\n\n{details}"
+)
+
 
 def format_bytes(value: int | float) -> str:
     """Rozmiar w postaci czytelnej po polsku, z przecinkiem dziesietnym."""

@@ -38,6 +38,7 @@ class AppContext:
         self.search: SearchService | None = None
         self.runner: JobRunner | None = None
         self.startup_notes: list[str] = []
+        self.rebuild_required = False
 
     # --- cykl zycia -------------------------------------------------------
 
@@ -47,6 +48,7 @@ class AppContext:
         self.index = IndexService(self.config, self.paths)
         self.index.open()
         self.startup_notes = list(self.index.notes)
+        self.rebuild_required = self.index.rebuild_required
         self.search = SearchService(self.index)
         self.runner = JobRunner(self.config, self.index, paths=self.paths)
         self.runner.mark_interrupted_jobs()

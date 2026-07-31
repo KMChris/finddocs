@@ -7,9 +7,26 @@ a kontrola typow nie zglaszala falszywych bledow.
 
 from __future__ import annotations
 
+import os
+import sys
+
 from PySide6.QtWidgets import QMessageBox, QWidget
 
 from finddocs.gui import i18n
+
+
+def dialogs_suppressed() -> bool:
+    """Czy okna modalne maja byc pominiete.
+
+    Ustawienie ``FINDDOCS_NO_DIALOG=1`` wylacza okna wymagajace klikniecia.
+    Korzysta z tego test dymny zbudowanej aplikacji i uruchomienie z harmonogramu,
+    gdzie nikt nie kliknie ,,OK'' i proces stalby w miejscu bez konca.
+    """
+    return os.environ.get("FINDDOCS_NO_DIALOG") == "1"
+
+
+def _log_suppressed(title: str, text: str) -> None:
+    print(f"[{title}] {text}", file=sys.stderr)
 
 
 def _prepare(parent: QWidget | None, icon: QMessageBox.Icon, title: str, text: str) -> QMessageBox:
@@ -23,6 +40,9 @@ def _prepare(parent: QWidget | None, icon: QMessageBox.Icon, title: str, text: s
 
 def show_info(parent: QWidget | None, text: str, title: str = i18n.INFO_TITLE) -> None:
     """Komunikat informacyjny."""
+    if dialogs_suppressed():
+        _log_suppressed(title, text)
+        return
     box = _prepare(parent, QMessageBox.Icon.Information, title, text)
     button = box.addButton(QMessageBox.StandardButton.Ok)
     button.setText(i18n.BUTTON_OK)
@@ -31,6 +51,9 @@ def show_info(parent: QWidget | None, text: str, title: str = i18n.INFO_TITLE) -
 
 def show_warning(parent: QWidget | None, text: str, title: str = i18n.WARNING_TITLE) -> None:
     """Ostrzezenie."""
+    if dialogs_suppressed():
+        _log_suppressed(title, text)
+        return
     box = _prepare(parent, QMessageBox.Icon.Warning, title, text)
     button = box.addButton(QMessageBox.StandardButton.Ok)
     button.setText(i18n.BUTTON_OK)
@@ -39,6 +62,9 @@ def show_warning(parent: QWidget | None, text: str, title: str = i18n.WARNING_TI
 
 def show_error(parent: QWidget | None, text: str, title: str = i18n.ERROR_TITLE) -> None:
     """Blad."""
+    if dialogs_suppressed():
+        _log_suppressed(title, text)
+        return
     box = _prepare(parent, QMessageBox.Icon.Critical, title, text)
     button = box.addButton(QMessageBox.StandardButton.Ok)
     button.setText(i18n.BUTTON_OK)
@@ -52,6 +78,9 @@ def show_error_with_code(parent: QWidget | None, code: str, message: str) -> Non
 
 def ask_yes_no(parent: QWidget | None, text: str, title: str = i18n.CONFIRM_TITLE) -> bool:
     """Pytanie tak lub nie. Zwraca True, gdy uzytkownik potwierdzil."""
+    if dialogs_suppressed():
+        _log_suppressed(title, text)
+        return False
     box = _prepare(parent, QMessageBox.Icon.Question, title, text)
     yes = box.addButton("Tak", QMessageBox.ButtonRole.YesRole)
     no = box.addButton("Nie", QMessageBox.ButtonRole.NoRole)
@@ -62,6 +91,7 @@ def ask_yes_no(parent: QWidget | None, text: str, title: str = i18n.CONFIRM_TITL
 
 __all__ = [
     "ask_yes_no",
+    "dialogs_suppressed",
     "show_error",
     "show_error_with_code",
     "show_info",

@@ -7,6 +7,7 @@ sa pokazywane w oknie dialogowym, a szczegoly trafiaja do pliku logu.
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 import traceback
 from pathlib import Path
@@ -35,6 +36,9 @@ def _show_startup_error(message: str, log_path: Path) -> None:
     from finddocs.gui import i18n
 
     text = i18n.STARTUP_ERROR.format(message=message, log=log_path)
+    if os.environ.get("FINDDOCS_NO_DIALOG") == "1":
+        print(text, file=sys.stderr)
+        return
     try:
         from PySide6.QtWidgets import QApplication, QMessageBox
 
@@ -69,6 +73,7 @@ def main(argv: list[str] | None = None) -> int:
     log.info("gui.starting", version=APP_VERSION)
 
     try:
+        from PySide6.QtCore import QTimer
         from PySide6.QtGui import QIcon
         from PySide6.QtWidgets import QApplication
 
@@ -122,6 +127,10 @@ def main(argv: list[str] | None = None) -> int:
         context.close()
         log.info("gui.self_test_ok")
         return 0
+
+    # Komunikaty startowe pokazujemy dopiero gdy okno jest widoczne, w kolejnym
+    # obiegu petli zdarzen. Inaczej okno modalne wisi nad pustym ekranem.
+    QTimer.singleShot(0, window.run_startup_checks)
 
     exit_code = app.exec()
     log.info("gui.stopped", exit_code=exit_code)
