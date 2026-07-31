@@ -8,6 +8,7 @@ indeksu, wyeksportowac raport i zdiagnozowac problem.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import sys
 import uuid
@@ -89,7 +90,7 @@ def cmd_init(args: argparse.Namespace) -> int:
 def cmd_sources_list(args: argparse.Namespace) -> int:
     config = _load(args)
     if not config.sources:
-        print("Nie skonfigurowano zadnego zrodla.")
+        print("Nie skonfigurowano żadnego źródła.")
         return EXIT_OK
     rows: list[dict[str, Any]] = []
     for source in config.sources:
@@ -124,7 +125,7 @@ def cmd_sources_add_local(args: argparse.Namespace) -> int:
     )
     config = config.with_source(source)
     save_config(config, _paths(args).config_file)
-    print(f"Dodano zrodlo lokalne: {source.source_id} ({root})")
+    print(f"Dodano źródło lokalne: {source.source_id} ({root})")
     return EXIT_OK
 
 
@@ -145,7 +146,7 @@ def cmd_sources_add_sharepoint(args: argparse.Namespace) -> int:
     )
     config = config.with_source(source)
     save_config(config, _paths(args).config_file)
-    print(f"Dodano zrodlo SharePoint: {source.source_id}")
+    print(f"Dodano źródło SharePoint: {source.source_id}")
     print("Uwaga: pierwsze uzycie wymaga zalogowania. Uruchom 'finddocs sources test'.")
     return EXIT_OK
 
@@ -178,7 +179,7 @@ def cmd_sources_remove(args: argparse.Namespace) -> int:
     before = len(config.sources)
     config.sources = [s for s in config.sources if s.source_id != args.id]
     if len(config.sources) == before:
-        print(f"Nie znaleziono zrodla {args.id}.", file=sys.stderr)
+        print(f"Nie znaleziono źródła {args.id}.", file=sys.stderr)
         return EXIT_ERROR
     save_config(config, _paths(args).config_file)
     if args.purge:
@@ -186,10 +187,10 @@ def cmd_sources_remove(args: argparse.Namespace) -> int:
         try:
             with index.db.transaction():
                 removed = index.repository.delete_source(args.id)
-            print(f"Usunieto {removed} dokumentow z indeksu.")
+            print(f"Usunieto {removed} dokumentów z indeksu.")
         finally:
             index.close()
-    print(f"Usunieto zrodlo {args.id}.")
+    print(f"Usunieto źródło {args.id}.")
     return EXIT_OK
 
 
@@ -200,20 +201,20 @@ def cmd_demo(args: argparse.Namespace) -> int:
     paths = _paths(args).ensure()
     target = Path(args.path).expanduser().resolve() if args.path else paths.root / "demo"
     info = ensure_demo_corpus(target.parent if target.name == "demo" else target, force=args.force)
-    print(f"Zbior demonstracyjny: {info.root}")
-    print(f"Plikow: {info.files}")
-    print(f"Numer rachunku testowego: {info.account_number} ({info.account_documents} dokumentow)")
+    print(f"Zbiór demonstracyjny: {info.root}")
+    print(f"Plików: {info.files}")
+    print(f"Numer rachunku testowego: {info.account_number} ({info.account_documents} dokumentów)")
     if args.register:
         source = SourceConfig(
             source_id="demo",
             kind=SourceKind.LOCAL_DIR,
-            label="Zbior demonstracyjny",
+            label="Zbiór demonstracyjny",
             local=LocalDirSourceSettings(root_path=str(info.root)),
             exclude_globs=["manifest.json"],
         )
         config = config.with_source(source)
         save_config(config, paths.config_file)
-        print("Zarejestrowano zrodlo 'demo'.")
+        print("Zarejestrowano źródło 'demo'.")
     return EXIT_OK
 
 
@@ -240,7 +241,7 @@ def cmd_index(args: argparse.Namespace) -> int:
             name = (snapshot.current_file or "")[-60:]
             print(
                 f"\r[{percent}] wykryte {snapshot.discovered} | przetworzone {snapshot.processed}"
-                f" | niezmienione {snapshot.unchanged} | bledy {snapshot.failed}"
+                f" | niezmienione {snapshot.unchanged} | błędy {snapshot.failed}"
                 f" | OCR {snapshot.ocr_documents}  {name}",
                 end="",
                 flush=True,
@@ -263,9 +264,9 @@ def cmd_index(args: argparse.Namespace) -> int:
         print(snapshot.message)
     print(
         f"Wykryte {snapshot.discovered}, przetworzone {snapshot.processed}, "
-        f"niezmienione {snapshot.unchanged}, pominiete {snapshot.skipped}, "
-        f"bledy {snapshot.failed}, usuniete {snapshot.deleted}, "
-        f"OCR {snapshot.ocr_documents} dokumentow / {snapshot.ocr_pages} stron"
+        f"niezmienione {snapshot.unchanged}, pominięte {snapshot.skipped}, "
+        f"błędy {snapshot.failed}, usunięte {snapshot.deleted}, "
+        f"OCR {snapshot.ocr_documents} dokumentów / {snapshot.ocr_pages} stron"
     )
     print(f"Czas: {snapshot.elapsed_seconds:.1f} s")
     return EXIT_OK if snapshot.state is JobState.COMPLETED else EXIT_ERROR
@@ -317,7 +318,7 @@ def cmd_search(args: argparse.Namespace) -> int:
         return EXIT_OK
 
     label = "dokladnie" if response.total_is_exact else "co najmniej"
-    print(f"Znaleziono {label} {response.total_documents} dokumentow ({response.took_ms} ms)")
+    print(f"Znaleziono {label} {response.total_documents} dokumentów ({response.took_ms} ms)")
     for note in response.notes:
         print(f"  Uwaga: {note}")
     print()
@@ -417,7 +418,7 @@ def cmd_maintenance(args: argparse.Namespace) -> int:
         print("Przywrocono indeks z kopii.")
         return EXIT_OK
 
-    index = _open_index(config, load_provider=args.action in {"compact"})
+    index = _open_index(config, load_provider=args.action in {"check", "compact"})
     try:
         if args.action == "check":
             report = index.consistency()
@@ -425,16 +426,16 @@ def cmd_maintenance(args: argparse.Namespace) -> int:
             return EXIT_OK if report.is_healthy else EXIT_ERROR
         if args.action == "compact":
             if index.vector_store is None:
-                print("Indeks wektorowy nie jest dostepny.", file=sys.stderr)
+                print("Indeks wektorowy nie jest dostępny.", file=sys.stderr)
                 return EXIT_ERROR
             count = compact_vectors(index.repository, index.vector_store)
-            print(f"Skompaktowano indeks wektorowy: {count} wektorow.")
+            print(f"Skompaktowano indeks wektorowy: {count} wektorów.")
             index.db.optimize()
             return EXIT_OK
         if args.action == "rebuild":
             count = mark_all_for_reindex(index.repository, only_vectors=args.vectors_only)
-            print(f"Oznaczono {count} dokumentow do ponownego przetworzenia.")
-            print("Uruchom 'finddocs index', zeby przebudowac indeks.")
+            print(f"Oznaczono {count} dokumentów do ponownego przetworzenia.")
+            print("Uruchom 'finddocs index', żeby przebudować indeks.")
             return EXIT_OK
     finally:
         index.close()
@@ -453,7 +454,7 @@ def cmd_gui(args: argparse.Namespace) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="finddocs",
-        description=f"{APP_NAME} {APP_VERSION}: lokalna wyszukiwarka dokumentow",
+        description=f"{APP_NAME} {APP_VERSION}: lokalna wyszukiwarka dokumentów",
     )
     parser.add_argument("--version", action="version", version=f"{APP_NAME} {APP_VERSION}")
     parser.add_argument("--data-dir", help="katalog danych aplikacji")
@@ -465,9 +466,9 @@ def build_parser() -> argparse.ArgumentParser:
         func=cmd_init
     )
 
-    sources = sub.add_parser("sources", help="zarzadzanie zrodlami dokumentow")
+    sources = sub.add_parser("sources", help="zarzadzanie źródłami dokumentów")
     sources_sub = sources.add_subparsers(dest="sources_command", required=True)
-    sources_sub.add_parser("list", help="lista zrodel").set_defaults(func=cmd_sources_list)
+    sources_sub.add_parser("list", help="lista źródeł").set_defaults(func=cmd_sources_list)
 
     add_local = sources_sub.add_parser("add-local", help="dodaje katalog lokalny")
     add_local.add_argument("path")
@@ -475,9 +476,9 @@ def build_parser() -> argparse.ArgumentParser:
     add_local.add_argument("--label")
     add_local.set_defaults(func=cmd_sources_add_local)
 
-    add_sp = sources_sub.add_parser("add-sharepoint", help="dodaje zrodlo SharePoint")
+    add_sp = sources_sub.add_parser("add-sharepoint", help="dodaje źródło SharePoint")
     add_sp.add_argument("--site", required=True, help="adres witryny SharePoint")
-    add_sp.add_argument("--library", required=True, help="nazwa biblioteki dokumentow")
+    add_sp.add_argument("--library", required=True, help="nazwa biblioteki dokumentów")
     add_sp.add_argument("--tenant", required=True, help="identyfikator dzierzawy Entra ID")
     add_sp.add_argument("--client-id", required=True, help="identyfikator aplikacji Entra ID")
     add_sp.add_argument("--folder", help="katalog startowy w bibliotece")
@@ -488,28 +489,28 @@ def build_parser() -> argparse.ArgumentParser:
     )
     add_sp.set_defaults(func=cmd_sources_add_sharepoint)
 
-    test = sources_sub.add_parser("test", help="test polaczenia ze zrodlem")
+    test = sources_sub.add_parser("test", help="test połączenia że źródłem")
     test.add_argument("id")
     test.set_defaults(func=cmd_sources_test)
 
-    remove = sources_sub.add_parser("remove", help="usuwa zrodlo")
+    remove = sources_sub.add_parser("remove", help="usuwa źródło")
     remove.add_argument("id")
-    remove.add_argument("--purge", action="store_true", help="usun takze dokumenty z indeksu")
+    remove.add_argument("--purge", action="store_true", help="usuń także dokumenty z indeksu")
     remove.set_defaults(func=cmd_sources_remove)
 
-    demo = sub.add_parser("demo", help="generuje zbior demonstracyjny")
+    demo = sub.add_parser("demo", help="generuje zbiór demonstracyjny")
     demo.add_argument("--path", help="katalog docelowy")
-    demo.add_argument("--force", action="store_true", help="nadpisz istniejacy zbior")
+    demo.add_argument("--force", action="store_true", help="nadpisz istniejący zbiór")
     demo.add_argument(
-        "--register", action="store_true", help="dodaj zbior jako zrodlo o identyfikatorze demo"
+        "--register", action="store_true", help="dodaj zbiór jako źródło o identyfikatorze demo"
     )
     demo.set_defaults(func=cmd_demo)
 
     index_cmd = sub.add_parser("index", help="uruchamia indeksowanie")
-    index_cmd.add_argument("--source", action="append", help="ogranicz do wskazanego zrodla")
-    index_cmd.add_argument("--full", action="store_true", help="pelne przeindeksowanie")
+    index_cmd.add_argument("--source", action="append", help="ogranicz do wskazanego źródła")
+    index_cmd.add_argument("--full", action="store_true", help="pełne przeindeksowanie")
     index_cmd.add_argument(
-        "--no-deletions", action="store_true", help="nie usuwaj dokumentow znikniętych ze zrodla"
+        "--no-deletions", action="store_true", help="nie usuwaj dokumentów znikniętych że źródła"
     )
     index_cmd.set_defaults(func=cmd_index)
 
@@ -521,13 +522,13 @@ def build_parser() -> argparse.ArgumentParser:
     search.add_argument("--limit", type=int, default=10)
     search.add_argument("--offset", type=int, default=0)
     search.add_argument("--ext", action="append", help="filtr rozszerzenia, np. .pdf")
-    search.add_argument("--source", action="append", help="filtr zrodla")
+    search.add_argument("--source", action="append", help="filtr źródła")
     search.set_defaults(func=cmd_search)
 
     report = sub.add_parser("report", help="raport pokrycia indeksu")
     report.add_argument("--json-out", help="zapisz raport do pliku JSON")
     report.add_argument("--csv-out", help="zapisz raport do pliku CSV")
-    report.add_argument("--fast", action="store_true", help="nie laduj modelu embeddingow")
+    report.add_argument("--fast", action="store_true", help="nie laduj modelu embeddingów")
     report.set_defaults(func=cmd_report)
 
     sub.add_parser("doctor", help="diagnostyka srodowiska i indeksu").set_defaults(func=cmd_doctor)
@@ -538,7 +539,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     maintenance.add_argument("--name", help="nazwa kopii przy przywracaniu")
     maintenance.add_argument(
-        "--vectors-only", action="store_true", help="przebuduj tylko czesc wektorowa"
+        "--vectors-only", action="store_true", help="przebuduj tylko część wektorowa"
     )
     maintenance.set_defaults(func=cmd_maintenance)
 
@@ -546,7 +547,22 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _use_utf8_output() -> None:
+    """Wymusza UTF-8 na wyjsciu konsoli.
+
+    Polskie znaki w komunikatach sa poprawne, ale konsola Windows domyslnie
+    uzywa strony kodowej cp852 albo cp1250 i czesc z nich zamienia na smieci.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            # Przekierowany strumien moze nie pozwolic na zmiane kodowania.
+            with contextlib.suppress(OSError, ValueError):
+                reconfigure(encoding="utf-8", errors="replace")
+
+
 def main(argv: list[str] | None = None) -> int:
+    _use_utf8_output()
     parser = build_parser()
     args = parser.parse_args(argv)
     paths = _paths(args).ensure()
@@ -558,14 +574,14 @@ def main(argv: list[str] | None = None) -> int:
     try:
         return int(args.func(args))
     except FindDocsError as exc:
-        print(f"Blad [{exc.code}]: {exc.user_message}", file=sys.stderr)
+        print(f"Błąd [{exc.code}]: {exc.user_message}", file=sys.stderr)
         log.error("cli.error", code=exc.code, error_type=type(exc).__name__)
         return EXIT_ERROR
     except KeyboardInterrupt:
         print("\nPrzerwano.", file=sys.stderr)
         return EXIT_ERROR
     except Exception as exc:
-        print(f"Nieoczekiwany blad: {type(exc).__name__}: {exc}", file=sys.stderr)
+        print(f"Nieoczekiwany błąd: {type(exc).__name__}: {exc}", file=sys.stderr)
         log.exception("cli.unexpected_error")
         return EXIT_ERROR
 

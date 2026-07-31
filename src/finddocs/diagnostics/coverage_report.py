@@ -246,7 +246,7 @@ def coverage_summary_text(report: CoverageReport) -> str:
     lines = [
         f"Raport pokrycia z {_stamp(report.generated_at)}, wersja aplikacji {report.app_version}.",
         f"Wykryto {_documents(report.discovered)}: zaindeksowano {report.indexed}, "
-        f"czesciowo {report.partial}, niewyszukiwalnych {missing}.",
+        f"częściowo {report.partial}, niewyszukiwalnych {missing}.",
         f"Fragmenty w indeksie: {report.total_chunks}, wektory: {report.total_vectors}.",
         f"OCR: wymagany dla {report.requiring_ocr}, udany dla {report.ocr_succeeded}, "
         f"nieudany dla {report.ocr_failed}.",
