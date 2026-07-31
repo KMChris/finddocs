@@ -45,7 +45,7 @@ dependencies = [
 ocr-rapid = ["rapidocr-onnxruntime==1.4.4"]
 ocr-easy = ["easyocr>=1.7.2"]
 dev = [
-    "pytest==8.3.4",
+    "pytest==9.0.3",
     "pytest-qt==4.4.0",
     "pytest-cov==6.0.0",
     "mypy==1.14.1",
