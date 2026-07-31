@@ -71,7 +71,7 @@ git clone https://huggingface.co/sdadas/mmlw-retrieval-roberta-base models/mmlw-
 Uruchomienie interfejsu:
 
 ```bash
-.venv\Scripts\python.exe -m finddocs.gui.app
+.venv\Scripts\python.exe -m finddocs.gui
 ```
 
 Uruchomienie poleceń administracyjnych:
@@ -141,7 +141,6 @@ Szczegóły i diagramy: [docs/architektura.md](docs/architektura.md).
 | [Raport testów](docs/raport-testow.md) | zakres i wyniki testów |
 | [Licencje](docs/licencje.md) | komponenty i licencje, SBOM w `sbom.cdx.json` |
 | [Plan RAG i GPU](docs/plan-rag-gpu.md) | przyszły rozwój |
-| [Macierz zgodności](docs/requirements-matrix.md) | wymaganie do implementacji i testu |
 | [ADR](docs/adr/) | decyzje architektoniczne |
 
 ## Prywatność
