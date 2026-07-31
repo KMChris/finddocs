@@ -79,7 +79,16 @@ finddocs = ["resources/*", "resources/**/*", "py.typed"]
 line-length = 100
 target-version = "py311"
 src = ["src", "tests"]
-extend-exclude = [".venv", "build", "dist", "models"]
+# packaging/output i packaging/build zawieraja wynik PyInstallera,
+# czyli setki plikow bibliotek zewnetrznych. Nie sa naszym kodem.
+extend-exclude = [
+    ".venv",
+    "build",
+    "dist",
+    "models",
+    "packaging/build",
+    "packaging/output",
+]
 
 [tool.ruff.lint]
 select = [

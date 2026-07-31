@@ -10,8 +10,8 @@ Stan na 31 lipca 2026, wersja aplikacji 0.1.0.
 | Wynik | 836 zaliczonych, 0 niezaliczonych, 0 pominiętych |
 | Czas przebiegu | 26 s |
 | Pokrycie kodu `src/finddocs` | 73 procent instrukcji |
-| Kontrola stylu (`ruff check`) | bez zastrzeżeń |
-| Formatowanie (`ruff format --check`) | 147 plików zgodnych |
+| Kontrola stylu (`ruff check`) | bez zastrzeżeń, 154 pliki |
+| Formatowanie (`ruff format --check`) | 154 pliki zgodne |
 | Kontrola typów (`mypy src`) | bez zastrzeżeń, 103 pliki |
 
 Uruchomienie:
@@ -280,8 +280,8 @@ dzierżawie.** Procedurę testu wdrożeniowego opisuje
 .venv\Scripts\python.exe -m pytest -q --cov=finddocs --cov-report=term-missing
 .venv\Scripts\python.exe -m pytest -q -m "not requires_model"
 .venv\Scripts\python.exe -m pytest -q tests/search
-.venv\Scripts\python.exe -m ruff check src tests
-.venv\Scripts\python.exe -m ruff format --check src tests
+.venv\Scripts\python.exe -m ruff check src tests packaging tools
+.venv\Scripts\python.exe -m ruff format --check src tests packaging tools
 .venv\Scripts\python.exe -m mypy src
 ```
 

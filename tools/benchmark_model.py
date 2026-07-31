@@ -228,7 +228,9 @@ def benchmark(model_key: str, *, quantized: bool) -> dict[str, Any]:
         "wymiar": provider.dimension,
         "max_dlugosc_sekwencji": settings.max_sequence_length,
         "plik_wag": weights.name,
-        "rozmiar_wag_mb": round(weights.stat().st_size / (1024 * 1024), 1) if weights.exists() else 0,
+        "rozmiar_wag_mb": (
+            round(weights.stat().st_size / (1024 * 1024), 1) if weights.exists() else 0
+        ),
         "rozmiar_katalogu_mb": round(model_bytes / (1024 * 1024), 1),
         "czas_wczytania_s": round(load_seconds, 3),
         "pamiec_przed_mb": round(before / (1024 * 1024), 1),
@@ -237,10 +239,10 @@ def benchmark(model_key: str, *, quantized: bool) -> dict[str, Any]:
         "przyrost_pamieci_mb": round((after_work - before) / (1024 * 1024), 1),
         "fragmenty_na_sekunde": round(PASSAGE_BATCH / passage_seconds, 1),
         "czas_zapytania_mediana_ms": round(statistics.median(query_times) * 1000, 1),
-        "czas_zapytania_p95_ms": round(sorted(query_times)[int(len(query_times) * 0.95) - 1] * 1000, 1),
-        "recall_at_5": round(
-            sum(float(r["trafienie_at_k"]) for r in results) / len(results), 3
+        "czas_zapytania_p95_ms": round(
+            sorted(query_times)[int(len(query_times) * 0.95) - 1] * 1000, 1
         ),
+        "recall_at_5": round(sum(float(r["trafienie_at_k"]) for r in results) / len(results), 3),
         "mrr": round(sum(float(r["odwrotny_rank"]) for r in results) / len(results), 3),
         "ndcg_at_5": round(sum(float(r["ndcg_at_k"]) for r in results) / len(results), 3),
         "zapytania": results,

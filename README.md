@@ -83,8 +83,8 @@ Uruchomienie poleceń administracyjnych:
 ## Kontrola jakości
 
 ```bash
-.venv\Scripts\python.exe -m ruff check src tests
-.venv\Scripts\python.exe -m ruff format --check src tests
+.venv\Scripts\python.exe -m ruff check src tests packaging tools
+.venv\Scripts\python.exe -m ruff format --check src tests packaging tools
 .venv\Scripts\python.exe -m mypy src
 .venv\Scripts\python.exe -m pytest -q
 ```
