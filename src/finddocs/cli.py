@@ -23,6 +23,7 @@ from finddocs.config import (
     load_config,
     save_config,
 )
+from finddocs.connectors.base import SourceConnector
 from finddocs.errors import FindDocsError
 from finddocs.logging_setup import configure_logging, get_logger
 from finddocs.types import JobState, SearchFilters, SearchMode, SearchRequest, SourceKind
@@ -101,7 +102,11 @@ def cmd_sources_list(args: argparse.Namespace) -> int:
                 "aktywne": source.enabled,
             }
         )
-    _print(rows if args.json else [json.dumps(r, ensure_ascii=False) for r in rows], as_json=args.json)
+    if args.json:
+        _print(rows, as_json=True)
+    else:
+        for row in rows:
+            print(json.dumps(row, ensure_ascii=False))
     return EXIT_OK
 
 
@@ -152,7 +157,7 @@ def cmd_sources_test(args: argparse.Namespace) -> int:
     if source.kind is SourceKind.LOCAL_DIR:
         from finddocs.connectors.local_dir import LocalDirectoryConnector
 
-        connector = LocalDirectoryConnector.from_config(source)
+        connector: SourceConnector = LocalDirectoryConnector.from_config(source)
     else:
         from finddocs.connectors.sharepoint import build_sharepoint_connector
 
@@ -400,7 +405,8 @@ def cmd_maintenance(args: argparse.Namespace) -> int:
 
     if args.action == "list-backups":
         for entry in list_backups(paths):
-            print(f"{entry['nazwa']}  {entry['rozmiar_bajty'] // (1024 * 1024)} MB  {entry['utworzono']}")
+            size_mb = int(entry["rozmiar_bajty"]) // (1024 * 1024)
+            print(f"{entry['nazwa']}  {size_mb} MB  {entry['utworzono']}")
         return EXIT_OK
 
     if args.action == "restore":
@@ -558,7 +564,7 @@ def main(argv: list[str] | None = None) -> int:
     except KeyboardInterrupt:
         print("\nPrzerwano.", file=sys.stderr)
         return EXIT_ERROR
-    except Exception as exc:  # noqa: BLE001 - CLI ma zawsze zwrocic czytelny komunikat
+    except Exception as exc:
         print(f"Nieoczekiwany blad: {type(exc).__name__}: {exc}", file=sys.stderr)
         log.exception("cli.unexpected_error")
         return EXIT_ERROR

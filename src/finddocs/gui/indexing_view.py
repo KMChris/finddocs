@@ -10,7 +10,6 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QHeaderView,
     QLabel,
-    QMessageBox,
     QProgressBar,
     QPushButton,
     QTableWidget,
@@ -22,6 +21,7 @@ from PySide6.QtWidgets import (
 
 from finddocs.gui import i18n
 from finddocs.gui.context import AppContext
+from finddocs.gui.dialogs import ask_yes_no, show_error, show_info, show_warning
 from finddocs.gui.workers import CallableTask, ProgressBridge, thread_pool
 from finddocs.jobs.indexing_job import JobOptions
 from finddocs.logging_setup import get_logger
@@ -157,9 +157,7 @@ class IndexingView(QWidget):
 
     def _build_tables(self) -> QWidget:
         tabs = QTabWidget()
-        self.error_table = self._make_table(
-            ["Plik", "Etap", "Kod", "Komunikat", "Czas"]
-        )
+        self.error_table = self._make_table(["Plik", "Etap", "Kod", "Komunikat", "Czas"])
         self.skipped_table = self._make_table(["Plik", "Lokalizacja", "Status", "Powod"])
         tabs.addTab(self.error_table, i18n.INDEXING_SHOW_ERRORS)
         tabs.addTab(self.skipped_table, i18n.INDEXING_SHOW_SKIPPED)
@@ -185,13 +183,7 @@ class IndexingView(QWidget):
         self._submit(JobOptions(kind=JobKind.RESCAN))
 
     def start_full_reindex(self) -> None:
-        answer = QMessageBox.question(
-            self,
-            i18n.CONFIRM_TITLE,
-            i18n.CONFIRM_FULL_REINDEX,
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        )
-        if answer != QMessageBox.StandardButton.Yes:
+        if not ask_yes_no(self, i18n.CONFIRM_FULL_REINDEX, i18n.CONFIRM_TITLE):
             return
         self._submit(JobOptions(kind=JobKind.FULL_INDEX, force_reindex=True))
 
@@ -200,13 +192,11 @@ class IndexingView(QWidget):
 
     def _submit(self, options: JobOptions) -> None:
         if not self.context.config.enabled_sources():
-            QMessageBox.warning(self, i18n.WARNING_TITLE, i18n.SOURCES_EMPTY)
+            show_warning(self, i18n.SOURCES_EMPTY)
             return
         runner = self.context.require_runner()
         if runner.is_running:
-            QMessageBox.information(
-                self, i18n.INFO_TITLE, "Indeksowanie juz trwa. Poczekaj albo je anuluj."
-            )
+            show_info(self, "Indeksowanie juz trwa. Poczekaj albo je anuluj.")
             return
         runner.on_progress(self.bridge.publish)
         runner.on_completed(self.bridge.publish_completion)
@@ -256,9 +246,7 @@ class IndexingView(QWidget):
             lambda result: self.status_message.emit(f"Zapisano raport: {result}")
         )
         task.signals.failed.connect(
-            lambda code, message: QMessageBox.warning(
-                self, i18n.ERROR_TITLE, f"{message}\n\nKod: {code}"
-            )
+            lambda code, message: show_error(self, f"{message}\n\nKod: {code}")
         )
         thread_pool().start(task)
 
@@ -312,9 +300,8 @@ class IndexingView(QWidget):
             self.status_message.emit("Indeksowanie anulowane. Mozna je wznowic pozniej.")
         else:
             self.status_message.emit(snapshot.message or "Indeksowanie zakonczone bledem.")
-            QMessageBox.warning(
+            show_error(
                 self,
-                i18n.ERROR_TITLE,
                 snapshot.message or "Indeksowanie zakonczylo sie bledem.",
             )
         self.refresh_tables()
@@ -340,7 +327,7 @@ class IndexingView(QWidget):
             return
         try:
             errors = index.repository.recent_errors(ERROR_TABLE_LIMIT)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             log.warning("gui.errors_refresh_failed", error_type=type(exc).__name__)
             return
         self.error_table.setRowCount(0)
@@ -360,7 +347,7 @@ class IndexingView(QWidget):
         self.skipped_table.setRowCount(0)
         try:
             documents = index.repository.non_searchable_documents(limit=ERROR_TABLE_LIMIT)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             log.warning("gui.skipped_refresh_failed", error_type=type(exc).__name__)
             return
         for document in documents:

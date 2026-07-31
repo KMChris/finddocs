@@ -125,7 +125,9 @@ class Repository:
             self.set_meta(key, value)
 
     def all_meta(self) -> dict[str, str | None]:
-        return {r["key"]: r["value"] for r in self.db.query_all("SELECT key, value FROM index_meta")}
+        return {
+            r["key"]: r["value"] for r in self.db.query_all("SELECT key, value FROM index_meta")
+        }
 
     def get_meta_int(self, key: str, default: int = 0) -> int:
         raw = self.get_meta(key)
@@ -202,7 +204,7 @@ class Repository:
             return {}
         placeholders = ",".join("?" * len(ids))
         rows = self.db.query_all(
-            f"SELECT * FROM documents WHERE doc_id IN ({placeholders})",  # noqa: S608
+            f"SELECT * FROM documents WHERE doc_id IN ({placeholders})",
             ids,
         )
         return {int(r["doc_id"]): _row_to_document(r) for r in rows}
@@ -309,10 +311,11 @@ class Repository:
             return True
         if not row["fts_indexed"] and status is DocumentStatus.INDEXED:
             return True
-        if require_vectors and status in {DocumentStatus.INDEXED, DocumentStatus.PARTIAL}:
-            if not row["vector_indexed"] or row["model_key"] != model_key:
-                return True
-        return False
+        return bool(
+            require_vectors
+            and status in {DocumentStatus.INDEXED, DocumentStatus.PARTIAL}
+            and (not row["vector_indexed"] or row["model_key"] != model_key)
+        )
 
     def mark_unchanged(self, doc_id: int, scan_id: int) -> None:
         self.db.execute(
@@ -452,7 +455,7 @@ class Repository:
             return {}
         placeholders = ",".join("?" * len(ids))
         rows = self.db.query_all(
-            f"SELECT * FROM chunks WHERE chunk_id IN ({placeholders})",  # noqa: S608
+            f"SELECT * FROM chunks WHERE chunk_id IN ({placeholders})",
             ids,
         )
         return {int(r["chunk_id"]): r for r in rows}
@@ -670,9 +673,7 @@ class Repository:
         stamp = to_iso(now())
         started = stamp if state is JobState.RUNNING else None
         finished = (
-            stamp
-            if state in {JobState.COMPLETED, JobState.FAILED, JobState.CANCELLED}
-            else None
+            stamp if state in {JobState.COMPLETED, JobState.FAILED, JobState.CANCELLED} else None
         )
         self.db.execute(
             """
@@ -821,7 +822,7 @@ class Repository:
         if column not in allowed:
             raise ValueError(f"Kolumna {column} nie jest dozwolona w filtrach.")
         rows = self.db.query_all(
-            f"SELECT DISTINCT {column} AS v FROM documents "  # noqa: S608
+            f"SELECT DISTINCT {column} AS v FROM documents "
             f"WHERE {column} IS NOT NULL AND {column} <> '' ORDER BY v LIMIT ?",
             (limit,),
         )

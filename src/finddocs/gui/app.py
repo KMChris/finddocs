@@ -38,14 +38,15 @@ def _show_startup_error(message: str, log_path: Path) -> None:
     try:
         from PySide6.QtWidgets import QApplication, QMessageBox
 
-        app = QApplication.instance() or QApplication(sys.argv[:1])
+        existing = QApplication.instance()
+        app = existing if isinstance(existing, QApplication) else QApplication(sys.argv[:1])
         box = QMessageBox()
         box.setIcon(QMessageBox.Icon.Critical)
         box.setWindowTitle(f"{APP_NAME}: blad uruchomienia")
         box.setText(text)
         box.exec()
         del app
-    except Exception:  # noqa: BLE001 - ostatnia deska ratunku
+    except Exception:
         print(text, file=sys.stderr)
 
 
@@ -76,13 +77,13 @@ def main(argv: list[str] | None = None) -> int:
         from finddocs.gui.theme import apply_theme
     except ImportError as exc:  # pragma: no cover - brak Qt to blad instalacji
         _show_startup_error(
-            "Brakuje bibliotek interfejsu graficznego (PySide6). "
-            f"Szczegoly: {exc}",
+            f"Brakuje bibliotek interfejsu graficznego (PySide6). Szczegoly: {exc}",
             paths.log_file,
         )
         return 1
 
-    app = QApplication.instance() or QApplication(sys.argv[:1])
+    existing = QApplication.instance()
+    app = existing if isinstance(existing, QApplication) else QApplication(sys.argv[:1])
     app.setApplicationName(APP_NAME)
     app.setApplicationDisplayName(APP_NAME)
     app.setOrganizationName(APP_NAME)
@@ -103,7 +104,7 @@ def main(argv: list[str] | None = None) -> int:
         _show_startup_error(f"[{exc.code}] {exc.user_message}", paths.log_file)
         context.close()
         return 1
-    except Exception as exc:  # noqa: BLE001 - uzytkownik ma dostac czytelny komunikat
+    except Exception as exc:
         log.error("gui.startup_crashed", error_type=type(exc).__name__)
         log.debug("gui.startup_traceback", traceback=traceback.format_exc())
         _show_startup_error(f"{type(exc).__name__}: {exc}", paths.log_file)

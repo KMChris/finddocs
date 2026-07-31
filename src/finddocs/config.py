@@ -388,7 +388,7 @@ def save_config(config: AppConfig, path: Path | None = None) -> Path:
             handle.write(payload)
             handle.flush()
             os.fsync(handle.fileno())
-        os.replace(tmp_path, target)
+        tmp_path.replace(target)
     finally:
         tmp_path.unlink(missing_ok=True)
     return target

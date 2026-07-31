@@ -12,7 +12,6 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QHeaderView,
     QLabel,
-    QMessageBox,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
@@ -22,6 +21,7 @@ from PySide6.QtWidgets import (
 
 from finddocs.gui import i18n
 from finddocs.gui.context import AppContext
+from finddocs.gui.dialogs import show_error, show_info
 from finddocs.gui.workers import CallableTask, thread_pool
 from finddocs.logging_setup import get_logger
 from finddocs.types import CoverageReport
@@ -102,9 +102,7 @@ class ReportView(QWidget):
         task = CallableTask(work, label="raport pokrycia")
         task.signals.finished.connect(self._on_report)
         task.signals.failed.connect(
-            lambda code, message: QMessageBox.warning(
-                self, i18n.ERROR_TITLE, f"{message}\n\nKod: {code}"
-            )
+            lambda code, message: show_error(self, f"{message}\n\nKod: {code}")
         )
         thread_pool().start(task)
 
@@ -185,9 +183,7 @@ class ReportView(QWidget):
 
     def export(self, fmt: str) -> None:
         if self._report is None:
-            QMessageBox.information(
-                self, i18n.INFO_TITLE, "Najpierw odswiez raport przyciskiem Odswiez."
-            )
+            show_info(self, "Najpierw odswiez raport przyciskiem Odswiez.")
             return
         suffix = "json" if fmt == "json" else "csv"
         default = self.context.paths.reports_dir / f"raport-pokrycia.{suffix}"
@@ -213,9 +209,7 @@ class ReportView(QWidget):
             lambda result: self.status_message.emit(f"Zapisano raport: {result}")
         )
         task.signals.failed.connect(
-            lambda code, message: QMessageBox.warning(
-                self, i18n.ERROR_TITLE, f"{message}\n\nKod: {code}"
-            )
+            lambda code, message: show_error(self, f"{message}\n\nKod: {code}")
         )
         thread_pool().start(task)
 

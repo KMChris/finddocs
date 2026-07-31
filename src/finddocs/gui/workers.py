@@ -69,7 +69,7 @@ class SearchTask(QRunnable):
             log.warning("gui.search_failed", code=exc.code)
             self.signals.failed.emit(exc.code, exc.user_message)
             return
-        except Exception as exc:  # noqa: BLE001 - interfejs musi pokazac komunikat
+        except Exception as exc:
             log.exception("gui.search_crashed")
             self.signals.failed.emit("FD-7000", f"Nieoczekiwany blad: {type(exc).__name__}.")
             return
@@ -97,7 +97,7 @@ class CallableTask(QRunnable):
             log.warning("gui.task_failed", label=self._label, code=exc.code)
             self.signals.failed.emit(exc.code, exc.user_message)
             return
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             log.exception("gui.task_crashed", label=self._label)
             self.signals.failed.emit("FD-0000", f"Nieoczekiwany blad: {type(exc).__name__}.")
             return

@@ -111,7 +111,7 @@ class InternalApiEmbeddingProvider(EmbeddingProvider):
             )
             response.raise_for_status()
             payload = response.json()
-        except Exception as exc:  # noqa: BLE001 - httpx zglasza rozne typy
+        except Exception as exc:
             raise ProviderError(
                 "Wewnetrzne API embeddingow nie odpowiedzialo poprawnie.", cause=exc
             ) from exc
@@ -138,7 +138,9 @@ class InternalApiEmbeddingProvider(EmbeddingProvider):
         return self._post(prefixed, "passage")
 
     def embed_query(self, text: str) -> np.ndarray:
-        return self._post([self._info.query_prefix + text], "query")[0]
+        vectors = self._post([self._info.query_prefix + text], "query")
+        first: np.ndarray = vectors[0]
+        return first
 
 
 __all__ = ["DEFAULT_TIMEOUT_SECONDS", "PROVIDER_KEY", "InternalApiEmbeddingProvider"]

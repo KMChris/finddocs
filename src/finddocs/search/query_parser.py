@@ -10,6 +10,7 @@ Element rozpoznany jako doslowny nigdy nie jest zastepowany samym embeddingiem.
 
 from __future__ import annotations
 
+import itertools
 import re
 
 from finddocs.normalization.dates import (
@@ -123,7 +124,7 @@ def _detect_date_ranges(query: str) -> list[DateRange]:
         return []
     ranges: list[DateRange] = []
     lowered = fold_for_search(query)
-    for first, second in zip(dates, dates[1:], strict=False):
+    for first, second in itertools.pairwise(dates):
         between = lowered[first.span[1] : second.span[0]].strip()
         if len(between) > 12:
             continue
@@ -178,34 +179,34 @@ def analyze_query(query: str) -> QueryAnalysis:
         )
 
     # 3. numery urzedowe i IBAN
-    for match in (*find_official_numbers(without_quotes), *find_ibans(without_quotes)):
-        if occupied(match.span):
+    for found in (*find_official_numbers(without_quotes), *find_ibans(without_quotes)):
+        if occupied(found.span):
             continue
-        consumed.append(match.span)
+        consumed.append(found.span)
         terms.append(
             QueryTerm(
                 kind=TermKind.ACCOUNT,
-                raw=match.raw,
-                normalized=match.token,
-                variants=(match.normalized,),
+                raw=found.raw,
+                normalized=found.token,
+                variants=(found.normalized,),
                 is_exact_required=True,
-                span=match.span,
+                span=found.span,
             )
         )
 
     # 4. kwoty
-    for match in find_amounts(without_quotes):
-        if occupied(match.span):
+    for found in find_amounts(without_quotes):
+        if occupied(found.span):
             continue
-        consumed.append(match.span)
+        consumed.append(found.span)
         terms.append(
             QueryTerm(
                 kind=TermKind.AMOUNT,
-                raw=match.raw,
-                normalized=match.token,
-                variants=(match.normalized,),
+                raw=found.raw,
+                normalized=found.token,
+                variants=(found.normalized,),
                 is_exact_required=True,
-                span=match.span,
+                span=found.span,
             )
         )
 
@@ -216,44 +217,44 @@ def analyze_query(query: str) -> QueryAnalysis:
     range_endpoints = {r.start for r in date_ranges if r.start} | {
         r.end for r in date_ranges if r.end
     }
-    for match in find_dates(without_quotes):
-        if occupied(match.span):
+    for date_match in find_dates(without_quotes):
+        if occupied(date_match.span):
             continue
-        consumed.append(match.span)
-        is_endpoint = match.value in range_endpoints
+        consumed.append(date_match.span)
+        is_endpoint = date_match.value in range_endpoints
         normalized = (
-            match.token
-            if match.precision == "day"
-            else f"{MONTH_TOKEN_PREFIX}{match.value.year:04d}{match.value.month:02d}"
+            date_match.token
+            if date_match.precision == "day"
+            else f"{MONTH_TOKEN_PREFIX}{date_match.value.year:04d}{date_match.value.month:02d}"
         )
         terms.append(
             QueryTerm(
                 kind=TermKind.DATE_RANGE if is_endpoint else TermKind.DATE,
-                raw=match.raw,
+                raw=date_match.raw,
                 normalized=normalized,
                 variants=(
-                    f"{MONTH_TOKEN_PREFIX}{match.value.year:04d}{match.value.month:02d}",
-                    f"{YEAR_TOKEN_PREFIX}{match.value.year:04d}",
+                    f"{MONTH_TOKEN_PREFIX}{date_match.value.year:04d}{date_match.value.month:02d}",
+                    f"{YEAR_TOKEN_PREFIX}{date_match.value.year:04d}",
                 ),
                 is_exact_required=not is_endpoint,
-                span=match.span,
+                span=date_match.span,
             )
         )
 
     # 6. identyfikatory alfanumeryczne. Musza isc przed samymi ciagami cyfr,
     #    inaczej "FV/2015/07/123" rozpadloby sie na luzne liczby.
-    for match in find_identifiers(without_quotes):
-        if occupied(match.span):
+    for found in find_identifiers(without_quotes):
+        if occupied(found.span):
             continue
-        consumed.append(match.span)
+        consumed.append(found.span)
         terms.append(
             QueryTerm(
                 kind=TermKind.IDENTIFIER,
-                raw=match.raw,
-                normalized=match.token,
-                variants=(fold_for_search(match.raw),),
+                raw=found.raw,
+                normalized=found.token,
+                variants=(fold_for_search(found.raw),),
                 is_exact_required=True,
-                span=match.span,
+                span=found.span,
             )
         )
 

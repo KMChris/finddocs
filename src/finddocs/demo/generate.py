@@ -708,6 +708,8 @@ def _write_eml(
             subtype="pdf",
             filename=name,
         )
+        # Granica czesci jest losowa, wiec ustawiamy wlasna, zeby zbior byl powtarzalny.
+        message.set_boundary(f"=====granica-{moment.strftime('%Y%m%d%H%M%S')}=====")
     path.write_bytes(message.as_bytes())
 
 
@@ -1376,39 +1378,39 @@ def _build_skany(root: Path) -> None:
     _write_scan_png(
         root / "skany" / "skan-potwierdzenia-wplaty.png",
         [
-            "POTWIERDZENIE WPLATY GOTOWKOWEJ",
+            "POTWIERDZENIE WPŁATY GOTÓWKOWEJ",
             "",
-            "Bank Testowy S.A., oddzial nr 00",
+            f"{BANK}, oddział nr 00",
             "Data: 24.07.2015",
-            "Wplacajacy: Kowalski Jan",
-            "Kwota: 314 zl",
+            f"Wpłacający: {PERSON_A}",
+            "Kwota: 314 zł",
             "Rachunek: 99 8765 4321 0987",
-            "            6543 2109 8765",
-            "Tytul: oplata dodatkowa",
+            "                  6543 2109 8765",
+            "Tytuł: opłata dodatkowa",
             "",
             "Podpis kasjera: .....................",
             "",
-            "Dokument testowy, dane fikcyjne.",
+            DISCLAIMER,
         ],
     )
     _write_scan_pdf(
         root / "skany" / "skan-umowy-o-wspolpracy.pdf",
         [
-            "UMOWA O WSPOLPRACY",
+            "UMOWA O WSPÓŁPRACY",
             "",
-            "zawarta dnia 12.04.2005 pomiedzy",
-            "ACME Polska sp. z o.o.",
-            "a Nowak-Bud sp. j.",
+            "zawarta dnia 12.04.2005 pomiędzy",
+            CLIENT_A,
+            f"a {CLIENT_B}",
             "",
-            "Przedmiotem umowy jest stala wspolpraca",
-            "przy realizacji robot budowlanych.",
+            "Przedmiotem umowy jest stała współpraca",
+            "przy realizacji robót budowlanych.",
             "",
-            "Rozliczenia prowadzone sa w zlotych,",
+            "Rozliczenia prowadzone są w złotych,",
             "w terminie 14 dni od wystawienia faktury.",
             "",
-            "Podpisy stron: Kowalski Jan, Zielinski Marek",
+            f"Podpisy stron: {PERSON_A}, {PERSON_D}",
             "",
-            "Dokument testowy, dane fikcyjne.",
+            DISCLAIMER,
         ],
     )
 
@@ -1867,9 +1869,10 @@ def generate_demo_corpus(
 ) -> DemoCorpusInfo:
     """Tworzy zbior demonstracyjny w katalogu ``target`` i zwraca jego opis.
 
-    Generowanie jest powtarzalne dla tego samego ziarna ``seed``. Gdy
-    ``include_scans`` jest wylaczone, katalog ``skany`` nie powstaje, dzieki czemu
-    mozna testowac aplikacje bez silnika OCR.
+    Tresc dokumentow jest powtarzalna dla tego samego ziarna ``seed``. Same pliki
+    nie musza byc identyczne bajt po bajcie, bo pakiety DOCX i XLSX zapisuja
+    w archiwum czas zapisu. Gdy ``include_scans`` jest wylaczone, katalog ``skany``
+    nie powstaje, dzieki czemu mozna testowac aplikacje bez silnika OCR.
     """
     root = Path(target).expanduser()
     if root.exists() and not root.is_dir():

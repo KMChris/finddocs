@@ -103,10 +103,20 @@ ignore = [
     "RUF001",   # ambiguous unicode chars: Polish text is expected
     "RUF002",
     "RUF003",
+    # Nazwy statusow dokumentow zawieraja slowo "password", to nie sa hasla.
+    "S105",
+    # Opcjonalne haki cyklu zycia w klasach bazowych sa celowo puste.
+    "B027",
 ]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "ANN", "S311", "S105", "S106", "PTH"]
+# SQL sklada sie wylacznie z nazw kolumn z listy dozwolonych oraz z wygenerowanych
+# znakow zapytania. Wszystkie wartosci przekazujemy jako parametry zapytania.
+"src/finddocs/indexing/fts.py" = ["S608"]
+"src/finddocs/indexing/repository.py" = ["S608"]
+"src/finddocs/search/service.py" = ["S608"]
+"src/finddocs/diagnostics/*" = ["S608"]
 "tools/**" = ["S101", "ANN", "PTH", "S603", "S607"]
 "src/finddocs/demo/**" = ["S311"]
 

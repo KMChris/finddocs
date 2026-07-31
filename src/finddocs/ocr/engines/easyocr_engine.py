@@ -75,7 +75,7 @@ class EasyOcrEngine(OcrEngine):
             from importlib.metadata import version as pkg_version
 
             return pkg_version("easyocr")
-        except Exception:  # noqa: BLE001
+        except Exception:
             return "nieznana"
 
     def supported_languages(self) -> list[str]:
@@ -105,7 +105,7 @@ class EasyOcrEngine(OcrEngine):
             kwargs["user_network_directory"] = str(self._model_dir)
         try:
             self._reader = easyocr.Reader(wanted, **kwargs)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             raise OcrError(
                 "Nie udalo sie zainicjowac EasyOCR. Sprawdz, czy modele sa pobrane.",
                 cause=exc,
@@ -135,7 +135,7 @@ class EasyOcrEngine(OcrEngine):
         started = time.monotonic()
         try:
             raw = reader.readtext(array, detail=1, paragraph=False)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             raise OcrError(f"EasyOCR nie rozpoznal strony {page}.", cause=exc) from exc
 
         lines: list[OcrLine] = []
@@ -154,7 +154,9 @@ class EasyOcrEngine(OcrEngine):
                     box=(min(xs), min(ys), max(xs) - min(xs), max(ys) - min(ys)),
                 )
             )
-        lines.sort(key=lambda line: (line.box[1] if line.box else 0, line.box[0] if line.box else 0))
+        lines.sort(
+            key=lambda line: (line.box[1] if line.box else 0, line.box[0] if line.box else 0)
+        )
         return OcrPageResult(
             page=page,
             text="\n".join(line.text for line in lines),

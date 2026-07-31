@@ -12,7 +12,7 @@ import unicodedata
 
 #: Znaki, ktore Unicode NFKD rozklada na litere i znak diakrytyczny, sa obslugiwane
 #: automatycznie. Ponizsze litery to osobne znaki alfabetu i wymagaja mapy.
-SPECIAL_FOLD: dict[str, str] = {
+SPECIAL_FOLD: dict[str, str | int | None] = {
     "ł": "l",
     "Ł": "L",
     "đ": "d",
@@ -33,7 +33,7 @@ SPECIAL_FOLD: dict[str, str] = {
 }
 
 #: Znaki interpunkcyjne, ktore w dokumentach biurowych wystepuja w wielu wariantach.
-_PUNCTUATION_MAP: dict[str, str] = {
+_PUNCTUATION_MAP: dict[str, str | int | None] = {
     "‘": "'",
     "’": "'",
     "‚": "'",

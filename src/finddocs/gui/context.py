@@ -8,7 +8,7 @@ mamy jedno miejsce, w ktorym zarzadza sie cyklem zycia i zamknieciem zasobow.
 from __future__ import annotations
 
 import os
-import subprocess  # noqa: S404 - otwieramy pliki przez powloke systemowa
+import subprocess
 import webbrowser
 from pathlib import Path
 from typing import Any
@@ -116,9 +116,7 @@ class AppContext:
                 log.warning("gui.open_document_failed", kind=kind, error_type=type(exc).__name__)
         return False, "Nie udalo sie otworzyc dokumentu. Sprawdz, czy plik nadal istnieje."
 
-    def open_location(
-        self, *, parent_url: str | None, local_path: str | None
-    ) -> tuple[bool, str]:
+    def open_location(self, *, parent_url: str | None, local_path: str | None) -> tuple[bool, str]:
         """Otwiera katalog dokumentu albo lokalizacje w SharePoint."""
         if local_path:
             path = Path(local_path.removeprefix("file:///").replace("/", os.sep))

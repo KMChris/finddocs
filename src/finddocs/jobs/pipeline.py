@@ -19,8 +19,11 @@ sie zapisaniem statusu, dzieki czemu raport pokrycia widzi wszystko, co sie nie 
 from __future__ import annotations
 
 import shutil
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
+
+import numpy as np
 
 from finddocs.chunking import ChunkingConfig, chunk_document
 from finddocs.config import AppConfig
@@ -35,7 +38,6 @@ from finddocs.errors import (
     JobCancelledError,
     OcrCancelledError,
     OcrEngineUnavailableError,
-    OcrError,
     PasswordProtectedError,
     StorageSpaceError,
     TransientConnectorError,
@@ -55,8 +57,10 @@ from finddocs.types import (
     Chunk,
     DocumentRecord,
     DocumentStatus,
+    ExtractedAttachment,
     ExtractedSection,
     ExtractionResult,
+    FetchedFile,
     SourceItem,
     SupportLevel,
     TextOrigin,
@@ -199,10 +203,8 @@ class DocumentPipeline:
                 error_code=exc.code,
                 error_message=exc.user_message,
             )
-        except Exception as exc:  # noqa: BLE001 - blad jednego pliku nie konczy zadania
-            log.error(
-                "pipeline.unexpected_error", doc_id=doc_id, error_type=type(exc).__name__
-            )
+        except Exception as exc:
+            log.error("pipeline.unexpected_error", doc_id=doc_id, error_type=type(exc).__name__)
             message = f"Nieoczekiwany blad przetwarzania: {type(exc).__name__}."
             self._fail(doc_id, DocumentStatus.ERROR, "FD-3000", message, stage="process", item=item)
             return DocumentOutcome(
@@ -222,7 +224,7 @@ class DocumentPipeline:
         item: SourceItem,
         destination: Path,
         control: JobControl,
-    ) -> object:
+    ) -> FetchedFile:
         destination.mkdir(parents=True, exist_ok=True)
         last: Exception | None = None
         for attempt in range(1, max(1, self.retry.max_attempts) + 1):
@@ -281,7 +283,7 @@ class DocumentPipeline:
             raise
         except FindDocsError as exc:
             extraction_error = exc
-        except Exception as exc:  # noqa: BLE001 - parser moze zglosic dowolny blad
+        except Exception as exc:
             extraction_error = ExtractionError(
                 "Parser zakonczyl prace nieoczekiwanym bledem.", cause=exc
             )
@@ -329,7 +331,7 @@ class DocumentPipeline:
                 if extraction_error is None:
                     extraction_error = exc
                 log.warning("pipeline.ocr_failed", doc_id=doc_id, code=exc.code)
-            except Exception as exc:  # noqa: BLE001 - silnik OCR moze zglosic dowolny blad
+            except Exception as exc:
                 warnings.append("OCR nie powiodl sie z powodu nieoczekiwanego bledu.")
                 log.warning("pipeline.ocr_crashed", doc_id=doc_id, error_type=type(exc).__name__)
 
@@ -358,9 +360,7 @@ class DocumentPipeline:
                 stage="chunk",
                 item=item,
             )
-            return DocumentOutcome(
-                doc_id=doc_id, status=DocumentStatus.EMPTY, bytes_processed=size
-            )
+            return DocumentOutcome(doc_id=doc_id, status=DocumentStatus.EMPTY, bytes_processed=size)
 
         embeddings = self._embed(chunks, control)
         metadata = result.metadata if result else None
@@ -427,9 +427,7 @@ class DocumentPipeline:
     ) -> tuple[list[ExtractedSection], int, float | None, list[str]]:
         pages: list[int] | None = None
         if result is not None and info.mime_type == "application/pdf" and result.total_pages:
-            candidates = pages_needing_ocr(
-                result, self.config.ocr, total_pages=result.total_pages
-            )
+            candidates = pages_needing_ocr(result, self.config.ocr, total_pages=result.total_pages)
             pages = candidates or None
         ocr_result = self.ocr.run(
             path, info, content_sha256=content_sha256, pages=pages, cancel=control
@@ -437,7 +435,7 @@ class DocumentPipeline:
         sections = self.ocr.to_sections(ocr_result)
         return sections, ocr_result.page_count, ocr_result.confidence, ocr_result.warnings
 
-    def _embed(self, chunks: list[Chunk], control: JobControl):  # type: ignore[no-untyped-def]
+    def _embed(self, chunks: list[Chunk], control: JobControl) -> np.ndarray | None:
         if not self.index.semantic_available or self.index.provider is None:
             return None
         control.checkpoint()
@@ -447,7 +445,7 @@ class DocumentPipeline:
             )
         except JobCancelledError:
             raise
-        except Exception as exc:  # noqa: BLE001 - brak wektorow nie blokuje indeksowania
+        except Exception as exc:
             log.warning("pipeline.embedding_failed", error_type=type(exc).__name__)
             return None
 
@@ -455,7 +453,7 @@ class DocumentPipeline:
         self,
         *,
         record: DocumentRecord,
-        attachments: list[object],
+        attachments: Sequence[ExtractedAttachment],
         workspace: Path,
         control: JobControl,
         scan_id: int,
@@ -463,14 +461,12 @@ class DocumentPipeline:
         """Indeksuje zalaczniki wiadomosci jako osobne dokumenty podrzedne."""
         for attachment in attachments:
             control.checkpoint()
-            name = getattr(attachment, "name", "")
-            data = getattr(attachment, "data", b"")
-            mime = getattr(attachment, "mime_type", None)
+            name = attachment.name
+            data = attachment.data
+            mime = attachment.mime_type
             if not name or not data:
                 continue
-            child_id = self.index.repository.create_attachment_document(
-                record, name, mime, scan_id
-            )
+            child_id = self.index.repository.create_attachment_document(record, name, mime, scan_id)
             child_dir = workspace / f"att-{child_id}"
             child_dir.mkdir(parents=True, exist_ok=True)
             safe_name = _safe_filename(name)
@@ -518,7 +514,7 @@ class DocumentPipeline:
                     file_name=name,
                     source_id=record.source_id,
                 )
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 self._fail(
                     child_id,
                     DocumentStatus.ERROR,
@@ -568,6 +564,7 @@ class DocumentPipeline:
             file_name=file_name or (item.name if item else None),
             source_id=source_id or (item.source_id if item else None),
             retryable=retryable,
+            change_key=item.change_key() if item is not None and not retryable else None,
         )
 
 

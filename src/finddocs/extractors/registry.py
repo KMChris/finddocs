@@ -80,7 +80,8 @@ class ExtractorRegistry:
         candidates = self.candidates(path, info)
         if not candidates:
             raise UnsupportedFormatError(
-                f"Brak parsera dla typu {info.mime_type} (rozszerzenie {info.extension or 'brak'}).",
+                f"Brak parsera dla typu {info.mime_type} "
+                f"(rozszerzenie {info.extension or 'brak'}).",
                 details={"mime": info.mime_type, "extension": info.extension},
             )
 
@@ -93,7 +94,7 @@ class ExtractorRegistry:
             context.checkpoint()
             try:
                 result = extractor.extract(path, context)
-            except Exception as exc:  # noqa: BLE001 - probujemy kolejny adapter
+            except Exception as exc:
                 last_error = exc
                 log.warning(
                     "extractor.failed",

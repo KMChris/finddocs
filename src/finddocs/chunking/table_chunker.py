@@ -44,7 +44,9 @@ class TableChunkingStrategy(ChunkingStrategy):
             if not rows:
                 pending = []
                 return
-            prefix_parts = [p for p in (sheet_label, header if config.table_include_header else None) if p]
+            prefix_parts = [
+                p for p in (sheet_label, header if config.table_include_header else None) if p
+            ]
             body = "\n".join(rows)
             text = "\n".join([*prefix_parts, body]) if prefix_parts else body
             row_numbers = [s.row for s in pending if s.row is not None]
@@ -112,10 +114,7 @@ class TableChunkingStrategy(ChunkingStrategy):
 
             pending.append(section)
             current_chars = sum(len(s.text) for s in pending)
-            if (
-                len(pending) >= config.table_rows_per_chunk
-                or current_chars >= config.target_chars
-            ):
+            if len(pending) >= config.table_rows_per_chunk or current_chars >= config.target_chars:
                 yield from flush()
                 if produced >= config.max_chunks:
                     return

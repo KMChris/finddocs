@@ -63,9 +63,7 @@ class OnnxEmbeddingProvider(EmbeddingProvider):
         from tokenizers import Tokenizer
 
         self._tokenizer = Tokenizer.from_file(str(tokenizer_path))
-        self._max_len = int(
-            max_sequence_length or self.manifest.max_sequence_length or 512
-        )
+        self._max_len = int(max_sequence_length or self.manifest.max_sequence_length or 512)
         self._tokenizer.enable_truncation(max_length=self._max_len)
         self._tokenizer.enable_padding(pad_id=self._pad_id(), pad_token=self._pad_token())
 
@@ -79,7 +77,7 @@ class OnnxEmbeddingProvider(EmbeddingProvider):
         options.enable_cpu_mem_arena = True
         options.log_severity_level = 3
 
-        self._session = ort.InferenceSession(
+        self._session: Any | None = ort.InferenceSession(
             str(model_path),
             sess_options=options,
             providers=list(ALLOWED_EXECUTION_PROVIDERS),
@@ -142,24 +140,30 @@ class OnnxEmbeddingProvider(EmbeddingProvider):
 
     def _pool(self, hidden: np.ndarray, mask: np.ndarray) -> np.ndarray:
         if self.manifest.pooling == "cls":
-            return hidden[:, 0, :]
+            cls_vectors: np.ndarray = hidden[:, 0, :]
+            return cls_vectors
         weights = mask.astype("float32")[:, :, None]
         summed = (hidden * weights).sum(axis=1)
         counts = np.maximum(weights.sum(axis=1), 1e-9)
-        return summed / counts
+        pooled: np.ndarray = summed / counts
+        return pooled
 
     def _run(self, texts: list[str]) -> np.ndarray:
+        session = self._session
+        if session is None:
+            raise ProviderError("Sesja modelu zostala juz zamknieta.")
         ids, mask = self._encode(texts)
         feeds: dict[str, np.ndarray] = {"input_ids": ids, "attention_mask": mask}
         if "token_type_ids" in self._input_names:
             feeds["token_type_ids"] = np.zeros_like(ids)
         feeds = {k: v for k, v in feeds.items() if k in self._input_names}
-        outputs = self._session.run(None, feeds)
+        outputs = session.run(None, feeds)
         hidden = np.asarray(outputs[0], dtype="float32")
         pooled = self._pool(hidden, mask)
         if self.manifest.normalize:
             pooled = l2_normalize(pooled)
-        return pooled.astype("float32", copy=False)
+        final: np.ndarray = pooled.astype("float32", copy=False)
+        return final
 
     def embed_passages(
         self, texts: list[str], *, cancel: CancellationToken | None = None
@@ -175,17 +179,21 @@ class OnnxEmbeddingProvider(EmbeddingProvider):
                     cancel.raise_if_cancelled()
                 batch = prepared[start : start + self.batch_size]
                 chunks.append(self._run(batch))
-        return np.vstack(chunks) if chunks else np.zeros((0, self.dimension), dtype="float32")
+        if not chunks:
+            return np.zeros((0, self.dimension), dtype="float32")
+        stacked: np.ndarray = np.vstack(chunks)
+        return stacked
 
     def embed_query(self, text: str) -> np.ndarray:
         prepared = self._info.query_prefix + (text or " ")
         with self._lock:
             result = self._run([prepared])
-        return result[0]
+        vector: np.ndarray = result[0]
+        return vector
 
     def close(self) -> None:
         with self._lock:
-            self._session = None  # type: ignore[assignment]
+            self._session = None
 
     def describe(self) -> dict[str, Any]:
         data = super().describe()

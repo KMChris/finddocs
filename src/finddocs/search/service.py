@@ -70,9 +70,7 @@ TRUNCATED_NOTE = (
     "Zapytanie pasuje do bardzo wielu dokumentow. Lista zostala ograniczona. "
     "Zaweź zapytanie albo uzyj filtrow."
 )
-NO_SEMANTIC_NOTE = (
-    "Indeks semantyczny jest niedostepny. Uzyto wylacznie wyszukiwania dokladnego."
-)
+NO_SEMANTIC_NOTE = "Indeks semantyczny jest niedostepny. Uzyto wylacznie wyszukiwania dokladnego."
 
 
 @dataclass(slots=True)
@@ -191,9 +189,7 @@ class SearchService:
         ]
         groups = group_by_document(ranked, max_chunks=request.max_chunks_per_document)
         page = groups[request.offset : request.offset + request.limit]
-        chunk_map = {
-            g.doc_id: [(c.chunk_id, c.score) for c in g.candidates] for g in page
-        }
+        chunk_map = {g.doc_id: [(c.chunk_id, c.score) for c in g.candidates] for g in page}
         hits = self._build_hits(
             doc_ids=[g.doc_id for g in page],
             chunk_map=chunk_map,
@@ -255,9 +251,7 @@ class SearchService:
         truncated = False
         if total_fts > len(ordered_ids):
             extra_limit = min(HYBRID_MAX_DOCUMENTS, HYBRID_FULL_ENUMERATION_LIMIT)
-            spill = self.index.fts.search_documents(
-                fts_query, filters, limit=extra_limit, offset=0
-            )
+            spill = self.index.fts.search_documents(fts_query, filters, limit=extra_limit, offset=0)
             known = set(ordered_ids)
             for match in spill:
                 if match.doc_id not in known:
@@ -354,9 +348,7 @@ class SearchService:
                 result[int(row["chunk_id"])] = int(row["doc_id"])
         return result
 
-    def _boost_exact(
-        self, groups: list[DocumentGroup], required: list[str]
-    ) -> list[DocumentGroup]:
+    def _boost_exact(self, groups: list[DocumentGroup], required: list[str]) -> list[DocumentGroup]:
         """Podnosi dokumenty zawierajace wszystkie elementy doslowne z zapytania."""
         doc_ids = [g.doc_id for g in groups]
         found = self.index.fts.documents_containing_tokens(required, doc_ids)
@@ -467,9 +459,7 @@ class SearchService:
 
     # --- pomocnicze -------------------------------------------------------
 
-    def _merge_date_filters(
-        self, filters: SearchFilters, analysis: QueryAnalysis
-    ) -> SearchFilters:
+    def _merge_date_filters(self, filters: SearchFilters, analysis: QueryAnalysis) -> SearchFilters:
         """Dokleja zakresy dat rozpoznane w zapytaniu do filtrow uzytkownika."""
         if not analysis.date_filters or not filters.modified.is_empty():
             return filters
@@ -499,9 +489,7 @@ class SearchService:
 
     # --- eksport pelnej listy --------------------------------------------
 
-    def all_matching_documents(
-        self, query: str, filters: SearchFilters | None = None
-    ) -> list[int]:
+    def all_matching_documents(self, query: str, filters: SearchFilters | None = None) -> list[int]:
         """Wszystkie dokumenty pasujace doslownie, bez paginacji.
 
         Uzywane przez eksport listy wynikow i testy kompletnosci.

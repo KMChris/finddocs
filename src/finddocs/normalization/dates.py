@@ -127,10 +127,7 @@ class DateMatch:
     def token(self) -> str:
         if self.precision == "month":
             return f"{MONTH_TOKEN_PREFIX}{self.value.year:04d}{self.value.month:02d}"
-        return (
-            f"{DATE_TOKEN_PREFIX}{self.value.year:04d}"
-            f"{self.value.month:02d}{self.value.day:02d}"
-        )
+        return f"{DATE_TOKEN_PREFIX}{self.value.year:04d}{self.value.month:02d}{self.value.day:02d}"
 
 
 def _safe_date(year: int, month: int, day: int) -> _dt.date | None:

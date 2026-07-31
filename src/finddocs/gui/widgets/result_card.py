@@ -170,17 +170,16 @@ class EmptyState(QWidget):
         super().__init__()
         layout = QVBoxLayout(self)
         layout.setContentsMargins(24, 48, 24, 48)
-        label = QLabel(message)
-        label.setObjectName("Muted")
-        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        label.setWordWrap(True)
-        layout.addWidget(label)
+        self._label = QLabel(message)
+        self._label.setObjectName("Muted")
+        self._label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._label.setWordWrap(True)
+        layout.addWidget(self._label)
         layout.addStretch(1)
 
     def set_message(self, message: str) -> None:
-        label = self.findChild(QLabel)
-        if label is not None:
-            label.setText(message)
+        """Podmienia tresc komunikatu bez tworzenia nowej kontrolki."""
+        self._label.setText(message)
 
 
 __all__ = ["MAX_PATH_CHARS", "EmptyState", "ResultCard", "shorten_path", "snippet_to_html"]

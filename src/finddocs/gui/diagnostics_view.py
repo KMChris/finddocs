@@ -10,7 +10,6 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QHeaderView,
     QLabel,
-    QMessageBox,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
@@ -21,6 +20,7 @@ from PySide6.QtWidgets import (
 
 from finddocs.gui import i18n
 from finddocs.gui.context import AppContext
+from finddocs.gui.dialogs import show_error, show_info, show_warning
 from finddocs.gui.workers import CallableTask, thread_pool
 from finddocs.logging_setup import get_logger
 
@@ -177,9 +177,8 @@ class DiagnosticsView(QWidget):
             self.tabs.setCurrentWidget(self.consistency_table)
             problems = result.get("problemy") or []
             if problems:
-                QMessageBox.warning(
+                show_warning(
                     self,
-                    i18n.WARNING_TITLE,
                     "Wykryto problemy ze spojnoscia indeksu:\n" + "\n".join(map(str, problems)),
                 )
             else:
@@ -192,9 +191,7 @@ class DiagnosticsView(QWidget):
     def compact_vectors(self) -> None:
         index = self.context.index
         if index is None or index.vector_store is None:
-            QMessageBox.information(
-                self, i18n.INFO_TITLE, "Indeks wektorowy nie jest dostepny."
-            )
+            show_info(self, "Indeks wektorowy nie jest dostepny.")
             return
 
         def work() -> str:
@@ -209,9 +206,7 @@ class DiagnosticsView(QWidget):
 
         self.status_message.emit("Kompaktowanie indeksu wektorowego...")
         task = CallableTask(work, label="kompaktacja")
-        task.signals.finished.connect(
-            lambda message: QMessageBox.information(self, i18n.INFO_TITLE, str(message))
-        )
+        task.signals.finished.connect(lambda message: show_info(self, str(message)))
         task.signals.failed.connect(self._show_error)
         thread_pool().start(task)
 
@@ -225,9 +220,7 @@ class DiagnosticsView(QWidget):
 
         self.status_message.emit("Tworzenie kopii indeksu...")
         task = CallableTask(work, label="kopia indeksu")
-        task.signals.finished.connect(
-            lambda message: QMessageBox.information(self, i18n.INFO_TITLE, str(message))
-        )
+        task.signals.finished.connect(lambda message: show_info(self, str(message)))
         task.signals.failed.connect(self._show_error)
         thread_pool().start(task)
 
@@ -235,17 +228,14 @@ class DiagnosticsView(QWidget):
         def work() -> str:
             from finddocs.diagnostics.export import export_diagnostics_bundle
 
-            target = export_diagnostics_bundle(
-                self.context.require_index(), self.context.paths
-            )
+            target = export_diagnostics_bundle(self.context.require_index(), self.context.paths)
             return str(target)
 
         self.status_message.emit("Przygotowywanie pakietu diagnostycznego...")
         task = CallableTask(work, label="pakiet diagnostyczny")
         task.signals.finished.connect(
-            lambda result: QMessageBox.information(
+            lambda result: show_info(
                 self,
-                i18n.INFO_TITLE,
                 f"Pakiet diagnostyczny zapisano w:\n{result}\n\n"
                 "Pakiet nie zawiera tresci dokumentow.",
             )
@@ -263,7 +253,7 @@ class DiagnosticsView(QWidget):
         )
 
     def _show_error(self, code: str, message: str) -> None:
-        QMessageBox.warning(self, i18n.ERROR_TITLE, f"{message}\n\nKod: {code}")
+        show_error(self, f"{message}\n\nKod: {code}")
 
 
 __all__ = ["DiagnosticsView"]

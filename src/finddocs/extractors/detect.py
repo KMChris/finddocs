@@ -69,7 +69,10 @@ MAGIC_SIGNATURES: tuple[tuple[bytes, str], ...] = (
 
 #: Wpisy w archiwum ZIP charakterystyczne dla formatow Office Open XML.
 OOXML_MARKERS: tuple[tuple[str, str], ...] = (
-    ("word/document.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
+    (
+        "word/document.xml",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ),
     ("xl/workbook.xml", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
     (
         "ppt/presentation.xml",

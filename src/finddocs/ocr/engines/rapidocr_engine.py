@@ -103,7 +103,7 @@ class RapidOcrEngine(OcrEngine):
             from importlib.metadata import version as pkg_version
 
             self._version = pkg_version("rapidocr-onnxruntime")
-        except Exception:  # noqa: BLE001 - brak metadanych nie jest bledem
+        except Exception:
             self._version = "nieznana"
         if self._latin is not None:
             self._version = f"{self._version}+latin"
@@ -147,7 +147,7 @@ class RapidOcrEngine(OcrEngine):
                 fallback["rec_model_path"] = str(model)
                 fallback["rec_keys_path"] = str(dictionary)
             self._engine = RapidOCR(**fallback)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             raise OcrError("Nie udalo sie zainicjowac silnika RapidOCR.", cause=exc) from exc
         return self._engine
 
@@ -179,7 +179,7 @@ class RapidOcrEngine(OcrEngine):
         started = time.monotonic()
         try:
             result, _elapsed = engine(array)
-        except Exception as exc:  # noqa: BLE001 - biblioteka zglasza rozne typy
+        except Exception as exc:
             raise OcrError(f"RapidOCR nie rozpoznal strony {page}.", cause=exc) from exc
 
         lines: list[OcrLine] = []
@@ -199,7 +199,9 @@ class RapidOcrEngine(OcrEngine):
                 )
             )
 
-        lines.sort(key=lambda line: (line.box[1] if line.box else 0, line.box[0] if line.box else 0))
+        lines.sort(
+            key=lambda line: (line.box[1] if line.box else 0, line.box[0] if line.box else 0)
+        )
         text_value = "\n".join(line.text for line in lines)
         average = sum(confidences) / len(confidences) if confidences else None
         return OcrPageResult(

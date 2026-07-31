@@ -9,8 +9,9 @@ from __future__ import annotations
 import logging
 import logging.handlers
 import sys
+from collections.abc import MutableMapping
 from pathlib import Path
-from typing import Any, MutableMapping
+from typing import Any
 
 import structlog
 

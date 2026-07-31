@@ -87,7 +87,8 @@ class KeyringCredentialStore(CredentialStore):
 
     def get_secret(self, key: str) -> str | None:
         try:
-            return self._keyring.get_password(self._service, key)  # type: ignore[no-any-return]
+            stored: str | None = self._keyring.get_password(self._service, key)
+            return stored
         except self._error as exc:
             raise CredentialStoreError(
                 "Nie udalo sie odczytac poswiadczen z Menedzera poswiadczen Windows.",
@@ -97,7 +98,7 @@ class KeyringCredentialStore(CredentialStore):
     def delete_secret(self, key: str) -> None:
         try:
             self._keyring.delete_password(self._service, key)
-        except Exception:  # noqa: BLE001 - brak wpisu nie jest bledem
+        except Exception:
             log.debug("credentials.delete_missing", key=key)
 
 
@@ -111,7 +112,9 @@ class DpapiCredentialStore(CredentialStore):
         try:
             import win32crypt  # noqa: F401
         except ImportError as exc:  # pragma: no cover - tylko poza Windows
-            raise CredentialStoreError("DPAPI jest dostepne wylacznie na Windows.", cause=exc)
+            raise CredentialStoreError(
+                "DPAPI jest dostepne wylacznie na Windows.", cause=exc
+            ) from exc
         self._storage_file = storage_file
         self._storage_file.parent.mkdir(parents=True, exist_ok=True)
 
@@ -127,7 +130,7 @@ class DpapiCredentialStore(CredentialStore):
         try:
             raw = base64.b64decode(value.encode("ascii"))
             _desc, plain = win32crypt.CryptUnprotectData(raw, None, None, None, 0)
-        except Exception:  # noqa: BLE001 - uszkodzony wpis traktujemy jak brak
+        except Exception:
             log.warning("credentials.dpapi_unprotect_failed")
             return None
         return plain.decode("utf-8")  # type: ignore[no-any-return]
@@ -201,7 +204,7 @@ def create_credential_store(storage_dir: Path, *, prefer: str = "auto") -> Crede
                 store = DpapiCredentialStore(storage_dir / "credentials.dat")
             else:
                 store = MemoryCredentialStore()
-        except Exception as exc:  # noqa: BLE001 - probujemy kolejny mechanizm
+        except Exception as exc:
             errors.append(f"{kind}: {type(exc).__name__}")
             continue
         log.info("credentials.store_selected", store=store.name, persistent=store.persistent)

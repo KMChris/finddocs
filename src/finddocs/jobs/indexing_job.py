@@ -138,7 +138,7 @@ class IndexingJob:
         except FindDocsError as exc:
             log.error("job.failed", code=exc.code, error_type=type(exc).__name__)
             self._finish(JobState.FAILED, exc.user_message)
-        except Exception as exc:  # noqa: BLE001 - zadanie nie moze wywrocic aplikacji
+        except Exception as exc:
             log.error("job.crashed", error_type=type(exc).__name__)
             self._finish(JobState.FAILED, f"Nieoczekiwany blad zadania: {type(exc).__name__}.")
         finally:
@@ -170,13 +170,9 @@ class IndexingJob:
 
             checkpoint = repository.get_checkpoint(source.source_id, self.job_id)
             scan_id = (
-                int(checkpoint["scan_id"])
-                if checkpoint is not None
-                else repository.next_scan_id()
+                int(checkpoint["scan_id"]) if checkpoint is not None else repository.next_scan_id()
             )
-            cursor = (
-                ScanCursor.from_json(checkpoint["cursor"]) if checkpoint is not None else None
-            )
+            cursor = ScanCursor.from_json(checkpoint["cursor"]) if checkpoint is not None else None
             processed_before = int(checkpoint["processed"]) if checkpoint is not None else 0
             self.snapshot.processed = max(self.snapshot.processed, processed_before)
 
@@ -217,7 +213,7 @@ class IndexingJob:
                     )
                 except (JobCancelledError, StorageSpaceError):
                     raise
-                except Exception as exc:  # noqa: BLE001 - ostatnia bariera dla jednego pliku
+                except Exception as exc:
                     log.error(
                         "job.document_failed",
                         doc_id=doc_id,
@@ -253,8 +249,7 @@ class IndexingJob:
                 self.index.repository.mark_source_scanned(
                     source.source_id,
                     scan_id,
-                    full=self.options.kind is JobKind.FULL_INDEX
-                    or self.options.force_reindex,
+                    full=self.options.kind is JobKind.FULL_INDEX or self.options.force_reindex,
                 )
             self.index.repository.clear_checkpoint(source.source_id, self.job_id)
         finally:
@@ -373,8 +368,8 @@ class IndexingJob:
         now = _dt.datetime.now().astimezone()
         self.snapshot.updated_at = now
         self.snapshot.elapsed_seconds = (
-            (now - self._started).total_seconds() - self.control.paused_seconds
-        )
+            now - self._started
+        ).total_seconds() - self.control.paused_seconds
         if self.control.is_paused:
             self.snapshot.state = JobState.PAUSED
         elif self.snapshot.state is JobState.PAUSED:

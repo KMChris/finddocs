@@ -7,6 +7,7 @@ miedzy watkami.
 
 from __future__ import annotations
 
+import contextlib
 import sqlite3
 import threading
 from collections.abc import Iterator
@@ -82,16 +83,15 @@ class Database:
             self._local.conn = conn
             with self._lock:
                 self._connections.append(conn)
-        return conn  # type: ignore[no-any-return]
+        return conn
 
     def close(self) -> None:
         """Zamyka wszystkie otwarte polaczenia."""
         with self._lock:
             for conn in self._connections:
-                try:
+                # Blad zamkniecia polaczenia nie ma znaczenia: proces i tak konczy prace.
+                with contextlib.suppress(sqlite3.Error):
                     conn.close()
-                except sqlite3.Error:  # pragma: no cover - zamkniecie i tak konczy prace
-                    pass
             self._connections.clear()
         self._local = threading.local()
 
@@ -141,7 +141,7 @@ class Database:
         cur = self.connection.execute(sql, params)  # type: ignore[arg-type]
         rows = cur.fetchall()
         cur.close()
-        return rows  # type: ignore[no-any-return]
+        return rows
 
     def query_scalar(self, sql: str, params: object = (), default: Any = None) -> Any:
         row = self.query_one(sql, params)

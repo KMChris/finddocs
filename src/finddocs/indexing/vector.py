@@ -63,7 +63,7 @@ class VectorIndexMeta:
     @classmethod
     def from_json(cls, raw: str) -> VectorIndexMeta:
         data: dict[str, Any] = json.loads(raw)
-        known = {f for f in cls.__dataclass_fields__}
+        known = set(cls.__dataclass_fields__)
         return cls(**{k: v for k, v in data.items() if k in known})
 
 
@@ -157,7 +157,7 @@ class VectorStore:
             ) from exc
         try:
             self._index = self.faiss.read_index(str(self.index_path))
-        except Exception as exc:  # noqa: BLE001 - faiss zglasza rozne typy wyjatkow
+        except Exception as exc:
             raise IndexCorruptedError(
                 "Plik indeksu wektorowego jest uszkodzony.", cause=exc
             ) from exc
@@ -186,8 +186,8 @@ class VectorStore:
             tmp_meta.write_text(self.meta.to_json(), encoding="utf-8")
             _fsync(tmp_index)
             _fsync(tmp_meta)
-            os.replace(tmp_index, self.index_path)
-            os.replace(tmp_meta, self.meta_path)
+            tmp_index.replace(self.index_path)
+            tmp_meta.replace(self.meta_path)
 
     # --- operacje ----------------------------------------------------------
 
@@ -258,7 +258,9 @@ class VectorStore:
             if self._index is None or self._index.ntotal == 0:
                 return []
             wanted = max(1, k)
-            fetch = min(int(self._index.ntotal), int(wanted * max(1.0, overfetch)) + len(self._deleted))
+            fetch = min(
+                int(self._index.ntotal), int(wanted * max(1.0, overfetch)) + len(self._deleted)
+            )
             fetch = max(fetch, wanted)
             vector = np.ascontiguousarray(query.reshape(1, -1), dtype="float32")
             distances, indices = self._index.search(vector, fetch)
@@ -293,7 +295,7 @@ class VectorStore:
                 return None
             try:
                 return np.asarray(self._index.reconstruct(int(chunk_id)), dtype="float32")
-            except Exception:  # noqa: BLE001 - brak wektora nie jest bledem
+            except Exception:
                 return None
 
     def reset(self) -> None:

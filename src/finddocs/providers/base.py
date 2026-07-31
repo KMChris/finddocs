@@ -89,7 +89,8 @@ def l2_normalize(matrix: np.ndarray) -> np.ndarray:
     """Normalizuje wiersze macierzy do dlugosci 1."""
     norms = np.linalg.norm(matrix, axis=1, keepdims=True)
     np.maximum(norms, 1e-12, out=norms)
-    return (matrix / norms).astype("float32", copy=False)
+    normalized: np.ndarray = (matrix / norms).astype("float32", copy=False)
+    return normalized
 
 
 __all__ = ["EmbeddingProvider", "ProviderInfo", "l2_normalize"]

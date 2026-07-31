@@ -126,7 +126,7 @@ class LocalModelManifest:
                 f"Katalog modelu {directory} nie zawiera pliku {MANIFEST_FILENAME}."
             )
         data = json.loads(path.read_text(encoding="utf-8"))
-        known = {f for f in cls.__dataclass_fields__}
+        known = set(cls.__dataclass_fields__)
         return cls(**{k: v for k, v in data.items() if k in known})
 
     def model_file(self, directory: Path, *, prefer_quantized: bool) -> Path:

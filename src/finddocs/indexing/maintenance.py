@@ -317,9 +317,7 @@ def compact_vectors(
             vectors.append(vector)
 
     matrix = (
-        np.vstack(vectors)
-        if vectors
-        else np.zeros((0, vector_store.dimension), dtype="float32")
+        np.vstack(vectors) if vectors else np.zeros((0, vector_store.dimension), dtype="float32")
     )
     vector_store.compact(active_ids, matrix)
     return len(active_ids)
@@ -332,8 +330,7 @@ def mark_all_for_reindex(repository: Repository, *, only_vectors: bool = False) 
         if only_vectors:
             db.execute("UPDATE chunks SET has_vector = 0")
             db.execute(
-                "UPDATE documents SET vector_indexed = 0, model_key = NULL "
-                "WHERE status IN (?, ?)",
+                "UPDATE documents SET vector_indexed = 0, model_key = NULL WHERE status IN (?, ?)",
                 (DocumentStatus.INDEXED.value, DocumentStatus.PARTIAL.value),
             )
             count = int(

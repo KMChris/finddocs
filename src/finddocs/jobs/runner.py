@@ -47,7 +47,7 @@ class _SinkAdapter:
         for callback in list(self._callbacks):
             try:
                 callback(snapshot)
-            except Exception as exc:  # noqa: BLE001 - blad odbiorcy nie moze zabic zadania
+            except Exception as exc:
                 log.warning("runner.progress_callback_failed", error_type=type(exc).__name__)
 
 
@@ -89,9 +89,7 @@ class JobRunner:
             if self._thread is not None and self._thread.is_alive():
                 return
             self._stopping.clear()
-            self._thread = threading.Thread(
-                target=self._worker, name="finddocs-jobs", daemon=True
-            )
+            self._thread = threading.Thread(target=self._worker, name="finddocs-jobs", daemon=True)
             self._thread.start()
 
     def stop(self, *, wait: bool = True, timeout: float = 30.0) -> None:
@@ -238,7 +236,7 @@ class JobRunner:
             self._current_control = queued.control
         try:
             snapshot = job.run()
-        except Exception as exc:  # noqa: BLE001 - watek roboczy nie moze umrzec
+        except Exception as exc:
             log.error("runner.job_crashed", error_type=type(exc).__name__)
             snapshot = job.snapshot
             snapshot.state = JobState.FAILED
@@ -251,7 +249,7 @@ class JobRunner:
         for callback in list(self._completion_callbacks):
             try:
                 callback(snapshot)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 log.warning("runner.completion_callback_failed", error_type=type(exc).__name__)
 
 

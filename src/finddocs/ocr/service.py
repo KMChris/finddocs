@@ -156,22 +156,24 @@ class OcrService:
                     raise OcrCancelledError()
                 if page < 1 or page > total:
                     continue
-                yield page, render_pdf_page(
-                    path, page - 1, dpi=dpi, max_pixels=self.settings.max_image_pixels
+                yield (
+                    page,
+                    render_pdf_page(
+                        path, page - 1, dpi=dpi, max_pixels=self.settings.max_image_pixels
+                    ),
                 )
             return
 
         from finddocs.extractors.image import load_image_frames
 
-        index = 0
-        for frame in load_image_frames(
+        frames = load_image_frames(
             path,
             max_frames=self.settings.max_pages_per_document,
             max_pixels=self.settings.max_image_pixels,
-        ):
+        )
+        for index, frame in enumerate(frames, start=1):
             if cancel is not None and cancel.is_cancelled():
                 raise OcrCancelledError()
-            index += 1
             yield index, frame
 
     # --- glowne wejscie ---------------------------------------------------

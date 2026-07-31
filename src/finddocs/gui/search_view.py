@@ -229,7 +229,7 @@ class SearchView(QWidget):
             extensions = index.repository.distinct_values("extension")
             authors = index.repository.distinct_values("author", limit=200)
             libraries = index.repository.distinct_values("library", limit=200)
-        except Exception as exc:  # noqa: BLE001 - filtry sa dodatkiem, nie blokuja pracy
+        except Exception as exc:
             log.warning("gui.filters_refresh_failed", error_type=type(exc).__name__)
             return
 
@@ -403,7 +403,9 @@ class SearchView(QWidget):
             return
 
         for hit in response.hits:
-            card = ResultCard(hit, self.palette_colors, show_score=self.context.config.ui.show_scores)
+            card = ResultCard(
+                hit, self.palette_colors, show_score=self.context.config.ui.show_scores
+            )
             card.open_document.connect(self._open_document)
             card.open_location.connect(self._open_location)
             card.copy_link.connect(self._copy_link)
@@ -431,9 +433,7 @@ class SearchView(QWidget):
             self.next_button.setEnabled(False)
             return
         pages = max(1, -(-self._response.total_documents // self._page_size))
-        self.page_label.setText(
-            i18n.PAGINATION_STATUS.format(page=self._page + 1, pages=pages)
-        )
+        self.page_label.setText(i18n.PAGINATION_STATUS.format(page=self._page + 1, pages=pages))
         self.previous_button.setEnabled(self._page > 0)
         self.next_button.setEnabled(self._page + 1 < pages)
 
@@ -442,9 +442,7 @@ class SearchView(QWidget):
     def _open_document(self, hit: object) -> None:
         if not isinstance(hit, DocumentHit):
             return
-        ok, message = self.context.open_document(
-            web_url=hit.web_url, local_path=hit.local_path
-        )
+        ok, message = self.context.open_document(web_url=hit.web_url, local_path=hit.local_path)
         self.status_message.emit("" if ok else message)
 
     def _open_location(self, hit: object) -> None:
@@ -475,7 +473,7 @@ class SearchView(QWidget):
                 lines.append(f"   {strip_highlight(chunk.highlighted)}")
         return "\n".join(lines)
 
-    def keyPressEvent(self, event: object) -> None:  # noqa: N802 - nazwa z Qt
+    def keyPressEvent(self, event: object) -> None:
         key = getattr(event, "key", lambda: None)()
         if key == Qt.Key.Key_Escape and self.cancel_button.isEnabled():
             self.cancel_search()

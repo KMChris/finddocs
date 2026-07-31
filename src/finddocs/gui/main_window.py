@@ -10,7 +10,6 @@ from PySide6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QMainWindow,
-    QMessageBox,
     QStackedWidget,
     QStatusBar,
     QVBoxLayout,
@@ -20,6 +19,7 @@ from PySide6.QtWidgets import (
 from finddocs.gui import i18n
 from finddocs.gui.context import AppContext
 from finddocs.gui.diagnostics_view import DiagnosticsView
+from finddocs.gui.dialogs import ask_yes_no, show_info
 from finddocs.gui.indexing_view import IndexingView
 from finddocs.gui.report_view import ReportView
 from finddocs.gui.search_view import SearchView
@@ -191,10 +191,11 @@ class MainWindow(QMainWindow):
         notes = self.context.startup_notes
         if not notes:
             return
-        QMessageBox.information(
+        details = "\n".join(f"- {note}" for note in notes)
+        show_info(
             self,
+            i18n.INDEX_INCOMPATIBLE.format(details=details),
             i18n.INDEX_INCOMPATIBLE_TITLE,
-            i18n.INDEX_INCOMPATIBLE.format(details="\n".join(f"- {n}" for n in notes)),
         )
 
     def _offer_resume(self) -> None:
@@ -204,36 +205,29 @@ class MainWindow(QMainWindow):
         jobs = [j for j in runner.resumable_jobs() if j["stan"] in {"paused", "running"}]
         if not jobs:
             return
-        answer = QMessageBox.question(
-            self,
-            i18n.RESUME_TITLE,
-            i18n.RESUME_PROMPT,
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        )
-        if answer == QMessageBox.StandardButton.Yes:
+        if ask_yes_no(self, i18n.RESUME_PROMPT, i18n.RESUME_TITLE):
             self.nav.setCurrentRow(2)
             self.indexing_view.resume_interrupted(str(jobs[0]["job_id"]))
 
     # --- zamkniecie -------------------------------------------------------
 
-    def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802 - nazwa z Qt
+    def closeEvent(self, event: QCloseEvent) -> None:
+        """Zapisuje ustawienia okna i zamyka zasoby aplikacji."""
         runner = self.context.runner
         if runner is not None and runner.is_running:
-            answer = QMessageBox.question(
+            confirmed = ask_yes_no(
                 self,
-                i18n.CONFIRM_TITLE,
-                "Indeksowanie jest w toku. Zamkniecie aplikacji przerwie zadanie.\n"
+                "Indeksowanie jest w toku. Zamkniecie aplikacji przerwie zadanie. "
                 "Postep zostanie zachowany i bedzie mozna je wznowic. Zamknac?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             )
-            if answer != QMessageBox.StandardButton.Yes:
+            if not confirmed:
                 event.ignore()
                 return
         self.context.config.ui.window_width = self.width()
         self.context.config.ui.window_height = self.height()
         try:
             self.context.save()
-        except Exception as exc:  # noqa: BLE001 - zamkniecie nie moze sie wywrocic
+        except Exception as exc:
             log.warning("gui.save_on_close_failed", error_type=type(exc).__name__)
         self.context.close()
         event.accept()

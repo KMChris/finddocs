@@ -18,7 +18,6 @@ from PySide6.QtWidgets import (
     QHeaderView,
     QLabel,
     QLineEdit,
-    QMessageBox,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
@@ -31,8 +30,10 @@ from finddocs.config import (
     SharePointSourceSettings,
     SourceConfig,
 )
+from finddocs.connectors.base import SourceConnector
 from finddocs.gui import i18n
 from finddocs.gui.context import AppContext
+from finddocs.gui.dialogs import ask_yes_no, show_error, show_info, show_warning
 from finddocs.gui.workers import CallableTask, thread_pool
 from finddocs.logging_setup import get_logger
 from finddocs.providers.model_manifest import describe_models
@@ -114,9 +115,8 @@ class SharePointDialog(QDialog):
         if not self.client_edit.text().strip():
             missing.append("identyfikator aplikacji")
         if missing:
-            QMessageBox.warning(
+            show_warning(
                 self,
-                i18n.WARNING_TITLE,
                 "Uzupelnij pola: " + ", ".join(missing) + ".",
             )
             return
@@ -179,9 +179,7 @@ class SourcesView(QWidget):
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.table.verticalHeader().setVisible(False)
-        self.table.horizontalHeader().setSectionResizeMode(
-            2, QHeaderView.ResizeMode.Stretch
-        )
+        self.table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
         layout.addWidget(self.table)
 
         buttons = QHBoxLayout()
@@ -310,7 +308,7 @@ class SourcesView(QWidget):
                 f"Licencja: {info.license_name}, srodowisko: {info.runtime}"
             )
         else:
-            self.model_info.setText(i18n.MODEL_MISSING if not installed_any else i18n.MODEL_MISSING)
+            self.model_info.setText(i18n.MODEL_MISSING)
 
     # --- akcje ------------------------------------------------------------
 
@@ -323,7 +321,7 @@ class SourcesView(QWidget):
             return None
         try:
             return self.context.config.source(item.text())
-        except Exception:  # noqa: BLE001
+        except Exception:
             return None
 
     def add_local_source(self) -> None:
@@ -359,14 +357,14 @@ class SourcesView(QWidget):
     def test_selected(self) -> None:
         source = self._selected_source()
         if source is None:
-            QMessageBox.information(self, i18n.INFO_TITLE, "Wybierz zrodlo z listy.")
+            show_info(self, "Wybierz zrodlo z listy.")
             return
 
         def work() -> str:
             if source.kind is SourceKind.LOCAL_DIR:
                 from finddocs.connectors.local_dir import LocalDirectoryConnector
 
-                connector = LocalDirectoryConnector.from_config(source)
+                connector: SourceConnector = LocalDirectoryConnector.from_config(source)
             else:
                 from finddocs.connectors.sharepoint import build_sharepoint_connector
 
@@ -380,13 +378,9 @@ class SourcesView(QWidget):
 
         self.status_message.emit("Sprawdzanie polaczenia...")
         task = CallableTask(work, label="test polaczenia")
-        task.signals.finished.connect(
-            lambda message: QMessageBox.information(self, i18n.INFO_TITLE, str(message))
-        )
+        task.signals.finished.connect(lambda message: show_info(self, str(message)))
         task.signals.failed.connect(
-            lambda code, message: QMessageBox.warning(
-                self, i18n.ERROR_TITLE, f"{message}\n\nKod: {code}"
-            )
+            lambda code, message: show_error(self, f"{message}\n\nKod: {code}")
         )
         thread_pool().start(task)
 
@@ -404,13 +398,9 @@ class SourcesView(QWidget):
         source = self._selected_source()
         if source is None:
             return
-        answer = QMessageBox.question(
-            self,
-            i18n.CONFIRM_TITLE,
-            i18n.CONFIRM_REMOVE_SOURCE.format(label=source.label),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        )
-        if answer != QMessageBox.StandardButton.Yes:
+        if not ask_yes_no(
+            self, i18n.CONFIRM_REMOVE_SOURCE.format(label=source.label), i18n.CONFIRM_TITLE
+        ):
             return
         index = self.context.require_index()
         with index.db.transaction():
@@ -445,13 +435,11 @@ class SourcesView(QWidget):
         def done(message: object) -> None:
             self.refresh()
             self.sources_changed.emit()
-            QMessageBox.information(self, i18n.INFO_TITLE, str(message))
+            show_info(self, str(message))
 
         task.signals.finished.connect(done)
         task.signals.failed.connect(
-            lambda code, message: QMessageBox.warning(
-                self, i18n.ERROR_TITLE, f"{message}\n\nKod: {code}"
-            )
+            lambda code, message: show_error(self, f"{message}\n\nKod: {code}")
         )
         thread_pool().start(task)
 
@@ -459,9 +447,8 @@ class SourcesView(QWidget):
         directory = QFileDialog.getExistingDirectory(self, i18n.STORAGE_CHANGE)
         if not directory:
             return
-        QMessageBox.information(
+        show_info(
             self,
-            i18n.INFO_TITLE,
             "Katalog danych zostanie zmieniony po ponownym uruchomieniu aplikacji.\n"
             f"Nowy katalog: {directory}",
         )
@@ -480,9 +467,8 @@ class SourcesView(QWidget):
         self.context.config.embedding.quantized = quantized
         self.context.save()
         if changed:
-            QMessageBox.information(
+            show_info(
                 self,
-                i18n.INFO_TITLE,
                 "Zmiana modelu wymaga przebudowy czesci semantycznej indeksu.\n"
                 "Uruchom pelne przeindeksowanie na ekranie Indeksowanie.\n"
                 "Do tego czasu wyszukiwanie dokladne dziala bez zmian.",

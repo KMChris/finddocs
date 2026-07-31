@@ -44,7 +44,8 @@ def fold_with_positions(text: str) -> FoldedText:
     folded_chars: list[str] = []
     positions: list[int] = []
     for index, char in enumerate(text):
-        replacement = SPECIAL_FOLD.get(char)
+        mapped = SPECIAL_FOLD.get(char)
+        replacement = mapped if isinstance(mapped, str) else None
         if replacement is None:
             decomposed = unicodedata.normalize("NFKD", char)
             replacement = "".join(c for c in decomposed if not unicodedata.combining(c))
@@ -157,9 +158,7 @@ def build_snippet(
     end = _word_boundary(cleaned, end, forward=False)
 
     window = cleaned[start:end]
-    local_spans = [
-        (s - start, e - start) for s, e in spans if s >= start and e <= end
-    ]
+    local_spans = [(s - start, e - start) for s, e in spans if s >= start and e <= end]
     highlighted = apply_highlight(window, local_spans)
     prefix = "..." if start > 0 else ""
     suffix = "..." if end < len(cleaned) else ""

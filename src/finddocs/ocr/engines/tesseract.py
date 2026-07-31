@@ -14,7 +14,7 @@ from __future__ import annotations
 import os
 import re
 import shutil
-import subprocess  # noqa: S404 - uruchamiamy tylko znany plik wykonywalny Tesseracta
+import subprocess
 import tempfile
 import time
 import winreg

@@ -91,10 +91,10 @@ def redact_value(key: str, value: Any, *, depth: int = 0) -> Any:
         return redact_text(value)
     if isinstance(value, dict):
         return {k: redact_value(str(k), v, depth=depth + 1) for k, v in value.items()}
-    if isinstance(value, (list, tuple)):
+    if isinstance(value, list | tuple):
         limited = list(value)[:20]
         return [redact_value(key, v, depth=depth + 1) for v in limited]
-    if isinstance(value, (int, float, bool)) or value is None:
+    if isinstance(value, int | float | bool) or value is None:
         return value
     return redact_text(str(value))
 

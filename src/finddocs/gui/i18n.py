@@ -221,8 +221,7 @@ INFO_TITLE = "Informacja"
 CONFIRM_TITLE = "Potwierdzenie"
 
 CONFIRM_REMOVE_SOURCE = (
-    "Czy na pewno usunac zrodlo '{label}'?\n"
-    "Dokumenty z tego zrodla zostana usuniete z indeksu."
+    "Czy na pewno usunac zrodlo '{label}'?\nDokumenty z tego zrodla zostana usuniete z indeksu."
 )
 CONFIRM_FULL_REINDEX = (
     "Pelne przeindeksowanie przetworzy wszystkie dokumenty od nowa. "
@@ -230,8 +229,7 @@ CONFIRM_FULL_REINDEX = (
 )
 
 STARTUP_ERROR = (
-    "Nie udalo sie uruchomic aplikacji.\n\n{message}\n\n"
-    "Szczegoly zapisano w pliku logu:\n{log}"
+    "Nie udalo sie uruchomic aplikacji.\n\n{message}\n\nSzczegoly zapisano w pliku logu:\n{log}"
 )
 
 INDEX_INCOMPATIBLE_TITLE = "Indeks wymaga przebudowy"

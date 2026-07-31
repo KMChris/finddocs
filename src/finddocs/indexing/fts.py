@@ -424,9 +424,7 @@ class FtsIndex:
             )
         return result
 
-    def matching_chunk_counts(
-        self, query: FtsQuery, doc_ids: list[int]
-    ) -> dict[int, int]:
+    def matching_chunk_counts(self, query: FtsQuery, doc_ids: list[int]) -> dict[int, int]:
         """Liczba pasujacych fragmentow w kazdym dokumencie."""
         if query.is_empty() or not doc_ids:
             return {}

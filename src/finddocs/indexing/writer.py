@@ -154,8 +154,14 @@ class IndexWriter:
         file_name: str | None = None,
         source_id: str | None = None,
         retryable: bool = False,
+        change_key: str | None = None,
     ) -> None:
-        """Zapisuje niepowodzenie przetwarzania dokumentu i usuwa jego fragmenty."""
+        """Zapisuje niepowodzenie przetwarzania dokumentu i usuwa jego fragmenty.
+
+        Zapisany ``change_key`` sprawia, ze niezmieniony plik, ktorego nie da sie
+        przetworzyc, nie jest ponawiany przy kazdym skanowaniu. Zmiana pliku albo
+        pelne przeindeksowanie ponownie go zakwalifikuje.
+        """
         db = self.repository.db
         with db.transaction():
             removed = self.repository.delete_chunks(doc_id)
@@ -167,8 +173,15 @@ class IndexWriter:
                 increment_attempt=True,
             )
             db.execute(
-                "UPDATE documents SET fts_indexed = 0, vector_indexed = 0 WHERE doc_id = ?",
-                (doc_id,),
+                "UPDATE documents SET fts_indexed = 0, vector_indexed = 0, "
+                "change_key = COALESCE(?, change_key), "
+                "normalization_version = ?, chunking_version = ? WHERE doc_id = ?",
+                (
+                    change_key,
+                    NORMALIZATION_VERSION if change_key else 0,
+                    CHUNKING_VERSION if change_key else 0,
+                    doc_id,
+                ),
             )
             self.repository.log_error(
                 stage=stage,
