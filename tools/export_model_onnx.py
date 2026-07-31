@@ -69,7 +69,7 @@ def export(model_dir: Path, output_dir: Path, opset: int, quantize: bool) -> Pat
     config = ConfigCls.from_pretrained(str(model_dir))
     try:
         model = ModelCls.from_pretrained(str(model_dir), torch_dtype=torch.float32)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         # Sciezka zapasowa dla srodowisk, w ktorych from_pretrained nie dziala
         # z powodu konfliktu wersji accelerate lub innych zaleznosci pobocznych.
         print(f"    from_pretrained nie zadzialalo ({type(exc).__name__}), laduje wagi recznie")
@@ -88,9 +88,7 @@ def export(model_dir: Path, output_dir: Path, opset: int, quantize: bool) -> Pat
     tokenizer = Tokenizer.from_file(str(model_dir / "tokenizer.json"))
     tokenizer.enable_truncation(max_length=64)
     tokenizer.enable_padding()
-    encodings = tokenizer.encode_batch(
-        ["zapytanie: przykladowe zdanie", "drugie zdanie kontrolne"]
-    )
+    encodings = tokenizer.encode_batch(["zapytanie: przykladowe zdanie", "drugie zdanie kontrolne"])
     input_ids = torch.tensor([e.ids for e in encodings], dtype=torch.long)
     attention_mask = torch.tensor([e.attention_mask for e in encodings], dtype=torch.long)
     inputs = (input_ids, attention_mask)
@@ -103,9 +101,7 @@ def export(model_dir: Path, output_dir: Path, opset: int, quantize: bool) -> Pat
             super().__init__()
             self.inner = inner
 
-        def forward(
-            self, input_ids: torch.Tensor, attention_mask: torch.Tensor
-        ) -> torch.Tensor:
+        def forward(self, input_ids: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
             out = self.inner(input_ids=input_ids, attention_mask=attention_mask)
             return out.last_hidden_state
 
