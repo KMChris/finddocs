@@ -36,6 +36,10 @@ DEFAULT_MODEL_KEY = "mmlw-retrieval-roberta-base"
 
 REQUIRED_MODULES = ("PyInstaller", "PySide6", "onnxruntime", "faiss", "pypdfium2")
 
+#: Dokumenty robocze zespolu. Nie trafiaja do pakietu dla uzytkownika, bo opisuja
+#: proces powstawania produktu, a nie sam produkt.
+INTERNAL_DOCS = ("spec.md", "requirements-matrix.md")
+
 
 def _fail(message: str) -> None:
     print(f"BLAD: {message}", file=sys.stderr)
@@ -119,7 +123,12 @@ def copy_extra_files(app_dir: Path) -> None:
     docs_source = PROJECT_ROOT / "docs"
     if docs_source.is_dir():
         target = app_dir / "docs"
-        shutil.copytree(docs_source, target, dirs_exist_ok=True)
+        shutil.copytree(
+            docs_source,
+            target,
+            dirs_exist_ok=True,
+            ignore=shutil.ignore_patterns(*INTERNAL_DOCS),
+        )
     third_party = PROJECT_ROOT / "docs" / "licencje.md"
     if third_party.exists():
         shutil.copy2(third_party, app_dir / "LICENCJE-KOMPONENTOW.md")

@@ -222,8 +222,13 @@ Poza suitą automatyczną wykonano przebieg na zbiorze demonstracyjnym:
 | tryb hybrydowy | `procedura-przelewow-2015.docx` na pierwszym miejscu tam, gdzie tryb dokładny nie znajduje nic |
 | test dymny zbudowanej aplikacji | aplikacja uruchamia się i zamyka poprawnie, kod wyjścia 0 |
 | pakiet bez modelu | 974 pliki, 409 MB |
-| pakiet z modelem INT8 | 982 pliki, 534 MB, w logu `provider.loaded` |
+| pakiet z modelem INT8 | 980 plików, 534 MB, w logu `provider.loaded` |
 | instalator Inno Setup | `FindDocs-0.1.0-instalator.exe`, 191 MB |
+| instalacja cicha | `/VERYSILENT /CURRENTUSER`, bez uprawnień administratora, 541 MB |
+| skróty po instalacji | aplikacja, dokumentacja i deinstalator w menu Start |
+| wpis w rejestrze | klucz `FindDocs_is1` w gałęzi użytkownika, wersja 0.1.0 |
+| uruchomienie po instalacji | `--self-test` kończy się kodem 0, model wczytany |
+| deinstalacja cicha | pliki, skróty i wpis usunięte, katalog danych zachowany |
 
 Dwa błędy w zbiorze demonstracyjnym są celowe: uszkodzony PDF i dokument
 zabezpieczony hasłem. Sprawdzają izolację błędów.

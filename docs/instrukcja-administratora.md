@@ -28,11 +28,19 @@ na pulpicie. Nie wymaga uprawnień administratora i nie zmienia ustawień system
 Instalacja cicha:
 
 ```bat
-FindDocs-0.1.0-instalator.exe /VERYSILENT /NORESTART
+FindDocs-0.1.0-instalator.exe /VERYSILENT /CURRENTUSER /NORESTART /SUPPRESSMSGBOXES
 ```
 
-Dostępne przełączniki Inno Setup: `/SILENT`, `/VERYSILENT`, `/SUPPRESSMSGBOXES`,
-`/LOG="sciezka"`, `/DIR="sciezka"`, `/TASKS=desktopicon`.
+Przełącznik `/CURRENTUSER` jest istotny: bez niego instalator pyta o zakres
+instalacji i przy braku odpowiedzi czeka w nieskończoność. Instalacja dla całej
+maszyny wymaga `/ALLUSERS` i uprawnień administratora.
+
+Pozostałe przełączniki Inno Setup: `/SILENT`, `/LOG="sciezka"`, `/DIR="sciezka"`,
+`/TASKS=desktopicon`.
+
+Sprawdzone na tej wersji: instalacja cicha zajmuje około 541 MB w profilu
+użytkownika, tworzy trzy skróty w menu Start (aplikacja, dokumentacja,
+deinstalator) i wpis `FindDocs_is1` w gałęzi rejestru użytkownika.
 
 ### Deinstalacja
 

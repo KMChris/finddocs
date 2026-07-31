@@ -25,7 +25,12 @@ DefaultDirName={autopf}\{#AppName}
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
-PrivilegesRequiredOverridesAllowed=dialog
+; Wartosc "commandline" zamiast "dialog" jest tu istotna. Przy "dialog" Inno Setup
+; pyta o zakres instalacji w osobnym oknie pokazywanym jeszcze przed kreatorem,
+; a tego okna nie ukrywa ani /SILENT, ani /VERYSILENT. Instalacja cicha stawala
+; przez to w miejscu i czekala na klikniecie, ktorego nikt nie widzial.
+; Administrator moze nadal wymusic instalacje dla wszystkich przez /ALLUSERS.
+PrivilegesRequiredOverridesAllowed=commandline
 OutputDir=output
 OutputBaseFilename=FindDocs-{#AppVersion}-instalator
 SetupIconFile=..\src\finddocs\resources\finddocs.ico
