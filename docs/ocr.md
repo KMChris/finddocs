@@ -38,11 +38,11 @@ Aplikacja nie jest związana z jednym silnikiem. Interfejs jest w
 | EasyOCR | `easyocr` | `pip install finddocs[ocr-easy]` | tak | wymaga pobrania modeli, wolniejszy |
 | RapidOCR | `rapidocr` | `pip install finddocs[ocr-rapid]` | model łaciński | działa na ONNX Runtime, bez instalatora systemowego |
 
-Dodatek `ocr-rapid` instaluje pakiet zależny od wersji Pythona: do 3.12 jest to
-`rapidocr-onnxruntime` 1.4.4 (nowszych wydań nie ma, a to wymaga Pythona
-poniżej 3.13), od 3.13 następca o nazwie `rapidocr`. Oba pochodzą z projektu
-RapidAI, mają modele wbudowane w pakiet i nie pobierają niczego z sieci.
-Adapter aplikacji obsługuje oba warianty automatycznie.
+Dodatek `ocr-rapid` instaluje pakiet `rapidocr`, następcę wycofanego
+`rapidocr-onnxruntime` (tamten kończy się na wersji 1.4.4 i wymaga Pythona
+poniżej 3.13). Oba pochodzą z projektu RapidAI, mają modele wbudowane w pakiet
+i nie pobierają niczego z sieci. Adapter aplikacji obsługuje oba warianty, więc
+starsze środowisko z poprzednim pakietem nadal działa.
 
 `ocr.engine = "auto"` wybiera pierwszy dostępny w kolejności Tesseract,
 EasyOCR, RapidOCR. Sprawdzenie, co jest widoczne na danym komputerze:

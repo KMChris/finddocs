@@ -10,6 +10,7 @@ ani zapytan poza komputer uzytkownika w konfiguracji domyslnej.
 
 | Komponent | Wersja | Licencja | Zastosowanie | Zrodlo |
 | --- | --- | --- | --- | --- |
+| antlr4-python3-runtime | 4.9.3 | BSD | zaleznosc posrednia | http://www.antlr.org |
 | anyio | 4.14.2 | MIT | zaleznosc posrednia | https://anyio.readthedocs.io/en/latest/ |
 | backports.tarfile | 1.2.0 | MIT License | zaleznosc posrednia | https://github.com/jaraco/backports.tarfile |
 | certifi | 2026.7.22 | Mozilla Public License 2.0 (MPL 2.0) | zaleznosc posrednia | https://github.com/certifi/python-certifi |
@@ -17,9 +18,10 @@ ani zapytan poza komputer uzytkownika w konfiguracji domyslnej.
 | charset-normalizer | 3.4.1 | MIT License | wykrywanie kodowania plikow tekstowych | https://charset-normalizer.readthedocs.io/ |
 | colorama | 0.4.6 | BSD License | zaleznosc posrednia | https://github.com/tartley/colorama |
 | coloredlogs | 15.0.1 | MIT License | zaleznosc posrednia | https://coloredlogs.readthedocs.io |
+| colorlog | 6.12.0 | MIT License | zaleznosc posrednia | https://github.com/borntyping/python-colorlog |
 | cryptography | 50.0.0 | Apache-2.0 OR BSD-3-Clause | zaleznosc posrednia | https://cryptography.io/ |
 | et_xmlfile | 2.0.0 | MIT License | zaleznosc posrednia | https://foss.heptapod.net/openpyxl/et_xmlfile |
-| faiss-cpu | 1.9.0.post1 | MIT License | indeks wektorowy | https://github.com/kyamagu/faiss-wheels |
+| faiss-cpu | 1.15.0 | MIT | indeks wektorowy | https://github.com/facebookresearch/faiss |
 | filelock | 3.32.2 | MIT License | zaleznosc posrednia | https://py-filelock.readthedocs.io |
 | flatbuffers | 25.12.19 | Apache Software License | zaleznosc posrednia | https://google.github.io/flatbuffers/ |
 | fsspec | 2026.7.0 | BSD-3-Clause | zaleznosc posrednia | https://filesystem-spec.readthedocs.io/en/latest/ |
@@ -40,7 +42,8 @@ ani zapytan poza komputer uzytkownika w konfiguracji domyslnej.
 | msal | 1.37.0 | MIT License | uwierzytelnienie w Microsoft Entra ID | https://github.com/AzureAD/microsoft-authentication-library-for-python |
 | numpy | 2.4.6 | BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0 | operacje na wektorach | https://numpy.org |
 | olefile | 0.47 | BSD License | odczyt kontenerow OLE (DOC, MSG) | https://www.decalage.info/python/olefileio |
-| onnxruntime | 1.20.1 | MIT License | uruchamianie modelu embeddingow na CPU | https://onnxruntime.ai |
+| omegaconf | 2.3.1 | BSD License | zaleznosc posrednia | https://github.com/omry/omegaconf |
+| onnxruntime | 1.28.0 | MIT License | uruchamianie modelu embeddingow na CPU | https://onnxruntime.ai |
 | opencv-python | 5.0.0.93 | Apache Software License | zaleznosc posrednia | https://github.com/opencv/opencv-python |
 | openpyxl | 3.1.5 | MIT License | odczyt plikow XLSX | https://openpyxl.readthedocs.io |
 | packaging | 26.2 | Apache-2.0 OR BSD-2-Clause | zaleznosc posrednia | https://packaging.pypa.io/ |
@@ -52,19 +55,18 @@ ani zapytan poza komputer uzytkownika w konfiguracji domyslnej.
 | PyJWT | 2.13.0 | MIT | zaleznosc posrednia | https://github.com/jpadilla/pyjwt |
 | pypdfium2 | 4.30.0 | (Apache-2.0 OR BSD-3-Clause) AND LicenseRef-PdfiumThirdParty | odczyt i rasteryzacja PDF | https://github.com/pypdfium2-team/pypdfium2 |
 | pyreadline3 | 3.5.6 | BSD License | zaleznosc posrednia | https://github.com/pyreadline3/pyreadline3 |
-| PySide6 | 6.8.1 | GNU Library or Lesser General Public License (LGPL) | interfejs graficzny | https://pyside.org |
-| PySide6_Addons | 6.8.1 | GNU Library or Lesser General Public License (LGPL) | interfejs graficzny | https://pyside.org |
-| PySide6_Essentials | 6.8.1 | GNU Library or Lesser General Public License (LGPL) | interfejs graficzny | https://pyside.org |
+| PySide6 | 6.11.1 | LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only | interfejs graficzny | https://pyside.org |
+| PySide6_Addons | 6.11.1 | LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only | interfejs graficzny | https://pyside.org |
+| PySide6_Essentials | 6.11.1 | LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only | interfejs graficzny | https://pyside.org |
 | python-docx | 1.1.2 | MIT License | odczyt plikow DOCX | https://python-docx.readthedocs.org/en/latest/ |
-| pywin32 | 308 | Python Software Foundation License | DPAPI, automatyzacja Office przez COM | https://github.com/mhammond/pywin32 |
+| pywin32 | 312 | Python Software Foundation License | DPAPI, automatyzacja Office przez COM | https://github.com/mhammond/pywin32 |
 | pywin32-ctypes | 0.2.3 | BSD-3-Clause | zaleznosc posrednia | https://github.com/enthought/pywin32-ctypes |
 | PyYAML | 6.0.3 | MIT License | zaleznosc posrednia | https://pyyaml.org/ |
-| rapidocr | 3.9.2 | Apache-2.0 | silnik OCR (opcjonalny, Python od 3.13) | https://github.com/RapidAI/RapidOCR |
-| rapidocr-onnxruntime | 1.4.4 | Apache-2.0 | silnik OCR (opcjonalny, Python do 3.12) | https://github.com/RapidAI/RapidOCR |
+| rapidocr | 3.9.2 | Apache-2.0 | silnik OCR (opcjonalny) | https://rapidai.github.io/RapidOCRDocs |
 | requests | 2.34.2 | Apache Software License | zaleznosc posrednia | https://requests.readthedocs.io |
 | setuptools | 83.0.0 | MIT | zaleznosc posrednia | https://github.com/pypa/setuptools |
 | shapely | 2.1.2 | BSD License | zaleznosc posrednia | https://shapely.readthedocs.io/ |
-| shiboken6 | 6.8.1 | GNU Library or Lesser General Public License (LGPL) | warstwa wiazan Qt dla Pythona | https://pyside.org |
+| shiboken6 | 6.11.1 | LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only | warstwa wiazan Qt dla Pythona | https://pyside.org |
 | six | 1.17.0 | MIT License | zaleznosc posrednia | https://github.com/benjaminp/six |
 | structlog | 24.4.0 | Apache Software License | strukturalne logowanie | https://www.structlog.org/ |
 | sympy | 1.14.0 | BSD License | zaleznosc posrednia | https://sympy.org |
@@ -100,7 +102,7 @@ Nie trafiaja do pakietu instalacyjnego.
 | pefile | 2023.2.7 | MIT |
 | pluggy | 1.6.0 | MIT License |
 | Pygments | 2.20.0 | BSD-2-Clause |
-| pyinstaller | 6.11.1 | GNU General Public License v2 (GPLv2) |
+| pyinstaller | 6.21.0 | GNU General Public License v2 (GPLv2) |
 | pyinstaller-hooks-contrib | 2026.6 | Apache Software License |
 | pytest | 9.1.1 | MIT |
 | pytest-cov | 7.1.0 | MIT License |

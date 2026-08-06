@@ -61,6 +61,37 @@
     },
     {
       "type": "library",
+      "name": "antlr4-python3-runtime",
+      "version": "4.9.3",
+      "purl": "pkg:pypi/antlr4-python3-runtime@4.9.3",
+      "scope": "required",
+      "licenses": [
+        {
+          "license": {
+            "name": "BSD"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "http://www.antlr.org"
+        }
+      ],
+      "properties": [
+        {
+          "name": "finddocs:usage",
+          "value": "zaleznosc posrednia"
+        },
+        {
+          "name": "finddocs:scope",
+          "value": "runtime"
+        }
+      ],
+      "author": "Eric Vergnaud, Terence Parr, Sam Harwell"
+    },
+    {
+      "type": "library",
       "name": "anyio",
       "version": "4.14.2",
       "purl": "pkg:pypi/anyio@4.14.2",
@@ -274,6 +305,37 @@
     },
     {
       "type": "library",
+      "name": "colorlog",
+      "version": "6.12.0",
+      "purl": "pkg:pypi/colorlog@6.12.0",
+      "scope": "required",
+      "licenses": [
+        {
+          "license": {
+            "name": "MIT License"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://github.com/borntyping/python-colorlog"
+        }
+      ],
+      "properties": [
+        {
+          "name": "finddocs:usage",
+          "value": "zaleznosc posrednia"
+        },
+        {
+          "name": "finddocs:scope",
+          "value": "runtime"
+        }
+      ],
+      "author": "Sam Clements"
+    },
+    {
+      "type": "library",
       "name": "coverage",
       "version": "7.15.2",
       "purl": "pkg:pypi/coverage@7.15.2",
@@ -367,20 +429,20 @@
     {
       "type": "library",
       "name": "faiss-cpu",
-      "version": "1.9.0.post1",
-      "purl": "pkg:pypi/faiss-cpu@1.9.0.post1",
+      "version": "1.15.0",
+      "purl": "pkg:pypi/faiss-cpu@1.15.0",
       "scope": "required",
       "licenses": [
         {
           "license": {
-            "name": "MIT License"
+            "name": "MIT"
           }
         }
       ],
       "externalReferences": [
         {
           "type": "website",
-          "url": "https://github.com/kyamagu/faiss-wheels"
+          "url": "https://github.com/facebookresearch/faiss"
         }
       ],
       "properties": [
@@ -392,7 +454,8 @@
           "name": "finddocs:scope",
           "value": "runtime"
         }
-      ]
+      ],
+      "author": "Meta AI Research"
     },
     {
       "type": "library",
@@ -1096,9 +1159,40 @@
     },
     {
       "type": "library",
+      "name": "omegaconf",
+      "version": "2.3.1",
+      "purl": "pkg:pypi/omegaconf@2.3.1",
+      "scope": "required",
+      "licenses": [
+        {
+          "license": {
+            "name": "BSD License"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://github.com/omry/omegaconf"
+        }
+      ],
+      "properties": [
+        {
+          "name": "finddocs:usage",
+          "value": "zaleznosc posrednia"
+        },
+        {
+          "name": "finddocs:scope",
+          "value": "runtime"
+        }
+      ],
+      "author": "Omry Yadan"
+    },
+    {
+      "type": "library",
       "name": "onnxruntime",
-      "version": "1.20.1",
-      "purl": "pkg:pypi/onnxruntime@1.20.1",
+      "version": "1.28.0",
+      "purl": "pkg:pypi/onnxruntime@1.28.0",
       "scope": "required",
       "licenses": [
         {
@@ -1462,8 +1556,8 @@
     {
       "type": "library",
       "name": "pyinstaller",
-      "version": "6.11.1",
-      "purl": "pkg:pypi/pyinstaller@6.11.1",
+      "version": "6.21.0",
+      "purl": "pkg:pypi/pyinstaller@6.21.0",
       "scope": "optional",
       "licenses": [
         {
@@ -1475,7 +1569,7 @@
       "externalReferences": [
         {
           "type": "website",
-          "url": "https://www.pyinstaller.org/"
+          "url": "https://pyinstaller.org"
         }
       ],
       "properties": [
@@ -1614,13 +1708,13 @@
     {
       "type": "library",
       "name": "PySide6",
-      "version": "6.8.1",
-      "purl": "pkg:pypi/pyside6@6.8.1",
+      "version": "6.11.1",
+      "purl": "pkg:pypi/pyside6@6.11.1",
       "scope": "required",
       "licenses": [
         {
           "license": {
-            "name": "GNU Library or Lesser General Public License (LGPL)"
+            "name": "LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only"
           }
         }
       ],
@@ -1644,13 +1738,13 @@
     {
       "type": "library",
       "name": "PySide6_Addons",
-      "version": "6.8.1",
-      "purl": "pkg:pypi/pyside6-addons@6.8.1",
+      "version": "6.11.1",
+      "purl": "pkg:pypi/pyside6-addons@6.11.1",
       "scope": "required",
       "licenses": [
         {
           "license": {
-            "name": "GNU Library or Lesser General Public License (LGPL)"
+            "name": "LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only"
           }
         }
       ],
@@ -1674,13 +1768,13 @@
     {
       "type": "library",
       "name": "PySide6_Essentials",
-      "version": "6.8.1",
-      "purl": "pkg:pypi/pyside6-essentials@6.8.1",
+      "version": "6.11.1",
+      "purl": "pkg:pypi/pyside6-essentials@6.11.1",
       "scope": "required",
       "licenses": [
         {
           "license": {
-            "name": "GNU Library or Lesser General Public License (LGPL)"
+            "name": "LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only"
           }
         }
       ],
@@ -1826,8 +1920,8 @@
     {
       "type": "library",
       "name": "pywin32",
-      "version": "308",
-      "purl": "pkg:pypi/pywin32@308",
+      "version": "312",
+      "purl": "pkg:pypi/pywin32@312",
       "scope": "required",
       "licenses": [
         {
@@ -1918,9 +2012,9 @@
     },
     {
       "type": "library",
-      "name": "rapidocr-onnxruntime",
-      "version": "1.4.4",
-      "purl": "pkg:pypi/rapidocr-onnxruntime@1.4.4",
+      "name": "rapidocr",
+      "version": "3.9.2",
+      "purl": "pkg:pypi/rapidocr@3.9.2",
       "scope": "required",
       "licenses": [
         {
@@ -1932,7 +2026,7 @@
       "externalReferences": [
         {
           "type": "website",
-          "url": "https://github.com/RapidAI/RapidOCR"
+          "url": "https://rapidai.github.io/RapidOCRDocs"
         }
       ],
       "properties": [
@@ -1944,8 +2038,7 @@
           "name": "finddocs:scope",
           "value": "runtime"
         }
-      ],
-      "author": "SWHL"
+      ]
     },
     {
       "type": "library",
@@ -2072,13 +2165,13 @@
     {
       "type": "library",
       "name": "shiboken6",
-      "version": "6.8.1",
-      "purl": "pkg:pypi/shiboken6@6.8.1",
+      "version": "6.11.1",
+      "purl": "pkg:pypi/shiboken6@6.11.1",
       "scope": "required",
       "licenses": [
         {
           "license": {
-            "name": "GNU Library or Lesser General Public License (LGPL)"
+            "name": "LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only"
           }
         }
       ],
