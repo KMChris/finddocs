@@ -17,7 +17,7 @@ ani zapytan poza komputer uzytkownika w konfiguracji domyslnej.
 | charset-normalizer | 3.4.1 | MIT License | wykrywanie kodowania plikow tekstowych | https://charset-normalizer.readthedocs.io/ |
 | colorama | 0.4.6 | BSD License | zaleznosc posrednia | https://github.com/tartley/colorama |
 | coloredlogs | 15.0.1 | MIT License | zaleznosc posrednia | https://coloredlogs.readthedocs.io |
-| cryptography | 45.0.7 | Apache-2.0 OR BSD-3-Clause | zaleznosc posrednia | https://github.com/pyca/cryptography |
+| cryptography | 50.0.0 | Apache-2.0 OR BSD-3-Clause | zaleznosc posrednia | https://cryptography.io/ |
 | et_xmlfile | 2.0.0 | MIT License | zaleznosc posrednia | https://foss.heptapod.net/openpyxl/et_xmlfile |
 | faiss-cpu | 1.9.0.post1 | MIT License | indeks wektorowy | https://github.com/kyamagu/faiss-wheels |
 | filelock | 3.32.2 | MIT License | zaleznosc posrednia | https://py-filelock.readthedocs.io |
@@ -37,14 +37,14 @@ ani zapytan poza komputer uzytkownika w konfiguracji domyslnej.
 | lxml | 6.1.1 | BSD-3-Clause | zaleznosc posrednia | https://lxml.de/ |
 | more-itertools | 11.1.0 | MIT | zaleznosc posrednia | https://more-itertools.readthedocs.io/en/stable/ |
 | mpmath | 1.3.0 | BSD License | zaleznosc posrednia | http://mpmath.org/ |
-| msal | 1.31.1 | MIT License | uwierzytelnienie w Microsoft Entra ID | https://github.com/AzureAD/microsoft-authentication-library-for-python |
+| msal | 1.37.0 | MIT License | uwierzytelnienie w Microsoft Entra ID | https://github.com/AzureAD/microsoft-authentication-library-for-python |
 | numpy | 2.4.6 | BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0 | operacje na wektorach | https://numpy.org |
 | olefile | 0.47 | BSD License | odczyt kontenerow OLE (DOC, MSG) | https://www.decalage.info/python/olefileio |
 | onnxruntime | 1.20.1 | MIT License | uruchamianie modelu embeddingow na CPU | https://onnxruntime.ai |
 | opencv-python | 5.0.0.93 | Apache Software License | zaleznosc posrednia | https://github.com/opencv/opencv-python |
 | openpyxl | 3.1.5 | MIT License | odczyt plikow XLSX | https://openpyxl.readthedocs.io |
 | packaging | 26.2 | Apache-2.0 OR BSD-2-Clause | zaleznosc posrednia | https://packaging.pypa.io/ |
-| pillow | 11.1.0 | CMU License (MIT-CMU) | obsluga obrazow i przygotowanie stron do OCR | https://pillow.readthedocs.io |
+| pillow | 12.3.0 | MIT-CMU | obsluga obrazow i przygotowanie stron do OCR | https://pillow.readthedocs.io |
 | pip | 26.2 | MIT | zaleznosc posrednia | https://pip.pypa.io |
 | protobuf | 7.35.1 | 3-Clause BSD License | zaleznosc posrednia | https://developers.google.com/protocol-buffers/ |
 | pyclipper | 1.4.0 | MIT License | zaleznosc posrednia | https://github.com/fonttools/pyclipper |
@@ -98,11 +98,12 @@ Nie trafiaja do pakietu instalacyjnego.
 | mypy_extensions | 1.1.0 | MIT |
 | pefile | 2023.2.7 | MIT |
 | pluggy | 1.6.0 | MIT License |
+| Pygments | 2.20.0 | BSD-2-Clause |
 | pyinstaller | 6.11.1 | GNU General Public License v2 (GPLv2) |
 | pyinstaller-hooks-contrib | 2026.6 | Apache Software License |
-| pytest | 8.3.4 | MIT License |
-| pytest-cov | 6.0.0 | MIT License |
-| pytest-qt | 4.4.0 | MIT License |
+| pytest | 9.1.1 | MIT |
+| pytest-cov | 7.1.0 | MIT License |
+| pytest-qt | 4.5.0 | MIT License |
 | ruff | 0.9.2 | MIT License |
 | types-openpyxl | 3.1.5.20260724 | Apache-2.0 |
 | types-pywin32 | 312.0.0.20260724 | Apache-2.0 |

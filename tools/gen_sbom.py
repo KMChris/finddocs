@@ -63,6 +63,7 @@ DEV_ONLY = {
     "pytest",
     "pytest-qt",
     "pytest-cov",
+    "pygments",
     "mypy",
     "mypy-extensions",
     "ruff",

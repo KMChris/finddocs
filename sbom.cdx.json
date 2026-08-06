@@ -306,8 +306,8 @@
     {
       "type": "library",
       "name": "cryptography",
-      "version": "45.0.7",
-      "purl": "pkg:pypi/cryptography@45.0.7",
+      "version": "50.0.0",
+      "purl": "pkg:pypi/cryptography@50.0.0",
       "scope": "required",
       "licenses": [
         {
@@ -319,7 +319,7 @@
       "externalReferences": [
         {
           "type": "website",
-          "url": "https://github.com/pyca/cryptography"
+          "url": "https://cryptography.io/"
         }
       ],
       "properties": [
@@ -331,8 +331,7 @@
           "name": "finddocs:scope",
           "value": "runtime"
         }
-      ],
-      "author": "The cryptography developers <cryptography-dev@python.org>"
+      ]
     },
     {
       "type": "library",
@@ -945,8 +944,8 @@
     {
       "type": "library",
       "name": "msal",
-      "version": "1.31.1",
-      "purl": "pkg:pypi/msal@1.31.1",
+      "version": "1.37.0",
+      "purl": "pkg:pypi/msal@1.37.0",
       "scope": "required",
       "licenses": [
         {
@@ -1251,13 +1250,13 @@
     {
       "type": "library",
       "name": "pillow",
-      "version": "11.1.0",
-      "purl": "pkg:pypi/pillow@11.1.0",
+      "version": "12.3.0",
+      "purl": "pkg:pypi/pillow@12.3.0",
       "scope": "required",
       "licenses": [
         {
           "license": {
-            "name": "CMU License (MIT-CMU)"
+            "name": "MIT-CMU"
           }
         }
       ],
@@ -1427,6 +1426,36 @@
         {
           "name": "finddocs:scope",
           "value": "runtime"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "Pygments",
+      "version": "2.20.0",
+      "purl": "pkg:pypi/pygments@2.20.0",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "name": "BSD-2-Clause"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://pygments.org"
+        }
+      ],
+      "properties": [
+        {
+          "name": "finddocs:usage",
+          "value": "zaleznosc posrednia"
+        },
+        {
+          "name": "finddocs:scope",
+          "value": "deweloperska"
         }
       ]
     },
@@ -1675,13 +1704,13 @@
     {
       "type": "library",
       "name": "pytest",
-      "version": "8.3.4",
-      "purl": "pkg:pypi/pytest@8.3.4",
+      "version": "9.1.1",
+      "purl": "pkg:pypi/pytest@9.1.1",
       "scope": "optional",
       "licenses": [
         {
           "license": {
-            "name": "MIT License"
+            "name": "MIT"
           }
         }
       ],
@@ -1701,13 +1730,13 @@
           "value": "deweloperska"
         }
       ],
-      "author": "Holger Krekel, Bruno Oliveira, Ronny Pfannschmidt, Floris Bruynooghe, Brianna Laugher, Florian Bruhin, Others (See AUTHORS)"
+      "author": "Brianna Laugher, Bruno Oliveira, Floris Bruynooghe, Freya Bruhin, Holger Krekel, Others (See AUTHORS), Ronny Pfannschmidt"
     },
     {
       "type": "library",
       "name": "pytest-cov",
-      "version": "6.0.0",
-      "purl": "pkg:pypi/pytest-cov@6.0.0",
+      "version": "7.1.0",
+      "purl": "pkg:pypi/pytest-cov@7.1.0",
       "scope": "optional",
       "licenses": [
         {
@@ -1719,7 +1748,7 @@
       "externalReferences": [
         {
           "type": "website",
-          "url": "https://github.com/pytest-dev/pytest-cov"
+          "url": "https://pytest-cov.readthedocs.io/"
         }
       ],
       "properties": [
@@ -1731,14 +1760,13 @@
           "name": "finddocs:scope",
           "value": "deweloperska"
         }
-      ],
-      "author": "Marc Schlaich"
+      ]
     },
     {
       "type": "library",
       "name": "pytest-qt",
-      "version": "4.4.0",
-      "purl": "pkg:pypi/pytest-qt@4.4.0",
+      "version": "4.5.0",
+      "purl": "pkg:pypi/pytest-qt@4.5.0",
       "scope": "optional",
       "licenses": [
         {

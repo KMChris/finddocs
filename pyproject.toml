@@ -35,7 +35,7 @@ dependencies = [
     "tokenizers==0.21.0",
     "faiss-cpu==1.9.0.post1",
     "httpx==0.28.1",
-    "msal==1.31.1",
+    "msal==1.37.0",
     "keyring==25.6.0",
     "pywin32==308; sys_platform == 'win32'",
     "structlog==24.4.0",
@@ -45,9 +45,9 @@ dependencies = [
 ocr-rapid = ["rapidocr-onnxruntime==1.4.4"]
 ocr-easy = ["easyocr>=1.7.2"]
 dev = [
-    "pytest==8.3.4",
-    "pytest-qt==4.4.0",
-    "pytest-cov==6.0.0",
+    "pytest==9.1.1",
+    "pytest-qt==4.5.0",
+    "pytest-cov==7.1.0",
     "mypy==1.14.1",
     "ruff==0.9.2",
     "pyinstaller==6.11.1",
