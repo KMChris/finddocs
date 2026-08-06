@@ -15,8 +15,10 @@ tokenizers) sa importowane dopiero wewnatrz funkcji.
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import importlib.util
+import io
 import json
 import shutil
 from collections.abc import Callable
@@ -285,20 +287,29 @@ def convert_checkpoint(
             out = self.inner(input_ids=input_ids, attention_mask=attention_mask)
             return out.last_hidden_state
 
-    torch.onnx.export(
-        _Wrapper(model),
-        (input_ids, attention_mask),
-        str(onnx_path),
-        input_names=["input_ids", "attention_mask"],
-        output_names=["last_hidden_state"],
-        dynamic_axes={
-            "input_ids": {0: "batch", 1: "sequence"},
-            "attention_mask": {0: "batch", 1: "sequence"},
-            "last_hidden_state": {0: "batch", 1: "sequence"},
-        },
-        opset_version=opset,
-        do_constant_folding=True,
-    )
+    # Nowy modul torch startuje w trybie treningowym, a eksporter patrzy na flage
+    # modulu zewnetrznego, wiec bez eval() na wrapperze ostrzega przy eksporcie.
+    wrapper = _Wrapper(model)
+    wrapper.eval()
+
+    # Eksporter dynamo (torch >= 2.9) wypisuje na stdout postep ze znakami spoza
+    # ASCII, co konczy sie UnicodeEncodeError na konsoli cp852/cp1250. Wydruki
+    # torcha laduja w buforze, komunikaty konwersji przekazuje wylacznie notify().
+    with contextlib.redirect_stdout(io.StringIO()):
+        torch.onnx.export(
+            wrapper,
+            (input_ids, attention_mask),
+            str(onnx_path),
+            input_names=["input_ids", "attention_mask"],
+            output_names=["last_hidden_state"],
+            dynamic_axes={
+                "input_ids": {0: "batch", 1: "sequence"},
+                "attention_mask": {0: "batch", 1: "sequence"},
+                "last_hidden_state": {0: "batch", 1: "sequence"},
+            },
+            opset_version=opset,
+            do_constant_folding=True,
+        )
 
     model_files = ["model.onnx"]
     if quantize:
