@@ -26,7 +26,7 @@ komputerze użytkownika: dokumenty, zapytania i embeddingi nie opuszczają maszy
 PDF (z warstwą tekstową i skanowany), DOCX, DOC, XLSX, XLS, CSV, TSV, TXT,
 HTML, RTF, EML, MSG wraz z załącznikami, PNG, JPEG, TIFF, BMP, GIF, WEBP.
 
-Szczegóły, poziom wsparcia i ograniczenia każdego formatu: [docs/formaty.md](docs/formaty.md).
+Szczegóły, poziom wsparcia i ograniczenia każdego formatu: [docs/formaty.md](https://github.com/KMChris/finddocs/blob/main/docs/formaty.md).
 
 ## Instalacja dla użytkownika
 
@@ -34,7 +34,28 @@ Uruchom instalator `FindDocs-0.1.0-instalator.exe`. Instalacja nie wymaga
 uprawnień administratora. Po zakończeniu aplikacja jest dostępna w menu Start.
 Nie trzeba uruchamiać żadnego serwera ani wpisywać adresu w przeglądarce.
 
-Pełna instrukcja: [docs/instrukcja-uzytkownika.md](docs/instrukcja-uzytkownika.md).
+Pełna instrukcja: [docs/instrukcja-uzytkownika.md](https://github.com/KMChris/finddocs/blob/main/docs/instrukcja-uzytkownika.md).
+
+## Instalacja przez pip
+
+Wymagany Python 3.11 lub 3.12 na Windows 11.
+
+```bash
+pip install finddocs
+```
+
+Silnik OCR jest opcjonalny i instaluje się jako dodatek:
+
+```bash
+pip install "finddocs[ocr-rapid]"
+```
+
+Po instalacji polecenie `finddocs-gui` uruchamia interfejs graficzny,
+a `finddocs` daje dostęp do poleceń administracyjnych. Wyszukiwanie dokładne
+działa od razu. Wyszukiwanie semantyczne i hybrydowe wymaga modelu embeddingów:
+przygotuj go według sekcji o uruchomieniu developerskim (potrzebne jest
+sklonowane repozytorium ze skryptem eksportu), a następnie umieść katalog
+modelu w `%LOCALAPPDATA%\FindDocs\models` albo wskaż go w konfiguracji.
 
 ## Szybki start bez SharePointa
 
@@ -124,29 +145,29 @@ connectors  ->  extractors / ocr  ->  normalization / chunking  ->  indexing
   (Apache-2.0, 768 wymiarów, pooling CLS);
 * interfejs: PySide6 (LGPL).
 
-Szczegóły i diagramy: [docs/architektura.md](docs/architektura.md).
+Szczegóły i diagramy: [docs/architektura.md](https://github.com/KMChris/finddocs/blob/main/docs/architektura.md).
 
 ## Dokumentacja
 
 | Dokument | Zawartość |
 | --- | --- |
-| [Instrukcja użytkownika](docs/instrukcja-uzytkownika.md) | obsługa aplikacji |
-| [Instrukcja administratora](docs/instrukcja-administratora.md) | wdrożenie, konfiguracja, CLI |
-| [Integracja z SharePoint](docs/integracja-sharepoint.md) | Microsoft Graph, Entra ID, uprawnienia |
-| [Architektura](docs/architektura.md) | warstwy, diagramy, decyzje |
-| [Schemat danych](docs/schemat-danych.md) | tabele, kolumny, wersjonowanie |
-| [Odbudowa indeksu](docs/odbudowa-indeksu.md) | przebudowa, kopie, kompaktacja |
-| [Aktualizacja](docs/aktualizacja.md) | procedura aktualizacji |
-| [Diagnostyka](docs/diagnostyka.md) | logi, kody błędów, typowe problemy |
-| [Formaty](docs/formaty.md) | obsługiwane formaty i poziomy wsparcia |
-| [OCR](docs/ocr.md) | silniki, jakość, wydajność |
-| [Znane ograniczenia](docs/ograniczenia.md) | czego aplikacja nie robi |
-| [Raport bezpieczeństwa](docs/raport-bezpieczenstwa.md) | model zagrożeń i kontrole |
-| [Raport PoC](docs/raport-poc.md) | porównanie modeli i pomiary |
-| [Raport testów](docs/raport-testow.md) | zakres i wyniki testów |
-| [Licencje](docs/licencje.md) | komponenty i licencje, SBOM w `sbom.cdx.json` |
-| [Plan RAG i GPU](docs/plan-rag-gpu.md) | przyszły rozwój |
-| [ADR](docs/adr/) | decyzje architektoniczne |
+| [Instrukcja użytkownika](https://github.com/KMChris/finddocs/blob/main/docs/instrukcja-uzytkownika.md) | obsługa aplikacji |
+| [Instrukcja administratora](https://github.com/KMChris/finddocs/blob/main/docs/instrukcja-administratora.md) | wdrożenie, konfiguracja, CLI |
+| [Integracja z SharePoint](https://github.com/KMChris/finddocs/blob/main/docs/integracja-sharepoint.md) | Microsoft Graph, Entra ID, uprawnienia |
+| [Architektura](https://github.com/KMChris/finddocs/blob/main/docs/architektura.md) | warstwy, diagramy, decyzje |
+| [Schemat danych](https://github.com/KMChris/finddocs/blob/main/docs/schemat-danych.md) | tabele, kolumny, wersjonowanie |
+| [Odbudowa indeksu](https://github.com/KMChris/finddocs/blob/main/docs/odbudowa-indeksu.md) | przebudowa, kopie, kompaktacja |
+| [Aktualizacja](https://github.com/KMChris/finddocs/blob/main/docs/aktualizacja.md) | procedura aktualizacji |
+| [Diagnostyka](https://github.com/KMChris/finddocs/blob/main/docs/diagnostyka.md) | logi, kody błędów, typowe problemy |
+| [Formaty](https://github.com/KMChris/finddocs/blob/main/docs/formaty.md) | obsługiwane formaty i poziomy wsparcia |
+| [OCR](https://github.com/KMChris/finddocs/blob/main/docs/ocr.md) | silniki, jakość, wydajność |
+| [Znane ograniczenia](https://github.com/KMChris/finddocs/blob/main/docs/ograniczenia.md) | czego aplikacja nie robi |
+| [Raport bezpieczeństwa](https://github.com/KMChris/finddocs/blob/main/docs/raport-bezpieczenstwa.md) | model zagrożeń i kontrole |
+| [Raport PoC](https://github.com/KMChris/finddocs/blob/main/docs/raport-poc.md) | porównanie modeli i pomiary |
+| [Raport testów](https://github.com/KMChris/finddocs/blob/main/docs/raport-testow.md) | zakres i wyniki testów |
+| [Licencje](https://github.com/KMChris/finddocs/blob/main/docs/licencje.md) | komponenty i licencje, SBOM w `sbom.cdx.json` |
+| [Plan RAG i GPU](https://github.com/KMChris/finddocs/blob/main/docs/plan-rag-gpu.md) | przyszły rozwój |
+| [ADR](https://github.com/KMChris/finddocs/tree/main/docs/adr) | decyzje architektoniczne |
 
 ## Prywatność
 
@@ -160,5 +181,5 @@ tej samej klauzuli poufności co dokumenty źródłowe.
 
 ## Licencja
 
-Kod aplikacji: patrz [LICENSE](LICENSE).
-Licencje komponentów i modeli: [docs/licencje.md](docs/licencje.md).
+Kod aplikacji: licencja MIT, patrz [LICENSE](https://github.com/KMChris/finddocs/blob/main/LICENSE).
+Licencje komponentów i modeli: [docs/licencje.md](https://github.com/KMChris/finddocs/blob/main/docs/licencje.md).

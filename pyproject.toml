@@ -1,14 +1,15 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "finddocs"
 version = "0.1.0"
-description = "Lokalna wyszukiwarka dokumentow korporacyjnych z obsluga SharePoint"
+description = "Lokalna wyszukiwarka dokumentów korporacyjnych z obsługą SharePoint"
 readme = "README.md"
 requires-python = ">=3.11"
-license = { file = "LICENSE" }
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [{ name = "Krzysztof Mizgała", email = "krzysztof@mizgala.pl" }]
 keywords = ["search", "sharepoint", "ocr", "retrieval", "polish"]
 classifiers = [
@@ -18,6 +19,7 @@ classifiers = [
     "Natural Language :: Polish",
     "Operating System :: Microsoft :: Windows :: Windows 11",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Topic :: Text Processing :: Indexing",
 ]
 
@@ -64,6 +66,9 @@ finddocs-gui = "finddocs.gui.app:main"
 
 [project.urls]
 Homepage = "https://github.com/KMChris/finddocs"
+Repository = "https://github.com/KMChris/finddocs"
+Issues = "https://github.com/KMChris/finddocs/issues"
+Documentation = "https://github.com/KMChris/finddocs/tree/main/docs"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
