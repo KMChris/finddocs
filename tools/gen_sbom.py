@@ -24,7 +24,7 @@ from typing import Any
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 APP_NAME = "FindDocs"
-APP_VERSION = "0.2.0"
+APP_VERSION = "0.2.1"
 
 #: Zastosowanie pakietu w aplikacji. Klucz to znormalizowana nazwa pakietu.
 USAGE: dict[str, str] = {

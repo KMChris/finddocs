@@ -21,14 +21,14 @@ Skany zajmują mniej, bo indeksowany jest wynik OCR, a nie obraz.
 
 ### Instalator
 
-`FindDocs-0.2.0-instalator.exe` instaluje aplikację w profilu użytkownika
+`FindDocs-0.2.1-instalator.exe` instaluje aplikację w profilu użytkownika
 (`%LOCALAPPDATA%\Programs\FindDocs`), tworzy skrót w menu Start i opcjonalnie
 na pulpicie. Nie wymaga uprawnień administratora i nie zmienia ustawień systemu.
 
 Instalacja cicha:
 
 ```bat
-FindDocs-0.2.0-instalator.exe /VERYSILENT /CURRENTUSER /NORESTART /SUPPRESSMSGBOXES
+FindDocs-0.2.1-instalator.exe /VERYSILENT /CURRENTUSER /NORESTART /SUPPRESSMSGBOXES
 ```
 
 Przełącznik `/CURRENTUSER` jest istotny: bez niego instalator pyta o zakres
@@ -66,7 +66,7 @@ Domyślnie `%LOCALAPPDATA%\FindDocs`. Można go zmienić zmienną środowiskową
 
 ```
 FindDocs\
-  config\      konfiguracja aplikacji (config.json)
+  config\      konfiguracja aplikacji (settings.json)
   index\       finddocs.db (SQLite WAL) oraz pliki indeksu wektorowego
   logs\        finddocs.log z rotacją
   models\      modele embeddingów
