@@ -2376,8 +2376,8 @@
     {
       "type": "library",
       "name": "tokenizers",
-      "version": "0.23.1",
-      "purl": "pkg:pypi/tokenizers@0.23.1",
+      "version": "0.22.2",
+      "purl": "pkg:pypi/tokenizers@0.22.2",
       "scope": "required",
       "licenses": [
         {

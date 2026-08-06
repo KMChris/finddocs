@@ -39,7 +39,9 @@ dependencies = [
     "charset-normalizer==3.4.9",
     "numpy>=1.26,<3",
     "onnxruntime==1.28.0",
-    "tokenizers==0.23.1",
+    # Nie podnosic na 0.23.x, dopoki transformers ogranicza tokenizers<=0.23.0:
+    # nowszy pin czyni finddocs[export] nierozwiazywalnym dla pip.
+    "tokenizers==0.22.2",
     "faiss-cpu==1.15.0",
     "httpx==0.28.1",
     "msal==1.37.0",

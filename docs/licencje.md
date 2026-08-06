@@ -73,7 +73,7 @@ ani zapytan poza komputer uzytkownika w konfiguracji domyslnej.
 | six | 1.17.0 | MIT License | zaleznosc posrednia | https://github.com/benjaminp/six |
 | structlog | 26.1.0 | Apache Software License | strukturalne logowanie | https://www.structlog.org/ |
 | sympy | 1.14.0 | BSD License | zaleznosc posrednia | https://sympy.org |
-| tokenizers | 0.23.1 | Apache Software License | tokenizacja tekstu dla modelu embeddingow | https://github.com/huggingface/tokenizers |
+| tokenizers | 0.22.2 | Apache Software License | tokenizacja tekstu dla modelu embeddingow | https://github.com/huggingface/tokenizers |
 | tqdm | 4.70.0 | MPL-2.0 AND MIT | zaleznosc posrednia | https://tqdm.github.io |
 | typing_extensions | 4.16.0 | PSF-2.0 | zaleznosc posrednia | https://typing-extensions.readthedocs.io/ |
 | urllib3 | 2.7.0 | MIT | zaleznosc posrednia | https://urllib3.readthedocs.io |

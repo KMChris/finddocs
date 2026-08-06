@@ -73,7 +73,7 @@ shiboken6==6.11.1
 six==1.17.0
 structlog==26.1.0
 sympy==1.14.0
-tokenizers==0.23.1
+tokenizers==0.22.2
 tqdm==4.70.0
 types-openpyxl==3.1.5.20260724
 types-pywin32==312.0.0.20260724
