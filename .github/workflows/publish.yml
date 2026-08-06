@@ -42,3 +42,25 @@ jobs:
           name: dist
           path: dist/
       - uses: pypa/gh-action-pypi-publish@release/v1
+
+  # Release na GitHubie powstaje dopiero po udanej publikacji na PyPI,
+  # z tymi samymi plikami wydania w zalacznikach.
+  release:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - name: Utworz release na GitHubie
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "FindDocs $version" \
+            --notes "Pakiet opublikowany na PyPI: https://pypi.org/project/finddocs/$version/"
