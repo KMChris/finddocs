@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 APP_NAME = "FindDocs"
-APP_VERSION = "0.1.0"
+APP_VERSION = "0.2.0"
 
 #: Wersja schematu bazy metadanych. Podnies przy kazdej migracji.
 SCHEMA_VERSION = 1

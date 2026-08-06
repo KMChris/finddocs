@@ -30,7 +30,7 @@ Szczegóły, poziom wsparcia i ograniczenia każdego formatu: [docs/formaty.md](
 
 ## Instalacja dla użytkownika
 
-Uruchom instalator `FindDocs-0.1.0-instalator.exe`. Instalacja nie wymaga
+Uruchom instalator `FindDocs-0.2.0-instalator.exe`. Instalacja nie wymaga
 uprawnień administratora. Po zakończeniu aplikacja jest dostępna w menu Start.
 Nie trzeba uruchamiać żadnego serwera ani wpisywać adresu w przeglądarce.
 
