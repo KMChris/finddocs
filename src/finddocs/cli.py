@@ -488,7 +488,7 @@ def cmd_model_list(args: argparse.Namespace) -> int:
 
 def _activate_model(args: argparse.Namespace, key: str) -> int:
     """Ustawia model jako aktywny i synchronizuje ustawienia z jego manifestem."""
-    from finddocs.providers.model_manifest import LocalModelManifest, find_model_dir
+    from finddocs.providers.model_manifest import find_model_dir, sync_embedding_settings
 
     config = _load(args)
     extra = Path(config.embedding.model_path) if config.embedding.model_path else None
@@ -499,14 +499,10 @@ def _activate_model(args: argparse.Namespace, key: str) -> int:
             file=sys.stderr,
         )
         return EXIT_ERROR
-    manifest = LocalModelManifest.load(directory)
     changed = config.embedding.model_key != key
-    config.embedding.model_key = key
-    config.embedding.max_sequence_length = int(manifest.max_sequence_length or 512)
-    config.embedding.query_prefix = manifest.query_prefix
-    config.embedding.passage_prefix = manifest.passage_prefix
-    config.embedding.normalize = bool(manifest.normalize)
-    config.embedding.quantized = bool(manifest.quantized)
+    manifest = sync_embedding_settings(config.embedding, key, extra=extra)
+    if manifest is not None:
+        config.embedding.quantized = bool(manifest.quantized)
     save_config(config, _paths(args).config_file)
     print(f"Aktywny model: {key} ({directory})")
     if changed:

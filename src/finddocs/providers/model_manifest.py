@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from finddocs.config import EmbeddingSettings
 from finddocs.errors import ModelIntegrityError, ModelNotAvailableError
 
 MANIFEST_FILENAME = "manifest.json"
@@ -216,6 +217,54 @@ def _is_complete_model_dir(directory: Path) -> bool:
     )
 
 
+def sync_embedding_settings(
+    settings: EmbeddingSettings, model_key: str, *, extra: Path | None = None
+) -> LocalModelManifest | None:
+    """Ustawia aktywny model i przepisuje jego parametry do konfiguracji.
+
+    Zrodlem prawdy jest manifest zainstalowanego modelu. Gdy modelu nie ma na
+    dysku, parametry pochodza z wbudowanego rejestru. Skrot zgodnosci czesci
+    wektorowej liczy sie z konfiguracji, wiec bez tej synchronizacji zmiana
+    modelu zostawilaby w konfiguracji przedrostki poprzedniego modelu.
+    Zwraca manifest, jesli zostal znaleziony.
+    """
+    settings.model_key = model_key
+    directory = find_model_dir(model_key, extra)
+    if directory is not None:
+        manifest = LocalModelManifest.load(directory)
+        settings.max_sequence_length = int(manifest.max_sequence_length or 512)
+        settings.query_prefix = manifest.query_prefix
+        settings.passage_prefix = manifest.passage_prefix
+        settings.normalize = bool(manifest.normalize)
+        return manifest
+    descriptor = KNOWN_MODELS.get(model_key)
+    if descriptor is not None:
+        settings.max_sequence_length = descriptor.max_sequence_length
+        settings.query_prefix = descriptor.query_prefix
+        settings.passage_prefix = descriptor.passage_prefix
+        settings.normalize = True
+    return None
+
+
+def update_manifest_prefixes(directory: Path, *, query_prefix: str, passage_prefix: str) -> None:
+    """Zapisuje nowe przedrostki w manifescie zainstalowanego modelu.
+
+    Dostawca lokalny czyta przedrostki z manifestu, wiec to jest miejsce,
+    w ktorym zmiana faktycznie wplywa na liczenie embeddingow.
+    """
+    path = directory / MANIFEST_FILENAME
+    if not path.exists():
+        raise ModelNotAvailableError(
+            f"Katalog modelu {directory} nie zawiera pliku {MANIFEST_FILENAME}."
+        )
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise ModelNotAvailableError(f"Manifest modelu {path} ma nieprawidłową strukturę.")
+    data["query_prefix"] = query_prefix
+    data["passage_prefix"] = passage_prefix
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
 def model_base_dirs() -> list[Path]:
     """Katalogi, w ktorych moga byc zainstalowane modele, w kolejnosci preferencji."""
     from finddocs.app_paths import AppPaths
@@ -318,4 +367,6 @@ __all__ = [
     "installed_models",
     "model_base_dirs",
     "sha256_of",
+    "sync_embedding_settings",
+    "update_manifest_prefixes",
 ]

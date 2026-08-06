@@ -14,6 +14,7 @@ from typing import Any
 import pytest
 
 from finddocs.app_paths import AppPaths
+from finddocs.config import EmbeddingSettings
 from finddocs.errors import ModelNotAvailableError
 from finddocs.providers import model_store
 from finddocs.providers.model_export import detect_pad_token, write_manifest
@@ -21,6 +22,8 @@ from finddocs.providers.model_manifest import (
     LocalModelManifest,
     describe_models,
     find_model_dir,
+    sync_embedding_settings,
+    update_manifest_prefixes,
 )
 from finddocs.providers.model_store import (
     ImportOptions,
@@ -330,3 +333,61 @@ def test_remove_model(tmp_home: AppPaths) -> None:
     assert not removed.exists()
     with pytest.raises(ModelNotAvailableError):
         remove_model("do-usuniecia", paths=tmp_home)
+
+
+# --- synchronizacja konfiguracji z manifestem ------------------------------------
+
+
+def test_sync_embedding_settings_przepisuje_manifest(tmp_home: AppPaths) -> None:
+    _install_fake_model(tmp_home, "wlasny-model")
+    settings = EmbeddingSettings()
+
+    manifest = sync_embedding_settings(settings, "wlasny-model")
+
+    assert manifest is not None
+    assert settings.model_key == "wlasny-model"
+    assert settings.max_sequence_length == 128
+    assert settings.query_prefix == "query: "
+    assert settings.passage_prefix == ""
+    assert settings.normalize is True
+
+
+def test_sync_embedding_settings_uzywa_rejestru_dla_niezainstalowanego() -> None:
+    settings = EmbeddingSettings()
+
+    manifest = sync_embedding_settings(settings, "multilingual-e5-small")
+
+    assert manifest is None
+    assert settings.model_key == "multilingual-e5-small"
+    assert settings.query_prefix == "query: "
+    assert settings.passage_prefix == "passage: "
+    assert settings.max_sequence_length == 512
+
+
+def test_sync_embedding_settings_nieznany_model_nie_rusza_parametrow() -> None:
+    settings = EmbeddingSettings()
+    poprzednie = (settings.query_prefix, settings.passage_prefix)
+
+    manifest = sync_embedding_settings(settings, "zupelnie-obcy-model")
+
+    assert manifest is None
+    assert settings.model_key == "zupelnie-obcy-model"
+    assert (settings.query_prefix, settings.passage_prefix) == poprzednie
+
+
+def test_update_manifest_prefixes_zapisuje_i_zachowuje_reszte(tmp_home: AppPaths) -> None:
+    directory = _install_fake_model(tmp_home, "wlasny-model")
+
+    update_manifest_prefixes(directory, query_prefix="pytanie: ", passage_prefix="tekst: ")
+
+    manifest = LocalModelManifest.load(directory)
+    assert manifest.query_prefix == "pytanie: "
+    assert manifest.passage_prefix == "tekst: "
+    assert manifest.dimension == 8
+    assert manifest.pooling == "mean"
+    assert manifest.files
+
+
+def test_update_manifest_prefixes_bez_manifestu_zglasza_blad(tmp_path: Path) -> None:
+    with pytest.raises(ModelNotAvailableError):
+        update_manifest_prefixes(tmp_path, query_prefix="", passage_prefix="")

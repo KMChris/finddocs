@@ -35,8 +35,11 @@ możesz od razu zaindeksować. Nie ma w nich żadnych prawdziwych danych osobowy
 ani firmowych.
 
 Komunikat o niedostępnym trybie semantycznym przy starcie oznacza, że na komputerze
-nie ma modelu językowego. Wyszukiwanie dokładne działa normalnie. Model instaluje
-administrator, patrz [instrukcja administratora](instrukcja-administratora.md).
+nie ma modelu językowego. Wyszukiwanie dokładne działa normalnie. Model można
+pobrać przyciskiem **Ustawienia...** obok listy modeli na ekranie
+**Źródła i konfiguracja** (wymaga zgody na jednorazowe połączenie z Hugging Face)
+albo poprosić administratora, patrz
+[instrukcja administratora](instrukcja-administratora.md).
 
 ## Ekran wyszukiwania
 
@@ -183,6 +186,34 @@ kontem służbowym. Zobaczysz tylko te dokumenty, do których i tak masz dostęp
 
 Przycisk **Usuń** kasuje źródło z konfiguracji. Dokumenty tego źródła znikają
 z indeksu przy następnym skanowaniu.
+
+## Model wyszukiwania semantycznego
+
+Na dole ekranu **Źródła i konfiguracja** znajduje się lista modeli językowych.
+Wybierz model i naciśnij **Zastosuj ustawienia modelu**, żeby go aktywować.
+Zmiana modelu wymaga przebudowy części semantycznej indeksu (pełne
+przeindeksowanie na ekranie **Indeksowanie**); do tego czasu działa
+wyszukiwanie dokładne.
+
+Przycisk **Ustawienia...** obok listy otwiera okno, w którym można:
+
+* **zaimportować własny model z dysku**: wskaż katalog z gotowym eksportem ONNX
+  albo z checkpointem Hugging Face (konwersja wymaga dodatku `finddocs[export]`,
+  opisanego w [instalacji z PyPI](instalacja-pip.md));
+* **pobrać model z Hugging Face**: podaj identyfikator repozytorium, na przykład
+  `sdadas/mmlw-retrieval-roberta-base`. Aplikacja poprosi o zgodę na jednorazowe
+  połączenie z serwerami Hugging Face; poza tym nie nawiązuje żadnych połączeń;
+* **zmienić przedrostki zapytania i treści**: część modeli (na przykład rodzina
+  E5) wymaga doklejenia przedrostka do tekstu przed policzeniem wektora.
+  Przedrostki są wykrywane automatycznie przy imporcie, ale można je poprawić.
+  Zmiana wymaga przebudowy części semantycznej indeksu;
+* **wyłączyć indeksowanie semantyczne**: aplikacja przestaje liczyć wektory
+  i działa wyłącznie w trybie dokładnym. Po ponownym włączeniu wystarczy zwykłe
+  skanowanie, brakujące wektory zostaną uzupełnione automatycznie.
+
+Po zapisaniu zmian aplikacja sama otwiera indeks ponownie; nie trzeba jej
+restartować. Każdy zaimportowany model pojawia się na liście obok modeli
+wbudowanych.
 
 ## Indeksowanie
 

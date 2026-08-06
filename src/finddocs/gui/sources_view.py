@@ -33,11 +33,12 @@ from finddocs.connectors.base import SourceConnector
 from finddocs.gui import i18n
 from finddocs.gui.context import AppContext
 from finddocs.gui.dialogs import ask_yes_no, show_error, show_info, show_warning
+from finddocs.gui.model_dialog import ModelSettingsDialog
 from finddocs.gui.tables import configure_columns
 from finddocs.gui.theme import theme_icon
 from finddocs.gui.workers import CallableTask, thread_pool
 from finddocs.logging_setup import get_logger
-from finddocs.providers.model_manifest import describe_models
+from finddocs.providers.model_manifest import describe_models, sync_embedding_settings
 from finddocs.types import SourceKind
 
 log = get_logger(__name__)
@@ -258,8 +259,16 @@ class SourcesView(QWidget):
         layout = QVBoxLayout(box)
         layout.setSpacing(8)
 
+        combo_row = QHBoxLayout()
+        combo_row.setSpacing(8)
         self.model_combo = QComboBox()
-        layout.addWidget(self.model_combo)
+        combo_row.addWidget(self.model_combo, stretch=1)
+        self.model_settings_button = QPushButton(i18n.MODEL_SETTINGS_BUTTON)
+        self.model_settings_button.setIcon(theme_icon("settings"))
+        self.model_settings_button.setToolTip(i18n.MODEL_SETTINGS_TITLE)
+        self.model_settings_button.clicked.connect(self.open_model_settings)
+        combo_row.addWidget(self.model_settings_button)
+        layout.addLayout(combo_row)
 
         self.model_info = QLabel("")
         self.model_info.setObjectName("Muted")
@@ -321,6 +330,8 @@ class SourcesView(QWidget):
                 f"{i18n.MODEL_DIMENSION.format(value=info.dimension)}\n"
                 f"Licencja: {info.license_name}, środowisko: {info.runtime}"
             )
+        elif not self.context.config.embedding.semantic_enabled:
+            self.model_info.setText(i18n.MODEL_SEMANTIC_DISABLED)
         else:
             self.model_info.setText(i18n.MODEL_MISSING)
 
@@ -471,23 +482,56 @@ class SourcesView(QWidget):
         self.refresh()
 
     def apply_model(self) -> None:
+        embedding = self.context.config.embedding
         key = str(self.model_combo.currentData())
         quantized = self.quantized_check.isChecked()
-        changed = (
-            key != self.context.config.embedding.model_key
-            or quantized != self.context.config.embedding.quantized
-        )
-        self.context.config.embedding.model_key = key
-        self.context.config.embedding.quantized = quantized
+        changed = key != embedding.model_key or quantized != embedding.quantized
+        if key != embedding.model_key:
+            # Przedrostki i dlugosc sekwencji ida za nowym modelem, tak jak
+            # w poleceniu finddocs model use. Bez tego skrot zgodnosci czesci
+            # wektorowej liczylby sie z parametrow poprzedniego modelu.
+            extra = Path(embedding.model_path) if embedding.model_path else None
+            sync_embedding_settings(embedding, key, extra=extra)
+        embedding.quantized = quantized
         self.context.save()
         if changed:
-            show_info(
-                self,
-                "Zmiana modelu wymaga przebudowy części semantycznej indeksu.\n"
-                "Uruchom pełne przeindeksowanie na ekranie Indeksowanie.\n"
-                "Do tego czasu wyszukiwanie dokładne działa bez zmian.",
-            )
+            show_info(self, i18n.MODEL_REBUILD_REQUIRED)
+            self._reload_index_in_background()
         self.refresh()
+
+    def open_model_settings(self) -> None:
+        key = str(self.model_combo.currentData() or self.context.config.embedding.model_key)
+        dialog = ModelSettingsDialog(self.context, self, model_key=key)
+        dialog.models_changed.connect(self.refresh)
+        dialog.config_applied.connect(self._after_model_settings)
+        dialog.exec()
+
+    def _after_model_settings(self, reload_needed: bool) -> None:
+        self.refresh()
+        if reload_needed:
+            self._reload_index_in_background()
+        else:
+            self.sources_changed.emit()
+
+    def _reload_index_in_background(self) -> None:
+        """Zamyka i otwiera indeks, zeby nowy model albo flaga semantyki zadzialaly."""
+        runner = self.context.runner
+        if runner is not None and runner.is_running:
+            show_warning(self, i18n.MODEL_RELOAD_WHILE_INDEXING)
+            return
+        self.status_message.emit("Ponowne otwieranie indeksu...")
+        task = CallableTask(self.context.reload_index, label="ponowne otwarcie indeksu")
+
+        def done(_result: object) -> None:
+            self.refresh()
+            self.sources_changed.emit()
+            self.status_message.emit("Indeks został otwarty ponownie.")
+
+        task.signals.finished.connect(done)
+        task.signals.failed.connect(
+            lambda code, message: show_error(self, f"{message}\n\nKod: {code}")
+        )
+        thread_pool().start(task)
 
 
 __all__ = ["SharePointDialog", "SourcesView"]

@@ -113,6 +113,66 @@ MODEL_MISSING = (
     "Model nie został znaleziony. Wyszukiwanie semantyczne i hybrydowe są niedostępne, "
     "tryb dokładny działa normalnie."
 )
+MODEL_SEMANTIC_DISABLED = (
+    "Indeksowanie semantyczne jest wyłączone w ustawieniach. Tryb dokładny działa normalnie."
+)
+
+# --- okno ustawien modelu ----------------------------------------------------
+
+MODEL_SETTINGS_TITLE = "Ustawienia modelu"
+MODEL_SETTINGS_BUTTON = "Ustawienia..."
+MODEL_QUERY_PREFIX = "Przedrostek zapytania"
+MODEL_PASSAGE_PREFIX = "Przedrostek treści"
+MODEL_PREFIX_HINT = (
+    "Przedrostki są doklejane do tekstu przed policzeniem wektora. Model MMLW "
+    "wymaga przedrostka „zapytanie: ” wyłącznie dla zapytań, rodzina E5 "
+    "wymaga „query: ” i „passage: ”. Zmiana przedrostków wymaga "
+    "przebudowy części semantycznej indeksu."
+)
+MODEL_PREFIX_NOT_INSTALLED = (
+    "Model nie jest zainstalowany, więc przedrostki nie zostały zapisane. "
+    "Zainstaluj model albo wybierz go jako aktywny i spróbuj ponownie."
+)
+MODEL_SEMANTIC_TOGGLE = "Włącz indeksowanie i wyszukiwanie semantyczne"
+MODEL_SEMANTIC_HINT = (
+    "Po wyłączeniu nowe dokumenty są indeksowane tylko pełnotekstowo, a tryby "
+    "semantyczny i hybrydowy przestają działać. Po ponownym włączeniu wystarczy "
+    "zwykłe skanowanie: brakujące wektory zostaną uzupełnione automatycznie."
+)
+MODEL_IMPORT_DISK = "Importuj z dysku..."
+MODEL_IMPORT_HF = "Pobierz z Hugging Face..."
+MODEL_IMPORT_TITLE = "Import modelu"
+MODEL_IMPORT_SOURCE = "Źródło"
+MODEL_IMPORT_NAME = "Nazwa modelu"
+MODEL_IMPORT_NAME_HINT = "puste pole oznacza nazwę z katalogu albo repozytorium"
+MODEL_IMPORT_POOLING = "Pooling"
+MODEL_IMPORT_QUANTIZE = "Kwantyzuj do INT8 (mniejszy i szybszy model)"
+MODEL_IMPORT_PREFIX_HINT = "puste pole oznacza wykrycie automatyczne"
+MODEL_IMPORT_REPO = "Repozytorium Hugging Face"
+MODEL_IMPORT_REPO_INVALID = (
+    "Podaj identyfikator repozytorium w formacie organizacja/nazwa, "
+    "na przykład sdadas/mmlw-retrieval-roberta-base."
+)
+MODEL_IMPORT_RUNNING = "Trwa import modelu. Duże modele mogą wymagać kilku minut..."
+MODEL_IMPORT_DONE = "Zaimportowano model: {name}"
+MODEL_IMPORT_OVERWRITE = "Model „{name}” jest już zainstalowany. Nadpisać jego pliki?"
+MODEL_DOWNLOAD_CONSENT = (
+    "Pobranie modelu wymaga jednorazowego połączenia z Hugging Face.\n"
+    "Dozwolone adresy: {hosts}.\n\nZgadzasz się na to połączenie?"
+)
+MODEL_ACTIVATE_PROMPT = (
+    "Ustawić model „{name}” jako aktywny?\n"
+    "Zmiana modelu wymaga przebudowy części semantycznej indeksu."
+)
+MODEL_REBUILD_REQUIRED = (
+    "Zmiana wymaga przebudowy części semantycznej indeksu.\n"
+    "Uruchom pełne przeindeksowanie na ekranie Indeksowanie.\n"
+    "Do tego czasu wyszukiwanie dokładne działa bez zmian."
+)
+MODEL_RELOAD_WHILE_INDEXING = (
+    "Trwa indeksowanie, więc indeks nie został otwarty ponownie. "
+    "Zmiany zaczną działać po zakończeniu zadania i ponownym uruchomieniu aplikacji."
+)
 
 # --- ekran indeksowania ------------------------------------------------------
 
