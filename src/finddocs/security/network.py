@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import fnmatch
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from urllib.parse import urlparse
 
 from finddocs.errors import NetworkPolicyError
@@ -19,7 +19,7 @@ from finddocs.security.redaction import safe_url
 log = get_logger(__name__)
 
 
-class EgressCategory(str, Enum):
+class EgressCategory(StrEnum):
     """Kategorie dozwolonego ruchu wychodzacego."""
 
     MICROSOFT_GRAPH = "microsoft_graph"

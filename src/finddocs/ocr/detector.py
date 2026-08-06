@@ -10,7 +10,7 @@ uszkodzony.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 
 from finddocs.config import OcrSettings
 from finddocs.extractors.detect import FileTypeInfo
@@ -18,7 +18,7 @@ from finddocs.normalization.text import alpha_ratio, looks_like_garbage
 from finddocs.types import ExtractionResult
 
 
-class OcrReason(str, Enum):
+class OcrReason(StrEnum):
     """Powod uruchomienia albo pominiecia OCR."""
 
     IMAGE_FILE = "plik_obrazu"

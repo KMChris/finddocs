@@ -9,19 +9,19 @@ from __future__ import annotations
 import datetime as _dt
 from collections.abc import Iterator
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
 
-class SourceKind(str, Enum):
+class SourceKind(StrEnum):
     """Rodzaj zrodla dokumentow."""
 
     LOCAL_DIR = "local_dir"
     SHAREPOINT = "sharepoint"
 
 
-class DocumentStatus(str, Enum):
+class DocumentStatus(StrEnum):
     """Status dokumentu w indeksie."""
 
     PENDING = "pending"
@@ -74,7 +74,7 @@ NON_SEARCHABLE_STATUSES: frozenset[DocumentStatus] = frozenset(
 )
 
 
-class TextOrigin(str, Enum):
+class TextOrigin(StrEnum):
     """Pochodzenie tekstu fragmentu."""
 
     NATIVE = "native"
@@ -87,7 +87,7 @@ class TextOrigin(str, Enum):
     """Część natywna, część z OCR."""
 
 
-class SupportLevel(str, Enum):
+class SupportLevel(StrEnum):
     """Deklarowany poziom wsparcia formatu."""
 
     FULL = "full"
@@ -106,7 +106,7 @@ class SupportLevel(str, Enum):
     """Format rozpoznawany, ale nieobsługiwany."""
 
 
-class SearchMode(str, Enum):
+class SearchMode(StrEnum):
     """Tryb wyszukiwania wybrany przez uzytkownika."""
 
     HYBRID = "hybrid"
@@ -114,7 +114,7 @@ class SearchMode(str, Enum):
     SEMANTIC = "semantic"
 
 
-class MatchKind(str, Enum):
+class MatchKind(StrEnum):
     """Rodzaj dopasowania pojedynczego wyniku."""
 
     EXACT = "exact"
@@ -122,7 +122,7 @@ class MatchKind(str, Enum):
     HYBRID = "hybrid"
 
 
-class JobState(str, Enum):
+class JobState(StrEnum):
     """Stan zadania w kolejce."""
 
     QUEUED = "queued"
@@ -134,7 +134,7 @@ class JobState(str, Enum):
     COMPLETED = "completed"
 
 
-class JobKind(str, Enum):
+class JobKind(StrEnum):
     """Rodzaj zadania."""
 
     FULL_INDEX = "full_index"
@@ -498,7 +498,7 @@ class SearchResponse:
 # --- analiza zapytania ---------------------------------------------------------
 
 
-class TermKind(str, Enum):
+class TermKind(StrEnum):
     WORD = "word"
     PHRASE = "phrase"
     DATE = "date"

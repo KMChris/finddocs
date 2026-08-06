@@ -540,8 +540,6 @@ class GraphClient:
             moment = parsedate_to_datetime(value)
         except (TypeError, ValueError):
             return None
-        if moment is None:
-            return None
         now = _dt.datetime.now(tz=moment.tzinfo)
         delta = float((moment - now).total_seconds())
         return min(RETRY_AFTER_MAX_SECONDS, max(0.0, delta))

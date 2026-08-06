@@ -106,8 +106,10 @@ def test_diagnostics_refresh_fills_tables(qtbot: object, diagnostics_view: Diagn
     diagnostics_view.refresh()
 
     qtbot.waitUntil(  # type: ignore[attr-defined]
-        lambda: diagnostics_view.environment_table.rowCount() > 0
-        and diagnostics_view.components_table.rowCount() > 0,
+        lambda: (
+            diagnostics_view.environment_table.rowCount() > 0
+            and diagnostics_view.components_table.rowCount() > 0
+        ),
         timeout=TIMEOUT_MS,
     )
     assert diagnostics_view.index_table.rowCount() > 0

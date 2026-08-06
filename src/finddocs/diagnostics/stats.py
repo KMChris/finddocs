@@ -129,7 +129,7 @@ def _average_chunk_chars(index: IndexService) -> int:
     if raw is None:
         return 0
     try:
-        return int(round(float(raw)))
+        return round(float(raw))
     except (TypeError, ValueError):  # pragma: no cover - SQLite zwraca liczbe albo NULL
         return 0
 

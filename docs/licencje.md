@@ -12,10 +12,11 @@ ani zapytan poza komputer uzytkownika w konfiguracji domyslnej.
 | --- | --- | --- | --- | --- |
 | antlr4-python3-runtime | 4.9.3 | BSD | zaleznosc posrednia | http://www.antlr.org |
 | anyio | 4.14.2 | MIT | zaleznosc posrednia | https://anyio.readthedocs.io/en/latest/ |
+| ast_serialize | 0.6.0 | MIT | zaleznosc posrednia | https://github.com/mypyc/ast_serialize |
 | backports.tarfile | 1.2.0 | MIT License | zaleznosc posrednia | https://github.com/jaraco/backports.tarfile |
 | certifi | 2026.7.22 | Mozilla Public License 2.0 (MPL 2.0) | zaleznosc posrednia | https://github.com/certifi/python-certifi |
 | cffi | 2.1.0 | MIT-0 | zaleznosc posrednia | https://cffi.readthedocs.io/ |
-| charset-normalizer | 3.4.1 | MIT License | wykrywanie kodowania plikow tekstowych | https://charset-normalizer.readthedocs.io/ |
+| charset-normalizer | 3.4.9 | MIT | wykrywanie kodowania plikow tekstowych | https://charset-normalizer.readthedocs.io/ |
 | colorama | 0.4.6 | BSD License | zaleznosc posrednia | https://github.com/tartley/colorama |
 | coloredlogs | 15.0.1 | MIT License | zaleznosc posrednia | https://coloredlogs.readthedocs.io |
 | colorlog | 6.12.0 | MIT License | zaleznosc posrednia | https://github.com/borntyping/python-colorlog |
@@ -35,7 +36,8 @@ ani zapytan poza komputer uzytkownika w konfiguracji domyslnej.
 | jaraco.classes | 3.4.0 | MIT License | zaleznosc posrednia | https://github.com/jaraco/jaraco.classes |
 | jaraco.context | 6.1.2 | MIT | zaleznosc posrednia | https://github.com/jaraco/jaraco.context |
 | jaraco.functools | 4.6.0 | MIT | zaleznosc posrednia | https://github.com/jaraco/jaraco.functools |
-| keyring | 25.6.0 | MIT License | dostep do Menedzera poswiadczen Windows | https://github.com/jaraco/keyring |
+| keyring | 25.7.0 | MIT | dostep do Menedzera poswiadczen Windows | https://github.com/jaraco/keyring |
+| librt | 0.13.0 | MIT | zaleznosc posrednia | https://github.com/mypyc/librt |
 | lxml | 6.1.1 | BSD-3-Clause | zaleznosc posrednia | https://lxml.de/ |
 | more-itertools | 11.1.0 | MIT | zaleznosc posrednia | https://more-itertools.readthedocs.io/en/stable/ |
 | mpmath | 1.3.0 | BSD License | zaleznosc posrednia | http://mpmath.org/ |
@@ -47,18 +49,19 @@ ani zapytan poza komputer uzytkownika w konfiguracji domyslnej.
 | opencv-python | 5.0.0.93 | Apache Software License | zaleznosc posrednia | https://github.com/opencv/opencv-python |
 | openpyxl | 3.1.5 | MIT License | odczyt plikow XLSX | https://openpyxl.readthedocs.io |
 | packaging | 26.2 | Apache-2.0 OR BSD-2-Clause | zaleznosc posrednia | https://packaging.pypa.io/ |
+| pathspec | 1.1.1 | Mozilla Public License 2.0 (MPL 2.0) | zaleznosc posrednia | https://python-path-specification.readthedocs.io/en/latest/index.html |
 | pillow | 12.3.0 | MIT-CMU | obsluga obrazow i przygotowanie stron do OCR | https://pillow.readthedocs.io |
 | pip | 26.2 | MIT | zaleznosc posrednia | https://pip.pypa.io |
 | protobuf | 7.35.1 | 3-Clause BSD License | zaleznosc posrednia | https://developers.google.com/protocol-buffers/ |
 | pyclipper | 1.4.0 | MIT License | zaleznosc posrednia | https://github.com/fonttools/pyclipper |
 | pycparser | 3.0 | BSD-3-Clause | zaleznosc posrednia | https://github.com/eliben/pycparser |
 | PyJWT | 2.13.0 | MIT | zaleznosc posrednia | https://github.com/jpadilla/pyjwt |
-| pypdfium2 | 4.30.0 | (Apache-2.0 OR BSD-3-Clause) AND LicenseRef-PdfiumThirdParty | odczyt i rasteryzacja PDF | https://github.com/pypdfium2-team/pypdfium2 |
+| pypdfium2 | 5.12.1 | BSD-3-Clause, Apache-2.0, dependency licenses | odczyt i rasteryzacja PDF | https://github.com/pypdfium2-team/pypdfium2 |
 | pyreadline3 | 3.5.6 | BSD License | zaleznosc posrednia | https://github.com/pyreadline3/pyreadline3 |
 | PySide6 | 6.11.1 | LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only | interfejs graficzny | https://pyside.org |
 | PySide6_Addons | 6.11.1 | LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only | interfejs graficzny | https://pyside.org |
 | PySide6_Essentials | 6.11.1 | LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only | interfejs graficzny | https://pyside.org |
-| python-docx | 1.1.2 | MIT License | odczyt plikow DOCX | https://python-docx.readthedocs.org/en/latest/ |
+| python-docx | 1.2.0 | MIT License | odczyt plikow DOCX | https://python-docx.readthedocs.org/en/latest/ |
 | pywin32 | 312 | Python Software Foundation License | DPAPI, automatyzacja Office przez COM | https://github.com/mhammond/pywin32 |
 | pywin32-ctypes | 0.2.3 | BSD-3-Clause | zaleznosc posrednia | https://github.com/enthought/pywin32-ctypes |
 | PyYAML | 6.0.3 | MIT License | zaleznosc posrednia | https://pyyaml.org/ |
@@ -68,14 +71,14 @@ ani zapytan poza komputer uzytkownika w konfiguracji domyslnej.
 | shapely | 2.1.2 | BSD License | zaleznosc posrednia | https://shapely.readthedocs.io/ |
 | shiboken6 | 6.11.1 | LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only | warstwa wiazan Qt dla Pythona | https://pyside.org |
 | six | 1.17.0 | MIT License | zaleznosc posrednia | https://github.com/benjaminp/six |
-| structlog | 24.4.0 | Apache Software License | strukturalne logowanie | https://www.structlog.org/ |
+| structlog | 26.1.0 | Apache Software License | strukturalne logowanie | https://www.structlog.org/ |
 | sympy | 1.14.0 | BSD License | zaleznosc posrednia | https://sympy.org |
-| tokenizers | 0.21.0 | Apache Software License | tokenizacja tekstu dla modelu embeddingow | https://github.com/huggingface/tokenizers |
+| tokenizers | 0.23.1 | Apache Software License | tokenizacja tekstu dla modelu embeddingow | https://github.com/huggingface/tokenizers |
 | tqdm | 4.70.0 | MPL-2.0 AND MIT | zaleznosc posrednia | https://tqdm.github.io |
 | typing_extensions | 4.16.0 | PSF-2.0 | zaleznosc posrednia | https://typing-extensions.readthedocs.io/ |
 | urllib3 | 2.7.0 | MIT | zaleznosc posrednia | https://urllib3.readthedocs.io |
 | wheel | 0.47.0 | MIT | zaleznosc posrednia | https://wheel.readthedocs.io/ |
-| xlrd | 2.0.1 | BSD License | odczyt starych plikow XLS | http://www.python-excel.org/ |
+| xlrd | 2.0.2 | BSD License | odczyt starych plikow XLS | http://www.python-excel.org/ |
 | zipp | 4.1.0 | MIT | zaleznosc posrednia | https://github.com/jaraco/zipp |
 
 ## Komponenty zewnetrzne i modele
@@ -97,7 +100,7 @@ Nie trafiaja do pakietu instalacyjnego.
 | altgraph | 0.17.5 | MIT License |
 | coverage | 7.15.2 | Apache-2.0 |
 | iniconfig | 2.3.0 | MIT |
-| mypy | 1.14.1 | MIT License |
+| mypy | 2.3.0 | MIT |
 | mypy_extensions | 1.1.0 | MIT |
 | pefile | 2023.2.7 | MIT |
 | pluggy | 1.6.0 | MIT License |
@@ -107,7 +110,7 @@ Nie trafiaja do pakietu instalacyjnego.
 | pytest | 9.1.1 | MIT |
 | pytest-cov | 7.1.0 | MIT License |
 | pytest-qt | 4.5.0 | MIT License |
-| ruff | 0.9.2 | MIT License |
+| ruff | 0.16.1 | MIT |
 | types-openpyxl | 3.1.5.20260724 | Apache-2.0 |
 | types-pywin32 | 312.0.0.20260724 | Apache-2.0 |
 

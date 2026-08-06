@@ -122,6 +122,36 @@
     },
     {
       "type": "library",
+      "name": "ast_serialize",
+      "version": "0.6.0",
+      "purl": "pkg:pypi/ast-serialize@0.6.0",
+      "scope": "required",
+      "licenses": [
+        {
+          "license": {
+            "name": "MIT"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://github.com/mypyc/ast_serialize"
+        }
+      ],
+      "properties": [
+        {
+          "name": "finddocs:usage",
+          "value": "zaleznosc posrednia"
+        },
+        {
+          "name": "finddocs:scope",
+          "value": "runtime"
+        }
+      ]
+    },
+    {
+      "type": "library",
       "name": "backports.tarfile",
       "version": "1.2.0",
       "purl": "pkg:pypi/backports.tarfile@1.2.0",
@@ -215,13 +245,13 @@
     {
       "type": "library",
       "name": "charset-normalizer",
-      "version": "3.4.1",
-      "purl": "pkg:pypi/charset-normalizer@3.4.1",
+      "version": "3.4.9",
+      "purl": "pkg:pypi/charset-normalizer@3.4.9",
       "scope": "required",
       "licenses": [
         {
           "license": {
-            "name": "MIT License"
+            "name": "MIT"
           }
         }
       ],
@@ -885,13 +915,13 @@
     {
       "type": "library",
       "name": "keyring",
-      "version": "25.6.0",
-      "purl": "pkg:pypi/keyring@25.6.0",
+      "version": "25.7.0",
+      "purl": "pkg:pypi/keyring@25.7.0",
       "scope": "required",
       "licenses": [
         {
           "license": {
-            "name": "MIT License"
+            "name": "MIT"
           }
         }
       ],
@@ -905,6 +935,36 @@
         {
           "name": "finddocs:usage",
           "value": "dostep do Menedzera poswiadczen Windows"
+        },
+        {
+          "name": "finddocs:scope",
+          "value": "runtime"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "librt",
+      "version": "0.13.0",
+      "purl": "pkg:pypi/librt@0.13.0",
+      "scope": "required",
+      "licenses": [
+        {
+          "license": {
+            "name": "MIT"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://github.com/mypyc/librt"
+        }
+      ],
+      "properties": [
+        {
+          "name": "finddocs:usage",
+          "value": "zaleznosc posrednia"
         },
         {
           "name": "finddocs:scope",
@@ -1038,13 +1098,13 @@
     {
       "type": "library",
       "name": "mypy",
-      "version": "1.14.1",
-      "purl": "pkg:pypi/mypy@1.14.1",
+      "version": "2.3.0",
+      "purl": "pkg:pypi/mypy@2.3.0",
       "scope": "optional",
       "licenses": [
         {
           "license": {
-            "name": "MIT License"
+            "name": "MIT"
           }
         }
       ],
@@ -1297,6 +1357,36 @@
         {
           "type": "website",
           "url": "https://packaging.pypa.io/"
+        }
+      ],
+      "properties": [
+        {
+          "name": "finddocs:usage",
+          "value": "zaleznosc posrednia"
+        },
+        {
+          "name": "finddocs:scope",
+          "value": "runtime"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "pathspec",
+      "version": "1.1.1",
+      "purl": "pkg:pypi/pathspec@1.1.1",
+      "scope": "required",
+      "licenses": [
+        {
+          "license": {
+            "name": "Mozilla Public License 2.0 (MPL 2.0)"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://python-path-specification.readthedocs.io/en/latest/index.html"
         }
       ],
       "properties": [
@@ -1647,13 +1737,13 @@
     {
       "type": "library",
       "name": "pypdfium2",
-      "version": "4.30.0",
-      "purl": "pkg:pypi/pypdfium2@4.30.0",
+      "version": "5.12.1",
+      "purl": "pkg:pypi/pypdfium2@5.12.1",
       "scope": "required",
       "licenses": [
         {
           "license": {
-            "name": "(Apache-2.0 OR BSD-3-Clause) AND LicenseRef-PdfiumThirdParty"
+            "name": "BSD-3-Clause, Apache-2.0, dependency licenses"
           }
         }
       ],
@@ -1890,8 +1980,8 @@
     {
       "type": "library",
       "name": "python-docx",
-      "version": "1.1.2",
-      "purl": "pkg:pypi/python-docx@1.1.2",
+      "version": "1.2.0",
+      "purl": "pkg:pypi/python-docx@1.2.0",
       "scope": "required",
       "licenses": [
         {
@@ -2073,13 +2163,13 @@
     {
       "type": "library",
       "name": "ruff",
-      "version": "0.9.2",
-      "purl": "pkg:pypi/ruff@0.9.2",
+      "version": "0.16.1",
+      "purl": "pkg:pypi/ruff@0.16.1",
       "scope": "optional",
       "licenses": [
         {
           "license": {
-            "name": "MIT License"
+            "name": "MIT"
           }
         }
       ],
@@ -2098,8 +2188,7 @@
           "name": "finddocs:scope",
           "value": "deweloperska"
         }
-      ],
-      "author": "Charlie Marsh <charlie.r.marsh@gmail.com>"
+      ]
     },
     {
       "type": "library",
@@ -2226,8 +2315,8 @@
     {
       "type": "library",
       "name": "structlog",
-      "version": "24.4.0",
-      "purl": "pkg:pypi/structlog@24.4.0",
+      "version": "26.1.0",
+      "purl": "pkg:pypi/structlog@26.1.0",
       "scope": "required",
       "licenses": [
         {
@@ -2287,8 +2376,8 @@
     {
       "type": "library",
       "name": "tokenizers",
-      "version": "0.21.0",
-      "purl": "pkg:pypi/tokenizers@0.21.0",
+      "version": "0.23.1",
+      "purl": "pkg:pypi/tokenizers@0.23.1",
       "scope": "required",
       "licenses": [
         {
@@ -2312,8 +2401,7 @@
           "name": "finddocs:scope",
           "value": "runtime"
         }
-      ],
-      "author": "Anthony MOI <m.anthony.moi@gmail.com>"
+      ]
     },
     {
       "type": "library",
@@ -2498,8 +2586,8 @@
     {
       "type": "library",
       "name": "xlrd",
-      "version": "2.0.1",
-      "purl": "pkg:pypi/xlrd@2.0.1",
+      "version": "2.0.2",
+      "purl": "pkg:pypi/xlrd@2.0.2",
       "scope": "required",
       "licenses": [
         {
