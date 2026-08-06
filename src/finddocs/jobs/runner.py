@@ -60,10 +60,12 @@ class JobRunner:
         index: IndexService,
         *,
         paths: AppPaths | None = None,
+        config_provider: Callable[[], AppConfig] | None = None,
     ) -> None:
         self.config = config
         self.index = index
         self.paths = paths or index.paths
+        self._config_provider = config_provider
         self._queue: queue.Queue[QueuedJob | None] = queue.Queue()
         self._thread: threading.Thread | None = None
         self._current: IndexingJob | None = None
@@ -221,6 +223,11 @@ class JobRunner:
         log.info("runner.stopped")
 
     def _run_job(self, queued: QueuedJob) -> None:
+        # Konfiguracja jest pobierana w chwili startu zadania, nie w chwili
+        # utworzenia wykonawcy. Zrodla dodane po uruchomieniu aplikacji sa
+        # dzieki temu widoczne bez restartu.
+        if self._config_provider is not None:
+            self.config = self._config_provider()
         sink = _SinkAdapter(self._progress_callbacks)
         job = IndexingJob(
             self.config,

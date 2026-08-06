@@ -50,7 +50,12 @@ class AppContext:
         self.startup_notes = list(self.index.notes)
         self.rebuild_required = self.index.rebuild_required
         self.search = SearchService(self.index)
-        self.runner = JobRunner(self.config, self.index, paths=self.paths)
+        self.runner = JobRunner(
+            self.config,
+            self.index,
+            paths=self.paths,
+            config_provider=lambda: self.config,
+        )
         self.runner.mark_interrupted_jobs()
 
     def close(self) -> None:
@@ -72,6 +77,22 @@ class AppContext:
     def save(self) -> None:
         save_config(self.config, self.paths.config_file)
         self._apply_network_policy()
+        self._sync_services()
+
+    def _sync_services(self) -> None:
+        """Przekazuje aktualna konfiguracje do obiektow dlugozyjacych.
+
+        Widoki podmieniaja ``self.config`` na nowy obiekt (np. ``with_source``
+        zwraca kopie), a indeks, wyszukiwarka i wykonawca zadan powstaly ze
+        stara referencja. Bez synchronizacji zmiana zrodel czy ustawien
+        wyszukiwania bylaby widoczna dopiero po restarcie aplikacji.
+        """
+        if self.index is not None:
+            self.index.config = self.config
+        if self.search is not None:
+            self.search.settings = self.config.search
+        if self.runner is not None:
+            self.runner.config = self.config
 
     def _apply_network_policy(self) -> None:
         policy = NetworkPolicy.offline()
