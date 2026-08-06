@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (
 from finddocs.gui import i18n
 from finddocs.gui.context import AppContext
 from finddocs.gui.dialogs import show_error, show_info
-from finddocs.gui.tables import configure_columns
+from finddocs.gui.tables import configure_columns, format_stamp
 from finddocs.gui.workers import CallableTask, thread_pool
 from finddocs.logging_setup import get_logger
 from finddocs.types import CoverageReport
@@ -50,6 +50,7 @@ class ReportView(QWidget):
         root.addWidget(title)
 
         buttons = QHBoxLayout()
+        buttons.setSpacing(8)
         refresh = QPushButton(i18n.REPORT_REFRESH)
         refresh.setObjectName("Primary")
         refresh.clicked.connect(self.refresh)
@@ -71,8 +72,9 @@ class ReportView(QWidget):
 
         self.summary_box = QGroupBox("Podsumowanie")
         self.summary_grid = QGridLayout(self.summary_box)
-        self.summary_grid.setHorizontalSpacing(24)
-        self.summary_grid.setVerticalSpacing(6)
+        self.summary_grid.setHorizontalSpacing(32)
+        # Podpis przylega do swojej wartosci, a grupy rozdziela pusty wiersz.
+        self.summary_grid.setVerticalSpacing(2)
         root.addWidget(self.summary_box)
 
         self.table = QTableWidget(0, 5)
@@ -142,8 +144,11 @@ class ReportView(QWidget):
             ("Wersja aplikacji", report.app_version),
             ("Model embeddingów", report.model_key or "brak"),
             ("Wymiar wektora", report.model_dimension or "brak"),
-            ("Ostatnie skanowanie", report.last_scan_at or "brak"),
-            ("Ostatnie pełne indeksowanie", report.last_full_index_at or "brak"),
+            ("Ostatnie skanowanie", format_stamp(str(report.last_scan_at or "")) or "brak"),
+            (
+                "Ostatnie pełne indeksowanie",
+                format_stamp(str(report.last_full_index_at or "")) or "brak",
+            ),
         ]
         for position, (label_text, value) in enumerate(entries):
             column = position % 3
@@ -151,9 +156,13 @@ class ReportView(QWidget):
             caption = QLabel(str(label_text))
             caption.setObjectName("Muted")
             display = QLabel(str(value))
+            display.setObjectName("StatValue")
             display.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-            self.summary_grid.addWidget(caption, row * 2, column)
-            self.summary_grid.addWidget(display, row * 2 + 1, column)
+            self.summary_grid.addWidget(caption, row * 3, column)
+            self.summary_grid.addWidget(display, row * 3 + 1, column)
+        rows = -(-len(entries) // 3)
+        for row in range(rows - 1):
+            self.summary_grid.setRowMinimumHeight(row * 3 + 2, 12)
 
         if report.non_searchable:
             self.completeness.setText(

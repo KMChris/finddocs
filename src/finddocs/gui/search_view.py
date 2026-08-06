@@ -86,7 +86,7 @@ class SearchView(QWidget):
         self._results_host = QWidget()
         self._results_layout = QVBoxLayout(self._results_host)
         self._results_layout.setContentsMargins(0, 0, 8, 0)
-        self._results_layout.setSpacing(10)
+        self._results_layout.setSpacing(12)
         self._results_layout.addStretch(1)
         self._scroll.setWidget(self._results_host)
         root.addWidget(self._scroll, stretch=1)
@@ -137,7 +137,7 @@ class SearchView(QWidget):
         container = QWidget()
         row = QHBoxLayout(container)
         row.setContentsMargins(0, 0, 0, 0)
-        row.setSpacing(6)
+        row.setSpacing(8)
 
         self.mode_group = QButtonGroup(self)
         self.mode_group.setExclusive(True)
@@ -154,6 +154,7 @@ class SearchView(QWidget):
             row.addWidget(button)
         self.mode_group.idClicked.connect(lambda _id: self._update_mode_hint())
 
+        row.addSpacing(8)
         self.mode_hint = QLabel(i18n.MODE_HINTS[default_mode])
         self.mode_hint.setObjectName("Hint")
         row.addWidget(self.mode_hint)
@@ -170,8 +171,9 @@ class SearchView(QWidget):
         panel.setObjectName("Card")
         grid = QGridLayout(panel)
         grid.setContentsMargins(16, 14, 16, 14)
-        grid.setHorizontalSpacing(12)
-        grid.setVerticalSpacing(8)
+        grid.setHorizontalSpacing(16)
+        # Podpis przylega do swojego pola, a grupy pol rozdziela pusty wiersz.
+        grid.setVerticalSpacing(4)
 
         self.filter_extension = QComboBox()
         self.filter_source = QComboBox()
@@ -211,13 +213,16 @@ class SearchView(QWidget):
         for index, (label_text, widget) in enumerate(widgets):
             label = QLabel(label_text)
             label.setObjectName("Muted")
-            grid.addWidget(label, index // 4 * 2, index % 4)
-            grid.addWidget(widget, index // 4 * 2 + 1, index % 4)
+            base_row = index // 4 * 3
+            grid.addWidget(label, base_row, index % 4)
+            grid.addWidget(widget, base_row + 1, index % 4)
+        grid.setRowMinimumHeight(2, 10)
+        grid.setRowMinimumHeight(5, 10)
 
-        grid.addWidget(self.filter_ocr, 3, 3)
+        grid.addWidget(self.filter_ocr, 4, 3)
         clear = QPushButton(i18n.SEARCH_FILTERS_CLEAR)
         clear.clicked.connect(self.clear_filters)
-        grid.addWidget(clear, 4, 0)
+        grid.addWidget(clear, 6, 0, Qt.AlignmentFlag.AlignLeft)
         return panel
 
     def _build_pagination(self) -> QHBoxLayout:

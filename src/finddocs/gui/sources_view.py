@@ -52,8 +52,11 @@ class SharePointDialog(QDialog):
         settings = existing.sharepoint if existing else SharePointSourceSettings()
 
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(20, 20, 20, 16)
+        layout.setSpacing(12)
         form = QFormLayout()
-        form.setSpacing(8)
+        form.setHorizontalSpacing(16)
+        form.setVerticalSpacing(10)
 
         self.label_edit = QLineEdit(existing.label if existing else "SharePoint")
         self.site_edit = QLineEdit(settings.site_url)
@@ -160,6 +163,7 @@ class SourcesView(QWidget):
 
         root.addWidget(self._build_sources_box(), stretch=1)
         row = QHBoxLayout()
+        row.setSpacing(16)
         row.addWidget(self._build_storage_box(), stretch=1)
         row.addWidget(self._build_model_box(), stretch=1)
         root.addLayout(row)
@@ -171,6 +175,7 @@ class SourcesView(QWidget):
     def _build_sources_box(self) -> QWidget:
         box = QGroupBox(i18n.SOURCES_TITLE)
         layout = QVBoxLayout(box)
+        layout.setSpacing(10)
 
         self.table = QTableWidget(0, 5)
         self.table.setHorizontalHeaderLabels(
@@ -183,6 +188,7 @@ class SourcesView(QWidget):
         layout.addWidget(self.table)
 
         buttons = QHBoxLayout()
+        buttons.setSpacing(8)
         add_local = QPushButton(i18n.SOURCES_ADD_LOCAL)
         add_local.clicked.connect(self.add_local_source)
         buttons.addWidget(add_local)
@@ -215,6 +221,7 @@ class SourcesView(QWidget):
     def _build_storage_box(self) -> QWidget:
         box = QGroupBox(i18n.STORAGE_TITLE)
         layout = QVBoxLayout(box)
+        layout.setSpacing(8)
 
         self.path_label = QLabel("")
         self.path_label.setWordWrap(True)
@@ -230,6 +237,7 @@ class SourcesView(QWidget):
         layout.addWidget(self.size_label)
 
         row = QHBoxLayout()
+        row.setSpacing(8)
         change = QPushButton(i18n.STORAGE_CHANGE)
         change.clicked.connect(self.change_storage)
         row.addWidget(change)
@@ -243,6 +251,7 @@ class SourcesView(QWidget):
     def _build_model_box(self) -> QWidget:
         box = QGroupBox(i18n.MODEL_TITLE)
         layout = QVBoxLayout(box)
+        layout.setSpacing(8)
 
         self.model_combo = QComboBox()
         layout.addWidget(self.model_combo)

@@ -56,7 +56,7 @@ class ResultCard(QFrame):
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(16, 14, 16, 14)
-        layout.setSpacing(8)
+        layout.setSpacing(10)
 
         title = QLabel(hit.name)
         title.setObjectName("ResultTitle")
@@ -97,7 +97,7 @@ class ResultCard(QFrame):
 
     def _build_badges(self, hit: DocumentHit, show_score: bool) -> QHBoxLayout:
         row = QHBoxLayout()
-        row.setSpacing(6)
+        row.setSpacing(8)
 
         def badge(text: str, name: str = "Badge") -> None:
             label = QLabel(text)

@@ -102,7 +102,7 @@ class IndexingView(QWidget):
     def _build_progress(self) -> QWidget:
         box = QGroupBox(i18n.STAGE_LABEL)
         layout = QVBoxLayout(box)
-        layout.setSpacing(6)
+        layout.setSpacing(8)
 
         self.stage_label = QLabel("Gotowe do uruchomienia")
         layout.addWidget(self.stage_label)
@@ -126,8 +126,9 @@ class IndexingView(QWidget):
     def _build_stats(self) -> QWidget:
         box = QGroupBox("Statystyki")
         grid = QGridLayout(box)
-        grid.setHorizontalSpacing(24)
-        grid.setVerticalSpacing(6)
+        grid.setHorizontalSpacing(32)
+        # Podpis przylega do swojej wartosci, a grupy rozdziela pusty wiersz.
+        grid.setVerticalSpacing(2)
 
         self._stat_labels: dict[str, QLabel] = {}
         entries = [
@@ -149,10 +150,14 @@ class IndexingView(QWidget):
             caption = QLabel(label_text)
             caption.setObjectName("Muted")
             value = QLabel("0")
+            value.setObjectName("StatValue")
             value.setAlignment(Qt.AlignmentFlag.AlignLeft)
-            grid.addWidget(caption, row * 2, column)
-            grid.addWidget(value, row * 2 + 1, column)
+            grid.addWidget(caption, row * 3, column)
+            grid.addWidget(value, row * 3 + 1, column)
             self._stat_labels[key] = value
+        rows = -(-len(entries) // 4)
+        for row in range(rows - 1):
+            grid.setRowMinimumHeight(row * 3 + 2, 12)
         return box
 
     def _build_tables(self) -> QWidget:

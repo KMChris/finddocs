@@ -10,10 +10,14 @@ from __future__ import annotations
 
 import datetime as _dt
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QHeaderView, QTableWidget
 
 #: Minimalna szerokosc kolumny opisowej, zeby naglowek zawsze byl czytelny.
 MIN_STRETCH_WIDTH = 140
+
+#: Wysokosc wiersza tabeli. Odrobina luzu nad i pod tekstem ulatwia czytanie.
+ROW_HEIGHT = 34
 
 
 def configure_columns(table: QTableWidget, stretch: tuple[int, ...]) -> None:
@@ -24,6 +28,8 @@ def configure_columns(table: QTableWidget, stretch: tuple[int, ...]) -> None:
     """
     header = table.horizontalHeader()
     header.setStretchLastSection(False)
+    header.setDefaultAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+    table.verticalHeader().setDefaultSectionSize(ROW_HEIGHT)
     for column in range(table.columnCount()):
         if column in stretch:
             header.setSectionResizeMode(column, QHeaderView.ResizeMode.Stretch)
@@ -48,4 +54,4 @@ def format_stamp(value: str) -> str:
     return moment.strftime("%Y-%m-%d %H:%M:%S")
 
 
-__all__ = ["MIN_STRETCH_WIDTH", "configure_columns", "format_stamp"]
+__all__ = ["MIN_STRETCH_WIDTH", "ROW_HEIGHT", "configure_columns", "format_stamp"]

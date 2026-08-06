@@ -1,17 +1,30 @@
 """Wyglad aplikacji zgodny z Windows 11.
 
-Motyw opiera sie na palecie Fluent: jasne tlo warstwowe, zaokraglone rogi, subtelne
-obramowania i akcent systemowy. Wersja ciemna jest wybierana automatycznie, gdy
-system zglasza ciemny motyw.
+Motyw opiera sie na palecie Fluent: jasne tlo warstwowe, zaokraglone rogi,
+subtelne obramowania i akcent systemowy. Wersja ciemna jest wybierana
+automatycznie, gdy system zglasza ciemny motyw.
+
+Trzy zasady, ktore latwo zepsuc:
+
+1. Uniwersalna regula ``QWidget`` NIE ustawia tla. Ustawienie tla na kazdej
+   kontrolce sprawia, ze etykiety maluja pod tekstem prostokat w kolorze tla
+   aplikacji, takze wtedy, gdy leza na bialej karcie. Tlo maja tylko okna
+   najwyzszego poziomu i kontrolki, ktore naprawde je potrzebuja.
+2. Przyciski przyjmuja fokus wylacznie z klawiatury (:class:`TabFocusStyle`).
+   Po kliknieciu myszka nie zostaje na nich ramka zaznaczenia.
+3. Kropkowana ramka fokusa jest wylaczona przez ``outline: none``. Zamiast
+   niej fokus z klawiatury ma wlasny, wyrazny styl obramowania.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QFont, QPalette
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QProxyStyle, QStyle, QStyleOption, QWidget
 
 FONT_FAMILY = "Segoe UI Variable Text, Segoe UI, Inter, sans-serif"
 FONT_SIZE = 10
@@ -19,6 +32,10 @@ MONO_FAMILY = "Cascadia Mono, Consolas, monospace"
 
 RADIUS = 8
 RADIUS_LARGE = 12
+
+#: Katalog z malymi obrazkami motywu (znacznik wyboru, strzalka listy).
+#: Pliki generuje ``tools/make_theme_icons.py``.
+ICON_DIR = Path(__file__).resolve().parents[1] / "resources" / "theme"
 
 
 @dataclass(frozen=True, slots=True)
@@ -40,6 +57,8 @@ class Palette:
     danger: str
     highlight: str
     highlight_text: str
+    #: Wariant obrazkow motywu: "light" albo "dark".
+    variant: str = "light"
 
 
 LIGHT = Palette(
@@ -58,6 +77,7 @@ LIGHT = Palette(
     danger="#c42b1c",
     highlight="#fff3bf",
     highlight_text="#3d2c00",
+    variant="light",
 )
 
 DARK = Palette(
@@ -76,7 +96,30 @@ DARK = Palette(
     danger="#ff99a4",
     highlight="#5c4a00",
     highlight_text="#ffeaa0",
+    variant="dark",
 )
+
+
+class TabFocusStyle(QProxyStyle):
+    """Styl, w ktorym przyciski przyjmuja fokus tylko z klawiatury.
+
+    Domyslnie na Windows klikniety przycisk zatrzymuje fokus i rysuje na sobie
+    ramke zaznaczenia, ktora zostaje do nastepnego kliknieciu gdzie indziej.
+    Ten styl zmienia polityke fokusa przyciskow na ``TabFocus``: klikniecie
+    tylko wykonuje akcje, a ramke fokusa widza wylacznie osoby poruszajace sie
+    klawiszem Tab.
+    """
+
+    def styleHint(
+        self,
+        hint: QStyle.StyleHint,
+        option: QStyleOption | None = None,
+        widget: QWidget | None = None,
+        returnData: Any = None,
+    ) -> int:
+        if hint == QStyle.StyleHint.SH_Button_FocusPolicy:
+            return int(Qt.FocusPolicy.TabFocus.value)
+        return super().styleHint(hint, option, widget, returnData)
 
 
 def is_dark_mode(app: QApplication) -> bool:
@@ -93,18 +136,27 @@ def resolve_palette(app: QApplication, preference: str = "system") -> Palette:
     return DARK if is_dark_mode(app) else LIGHT
 
 
+def _icon_url(name: str, variant: str) -> str:
+    """Sciezka obrazka motywu w postaci akceptowanej przez arkusz stylow."""
+    return (ICON_DIR / f"{name}-{variant}.png").as_posix()
+
+
 def build_stylesheet(palette: Palette) -> str:
     """Arkusz stylow Qt dla calej aplikacji."""
     p = palette
+    check = _icon_url("check", p.variant)
+    chevron = _icon_url("chevron", p.variant)
     return f"""
     QWidget {{
-        background-color: {p.background};
         color: {p.text};
         font-family: "{FONT_FAMILY}";
         font-size: {FONT_SIZE}pt;
     }}
     QMainWindow, QDialog {{
         background-color: {p.background};
+    }}
+    QLabel, QCheckBox, QRadioButton {{
+        background: transparent;
     }}
     #Sidebar {{
         background-color: {p.surface_alt};
@@ -114,17 +166,20 @@ def build_stylesheet(palette: Palette) -> str:
         background: transparent;
         border: none;
         padding: 8px 6px;
+        outline: none;
     }}
     #SidebarList::item {{
-        padding: 10px 12px;
+        padding: 9px 10px;
         border-radius: {RADIUS}px;
         margin: 2px 4px;
         color: {p.text};
+        border: 1px solid transparent;
+        border-left: 3px solid transparent;
     }}
     #SidebarList::item:selected {{
         background-color: {p.surface};
-        color: {p.text};
         border: 1px solid {p.border};
+        border-left: 3px solid {p.accent};
     }}
     #SidebarList::item:hover:!selected {{
         background-color: {p.surface};
@@ -141,15 +196,19 @@ def build_stylesheet(palette: Palette) -> str:
     QLabel#PageTitle {{
         font-size: 17pt;
         font-weight: 600;
-        padding-bottom: 4px;
+        padding-bottom: 2px;
     }}
     QLabel#SectionTitle {{
         font-size: 12pt;
         font-weight: 600;
-        padding-top: 4px;
+        padding-top: 6px;
     }}
     QLabel#Muted, QLabel#Hint {{
         color: {p.text_muted};
+    }}
+    QLabel#StatValue {{
+        font-size: 12pt;
+        font-weight: 600;
     }}
     QFrame#Card, QGroupBox {{
         background-color: {p.surface};
@@ -157,15 +216,18 @@ def build_stylesheet(palette: Palette) -> str:
         border-radius: {RADIUS_LARGE}px;
     }}
     QGroupBox {{
-        margin-top: 14px;
-        padding: 14px 12px 12px 12px;
+        margin-top: 26px;
+        padding: 6px;
+        font-size: 12pt;
         font-weight: 600;
     }}
     QGroupBox::title {{
         subcontrol-origin: margin;
-        left: 12px;
-        padding: 0 6px;
-        background-color: {p.surface};
+        subcontrol-position: top left;
+        left: 2px;
+        top: 2px;
+        padding: 0;
+        background: transparent;
     }}
     QLineEdit, QComboBox, QDateEdit, QSpinBox, QPlainTextEdit, QTextEdit {{
         background-color: {p.surface};
@@ -176,16 +238,28 @@ def build_stylesheet(palette: Palette) -> str:
         selection-background-color: {p.accent};
         selection-color: {p.accent_text};
     }}
-    QLineEdit:focus, QComboBox:focus, QDateEdit:focus, QSpinBox:focus {{
+    QLineEdit:focus, QComboBox:focus, QDateEdit:focus, QSpinBox:focus,
+    QPlainTextEdit:focus, QTextEdit:focus {{
         border-bottom: 2px solid {p.accent};
+    }}
+    QLineEdit:disabled, QComboBox:disabled, QDateEdit:disabled, QSpinBox:disabled {{
+        color: {p.text_muted};
+        background-color: {p.surface_alt};
     }}
     QLineEdit#SearchBox {{
         font-size: 13pt;
         padding: 11px 14px;
     }}
-    QComboBox::drop-down {{
+    QComboBox::drop-down, QDateEdit::drop-down {{
+        subcontrol-origin: padding;
+        subcontrol-position: center right;
         border: none;
-        width: 22px;
+        width: 26px;
+    }}
+    QComboBox::down-arrow, QDateEdit::down-arrow {{
+        image: url("{chevron}");
+        width: 16px;
+        height: 16px;
     }}
     QComboBox QAbstractItemView {{
         background-color: {p.surface};
@@ -194,6 +268,11 @@ def build_stylesheet(palette: Palette) -> str:
         selection-background-color: {p.accent};
         selection-color: {p.accent_text};
         padding: 4px;
+        outline: none;
+    }}
+    QComboBox QAbstractItemView::item {{
+        padding: 6px 8px;
+        border-radius: {RADIUS - 2}px;
     }}
     QPushButton {{
         background-color: {p.surface};
@@ -201,12 +280,16 @@ def build_stylesheet(palette: Palette) -> str:
         border-radius: {RADIUS}px;
         padding: 8px 16px;
         min-height: 18px;
+        outline: none;
     }}
     QPushButton:hover {{
         background-color: {p.surface_alt};
     }}
     QPushButton:pressed {{
         background-color: {p.border};
+    }}
+    QPushButton:focus {{
+        border: 1px solid {p.accent};
     }}
     QPushButton:disabled {{
         color: {p.text_muted};
@@ -224,6 +307,14 @@ def build_stylesheet(palette: Palette) -> str:
     QPushButton#Primary:pressed {{
         background-color: {p.accent_pressed};
     }}
+    QPushButton#Primary:focus {{
+        border: 1px solid {p.text};
+    }}
+    QPushButton#Primary:disabled {{
+        color: {p.text_muted};
+        background-color: {p.surface_alt};
+        border: 1px solid {p.border};
+    }}
     QPushButton#Danger {{
         color: {p.danger};
     }}
@@ -234,7 +325,7 @@ def build_stylesheet(palette: Palette) -> str:
         text-align: left;
         padding: 4px 2px;
     }}
-    QPushButton#Link:hover {{
+    QPushButton#Link:hover, QPushButton#Link:focus {{
         text-decoration: underline;
     }}
     QPushButton#ModeButton {{
@@ -246,6 +337,9 @@ def build_stylesheet(palette: Palette) -> str:
         color: {p.accent_text};
         border: 1px solid {p.accent};
         font-weight: 600;
+    }}
+    QPushButton#ModeButton:checked:focus {{
+        border: 1px solid {p.text};
     }}
     QFrame#ResultCard {{
         background-color: {p.surface};
@@ -300,13 +394,21 @@ def build_stylesheet(palette: Palette) -> str:
         gridline-color: {p.border};
         selection-background-color: {p.accent};
         selection-color: {p.accent_text};
+        outline: none;
+    }}
+    QTableWidget::item, QTableView::item {{
+        padding: 4px 6px;
     }}
     QHeaderView::section {{
         background-color: {p.surface_alt};
         border: none;
         border-bottom: 1px solid {p.border};
-        padding: 7px 8px;
+        padding: 8px 10px;
         font-weight: 600;
+    }}
+    QTableCornerButton::section {{
+        background-color: {p.surface_alt};
+        border: none;
     }}
     QScrollArea {{
         border: none;
@@ -344,21 +446,68 @@ def build_stylesheet(palette: Palette) -> str:
     QCheckBox, QRadioButton {{
         spacing: 8px;
     }}
+    QCheckBox:disabled, QRadioButton:disabled {{
+        color: {p.text_muted};
+    }}
     QCheckBox::indicator, QRadioButton::indicator {{
         width: 16px;
         height: 16px;
         border: 1px solid {p.text_muted};
-        border-radius: 4px;
         background-color: {p.surface};
+    }}
+    QCheckBox::indicator {{
+        border-radius: 4px;
+    }}
+    QRadioButton::indicator {{
+        border-radius: 8px;
+    }}
+    QCheckBox::indicator:hover, QRadioButton::indicator:hover {{
+        border-color: {p.accent};
     }}
     QCheckBox::indicator:checked {{
         background-color: {p.accent};
-        border: 1px solid {p.accent};
+        border-color: {p.accent};
+        image: url("{check}");
+    }}
+    QCheckBox::indicator:checked:hover {{
+        background-color: {p.accent_hover};
+        border-color: {p.accent_hover};
+    }}
+    QRadioButton::indicator:checked {{
+        background-color: {p.surface};
+        border: 5px solid {p.accent};
+    }}
+    QMenu {{
+        background-color: {p.surface};
+        border: 1px solid {p.border};
+        padding: 4px;
+    }}
+    QMenu::item {{
+        padding: 6px 24px 6px 12px;
+        border-radius: {RADIUS - 2}px;
+        background: transparent;
+    }}
+    QMenu::item:selected {{
+        background-color: {p.accent};
+        color: {p.accent_text};
+    }}
+    QMenu::separator {{
+        height: 1px;
+        background: {p.border};
+        margin: 4px 8px;
     }}
     QStatusBar {{
         background-color: {p.surface_alt};
         border-top: 1px solid {p.border};
         color: {p.text_muted};
+    }}
+    QStatusBar::item {{
+        border: none;
+    }}
+    QStatusBar QLabel {{
+        background: transparent;
+        color: {p.text_muted};
+        padding: 0 6px;
     }}
     QToolTip {{
         background-color: {p.surface};
@@ -372,6 +521,10 @@ def build_stylesheet(palette: Palette) -> str:
         border-radius: {RADIUS_LARGE}px;
         background-color: {p.surface};
         top: -1px;
+    }}
+    QTabBar {{
+        background: transparent;
+        outline: none;
     }}
     QTabBar::tab {{
         background: transparent;
@@ -392,17 +545,61 @@ def build_stylesheet(palette: Palette) -> str:
     """
 
 
+def build_qt_palette(palette: Palette) -> QPalette:
+    """Paleta Qt spojna z motywem.
+
+    Arkusz stylow nie obejmuje wszystkich kontrolek (na przyklad kalendarza
+    rozwijanego z pola daty). Paleta sprawia, ze i one dostaja wlasciwe tla
+    oraz kolory tekstu, takze w trybie ciemnym.
+    """
+    p = palette
+    qt_palette = QPalette()
+    roles = {
+        QPalette.ColorRole.Window: p.background,
+        QPalette.ColorRole.WindowText: p.text,
+        QPalette.ColorRole.Base: p.surface,
+        QPalette.ColorRole.AlternateBase: p.surface_alt,
+        QPalette.ColorRole.Text: p.text,
+        QPalette.ColorRole.Button: p.surface,
+        QPalette.ColorRole.ButtonText: p.text,
+        QPalette.ColorRole.PlaceholderText: p.text_muted,
+        QPalette.ColorRole.ToolTipBase: p.surface,
+        QPalette.ColorRole.ToolTipText: p.text,
+        QPalette.ColorRole.Highlight: p.accent,
+        QPalette.ColorRole.HighlightedText: p.accent_text,
+        QPalette.ColorRole.Link: p.accent,
+        QPalette.ColorRole.LinkVisited: p.accent_pressed,
+    }
+    for role, color in roles.items():
+        qt_palette.setColor(role, QColor(color))
+    muted = QColor(p.text_muted)
+    for role in (
+        QPalette.ColorRole.WindowText,
+        QPalette.ColorRole.Text,
+        QPalette.ColorRole.ButtonText,
+    ):
+        qt_palette.setColor(QPalette.ColorGroup.Disabled, role, muted)
+    return qt_palette
+
+
+#: Nazwa stylu bazowego zapamietana przy pierwszym zastosowaniu motywu.
+#: Przy kolejnych wywolaniach ``app.style()`` to juz nasz styl posredniczacy,
+#: wiec nazwy nie daloby sie odtworzyc.
+_base_style_key: str | None = None
+
+
 def apply_theme(app: QApplication, preference: str = "system") -> Palette:
-    """Ustawia czcionke i arkusz stylow. Zwraca uzyta palete."""
+    """Ustawia styl, czcionke, arkusz stylow i palete. Zwraca uzyta palete."""
+    global _base_style_key
     palette = resolve_palette(app, preference)
+    if _base_style_key is None:
+        _base_style_key = app.style().objectName() or "windowsvista"
+    app.setStyle(TabFocusStyle(_base_style_key))
     font = QFont(FONT_FAMILY.split(",")[0].strip(), FONT_SIZE)
     font.setStyleStrategy(QFont.StyleStrategy.PreferAntialias)
     app.setFont(font)
     app.setStyleSheet(build_stylesheet(palette))
-    qt_palette = app.palette()
-    qt_palette.setColor(QPalette.ColorRole.Link, QColor(palette.accent))
-    qt_palette.setColor(QPalette.ColorRole.Highlight, QColor(palette.accent))
-    app.setPalette(qt_palette)
+    app.setPalette(build_qt_palette(palette))
     app.setAttribute(Qt.ApplicationAttribute.AA_DontShowIconsInMenus, False)
     return palette
 
@@ -415,12 +612,15 @@ def highlight_css(palette: Palette) -> str:
 __all__ = [
     "DARK",
     "FONT_FAMILY",
+    "ICON_DIR",
     "LIGHT",
     "MONO_FAMILY",
     "RADIUS",
     "RADIUS_LARGE",
     "Palette",
+    "TabFocusStyle",
     "apply_theme",
+    "build_qt_palette",
     "build_stylesheet",
     "highlight_css",
     "is_dark_mode",
