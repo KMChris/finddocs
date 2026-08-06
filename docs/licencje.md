@@ -1,6 +1,6 @@
 # Licencje komponentow
 
-Dokument wygenerowany automatycznie przez `tools/gen_sbom.py` dla wersji 0.2.2.
+Dokument wygenerowany automatycznie przez `tools/gen_sbom.py` dla wersji 0.2.3.
 Odpowiadajacy mu plik SBOM w formacie CycloneDX to `sbom.cdx.json`.
 
 Wszystkie komponenty dzialaja lokalnie. Zaden z nich nie wysyla tresci dokumentow
