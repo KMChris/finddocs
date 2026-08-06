@@ -448,6 +448,167 @@ def cmd_gui(args: argparse.Namespace) -> int:
     return gui_main(["--data-dir", args.data_dir] if args.data_dir else [])
 
 
+# --- modele embeddingow ---------------------------------------------------------
+
+
+def _confirm(question: str) -> bool:
+    """Pyta w konsoli o potwierdzenie. Brak wejscia oznacza odmowe."""
+    try:
+        answer = input(f"{question} [t/N] ")
+    except (EOFError, OSError):
+        return False
+    return answer.strip().lower() in {"t", "tak", "y", "yes"}
+
+
+def cmd_model_list(args: argparse.Namespace) -> int:
+    from finddocs.providers.model_manifest import describe_models
+
+    config = _load(args)
+    active = config.embedding.model_key
+    rows = describe_models()
+    for row in rows:
+        row["aktywny"] = row["klucz"] == active
+    if args.json:
+        _print(rows, as_json=True)
+        return EXIT_OK
+    for row in rows:
+        marks = []
+        if row["aktywny"]:
+            marks.append("aktywny")
+        marks.append("zainstalowany" if row["zainstalowany"] else "brak plików")
+        print(f"{row['klucz']}  ({', '.join(marks)})")
+        print(f"    {row['nazwa']}, wymiar {row['wymiar']}, licencja: {row['licencja']}")
+        if row["katalog"]:
+            print(f"    katalog: {row['katalog']}")
+    print()
+    print("Instalacja: finddocs model import [katalog albo repozytorium]")
+    print("Przełączenie: finddocs model use <klucz>")
+    return EXIT_OK
+
+
+def _activate_model(args: argparse.Namespace, key: str) -> int:
+    """Ustawia model jako aktywny i synchronizuje ustawienia z jego manifestem."""
+    from finddocs.providers.model_manifest import LocalModelManifest, find_model_dir
+
+    config = _load(args)
+    extra = Path(config.embedding.model_path) if config.embedding.model_path else None
+    directory = find_model_dir(key, extra)
+    if directory is None:
+        print(
+            f"Model '{key}' nie jest zainstalowany. Lista: finddocs model list",
+            file=sys.stderr,
+        )
+        return EXIT_ERROR
+    manifest = LocalModelManifest.load(directory)
+    changed = config.embedding.model_key != key
+    config.embedding.model_key = key
+    config.embedding.max_sequence_length = int(manifest.max_sequence_length or 512)
+    config.embedding.query_prefix = manifest.query_prefix
+    config.embedding.passage_prefix = manifest.passage_prefix
+    config.embedding.normalize = bool(manifest.normalize)
+    config.embedding.quantized = bool(manifest.quantized)
+    save_config(config, _paths(args).config_file)
+    print(f"Aktywny model: {key} ({directory})")
+    if changed:
+        print("Zmiana modelu wymaga przebudowy części semantycznej indeksu:")
+        print("  finddocs maintenance rebuild --vectors-only")
+        print("  finddocs index")
+        print("Do tego czasu wyszukiwanie dokładne działa bez zmian.")
+    return EXIT_OK
+
+
+def cmd_model_import(args: argparse.Namespace) -> int:
+    from finddocs.providers.model_manifest import DEFAULT_MODEL_KEY, KNOWN_MODELS
+    from finddocs.providers.model_store import (
+        ImportOptions,
+        import_from_repo,
+        import_local_model,
+    )
+    from finddocs.security.network import (
+        DEFAULT_ALLOWLIST,
+        EgressCategory,
+        NetworkPolicy,
+    )
+
+    config = _load(args)
+    paths = _paths(args).ensure()
+    options = ImportOptions(
+        name=args.name or "",
+        quantize=not args.no_quantize,
+        keep_fp32=args.keep_fp32,
+        pooling=args.pooling or "",
+        query_prefix=args.query_prefix,
+        passage_prefix=args.passage_prefix,
+        force=args.force,
+    )
+
+    from finddocs.providers.model_store import looks_like_repo_id
+
+    source = args.source or ""
+    local_dir = Path(source).expanduser() if source else None
+    if local_dir is not None and local_dir.exists():
+        imported = import_local_model(local_dir, options, paths=paths, progress=print)
+    else:
+        if source and not looks_like_repo_id(source):
+            print(
+                f"Źródło '{source}' nie jest ani istniejącym katalogiem, ani "
+                "identyfikatorem repozytorium w formacie organizacja/nazwa.",
+                file=sys.stderr,
+            )
+            return EXIT_ERROR
+        repo = source or KNOWN_MODELS[DEFAULT_MODEL_KEY].repo
+        if not source:
+            print(f"Nie podano źródła. Zostanie pobrany model domyślny: {repo}")
+        if not config.allow_model_download:
+            hosts = ", ".join(DEFAULT_ALLOWLIST[EgressCategory.MODEL_DOWNLOAD])
+            print("Pobranie modelu wymaga jednorazowego połączenia z Hugging Face.")
+            print(f"Dozwolone adresy: {hosts}")
+            if not args.yes and not _confirm("Zgadzasz się na to połączenie?"):
+                print("Przerwano. Połączenie nie zostało nawiązane.", file=sys.stderr)
+                return EXIT_ERROR
+        policy = NetworkPolicy(enabled_categories={EgressCategory.MODEL_DOWNLOAD})
+        imported = import_from_repo(repo, options, paths=paths, policy=policy, progress=print)
+
+    print()
+    print(f"Zaimportowano model: {imported.key}")
+    print(f"  katalog: {imported.directory}")
+    print(f"  wymiar: {imported.dimension}, pooling: {imported.pooling}")
+    print(f"  pliki modelu: {', '.join(imported.model_files)}")
+    if imported.query_prefix or imported.passage_prefix:
+        print(
+            f"  przedrostki: zapytanie '{imported.query_prefix}', treść '{imported.passage_prefix}'"
+        )
+    for note in imported.notes:
+        print(f"  Uwaga: {note}")
+    if args.use:
+        print()
+        return _activate_model(args, imported.key)
+    print()
+    print(f"Model pojawi się na liście w GUI. Aktywacja: finddocs model use {imported.key}")
+    return EXIT_OK
+
+
+def cmd_model_use(args: argparse.Namespace) -> int:
+    return _activate_model(args, args.key)
+
+
+def cmd_model_remove(args: argparse.Namespace) -> int:
+    from finddocs.providers.model_store import remove_model
+
+    config = _load(args)
+    if not args.yes and not _confirm(f"Usunąć model '{args.key}' z dysku?"):
+        print("Przerwano.", file=sys.stderr)
+        return EXIT_ERROR
+    removed = remove_model(args.key, paths=_paths(args))
+    print(f"Usunięto katalog: {removed}")
+    if config.embedding.model_key == args.key:
+        print(
+            "Uwaga: usunięty model był aktywny. Wyszukiwanie semantyczne nie będzie "
+            "działać do czasu instalacji modelu (finddocs model import)."
+        )
+    return EXIT_OK
+
+
 # --- parser argumentow ----------------------------------------------------
 
 
@@ -542,6 +703,55 @@ def build_parser() -> argparse.ArgumentParser:
         "--vectors-only", action="store_true", help="przebuduj tylko część wektorowa"
     )
     maintenance.set_defaults(func=cmd_maintenance)
+
+    model_cmd = sub.add_parser("model", help="zarzadzanie modelami embeddingów")
+    model_sub = model_cmd.add_subparsers(dest="model_command", required=True)
+    model_sub.add_parser("list", help="lista modeli wbudowanych i zainstalowanych").set_defaults(
+        func=cmd_model_list
+    )
+
+    model_import = model_sub.add_parser(
+        "import",
+        help="instaluje model z katalogu albo z Hugging Face",
+        description=(
+            "Importuje model embeddingów. Źródłem może być katalog z eksportem ONNX, "
+            "katalog z checkpointem HuggingFace (konwersja wymaga dodatku finddocs[export]) "
+            "albo identyfikator repozytorium, np. sdadas/mmlw-retrieval-roberta-base. "
+            "Bez argumentu pobierany jest model domyślny."
+        ),
+    )
+    model_import.add_argument(
+        "source", nargs="?", help="katalog z modelem albo repozytorium organizacja/nazwa"
+    )
+    model_import.add_argument("--name", help="własna nazwa modelu w magazynie")
+    model_import.add_argument(
+        "--force", action="store_true", help="nadpisz model o tej samej nazwie"
+    )
+    model_import.add_argument("--no-quantize", action="store_true", help="nie twórz wariantu INT8")
+    model_import.add_argument(
+        "--keep-fp32", action="store_true", help="zachowaj plik FP32 obok wariantu INT8"
+    )
+    model_import.add_argument(
+        "--pooling", choices=["cls", "mean"], help="wymuś tryb poolingu zamiast wykrywania"
+    )
+    model_import.add_argument("--query-prefix", help="przedrostek zapytania, np. 'query: '")
+    model_import.add_argument("--passage-prefix", help="przedrostek treści, np. 'passage: '")
+    model_import.add_argument(
+        "--use", action="store_true", help="od razu przełącz konfigurację na ten model"
+    )
+    model_import.add_argument(
+        "--yes", action="store_true", help="nie pytaj o zgodę na połączenie sieciowe"
+    )
+    model_import.set_defaults(func=cmd_model_import)
+
+    model_use = model_sub.add_parser("use", help="przełącza aktywny model")
+    model_use.add_argument("key", help="klucz modelu z listy finddocs model list")
+    model_use.set_defaults(func=cmd_model_use)
+
+    model_remove = model_sub.add_parser("remove", help="usuwa zainstalowany model")
+    model_remove.add_argument("key")
+    model_remove.add_argument("--yes", action="store_true", help="nie pytaj o potwierdzenie")
+    model_remove.set_defaults(func=cmd_model_remove)
 
     sub.add_parser("gui", help="uruchamia interfejs graficzny").set_defaults(func=cmd_gui)
     return parser

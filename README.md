@@ -52,9 +52,17 @@ pip install "finddocs[ocr-rapid]"
 
 Po instalacji polecenie `finddocs-gui` uruchamia interfejs graficzny,
 a `finddocs` daje dostęp do poleceń administracyjnych. Wyszukiwanie dokładne
-działa od razu. Wyszukiwanie semantyczne i hybrydowe wymaga modelu embeddingów
-przygotowanego lokalnie. Pełny opis instalacji, konfiguracji i podłączenia
-modelu: [docs/instalacja-pip.md](https://github.com/KMChris/finddocs/blob/main/docs/instalacja-pip.md).
+działa od razu. Wyszukiwanie semantyczne i hybrydowe wymaga lokalnego modelu
+embeddingów, który instaluje jedno polecenie (za jawną zgodą pobiera model
+z Hugging Face i konwertuje do ONNX):
+
+```bash
+finddocs model import --use
+```
+
+Polecenie `finddocs model import` przyjmuje też katalog z własnym modelem albo
+dowolne repozytorium Hugging Face. Pełny opis instalacji, konfiguracji i modeli:
+[docs/instalacja-pip.md](https://github.com/KMChris/finddocs/blob/main/docs/instalacja-pip.md).
 
 ## Szybki start bez SharePointa
 
@@ -84,7 +92,7 @@ Model embeddingów pobiera się raz z Hugging Face i eksportuje do ONNX:
 
 ```bash
 git clone https://huggingface.co/sdadas/mmlw-retrieval-roberta-base models/mmlw-retrieval-roberta-base
-.venv\Scripts\python.exe -m pip install torch transformers onnx
+.venv\Scripts\python.exe -m pip install torch transformers onnx onnxscript
 .venv\Scripts\python.exe tools/export_model_onnx.py models/mmlw-retrieval-roberta-base --quantize
 ```
 

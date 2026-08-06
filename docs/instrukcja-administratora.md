@@ -82,7 +82,7 @@ z innymi użytkownikami.
 
 ## Konfiguracja
 
-Plik `config\config.json` zapisywany jest atomowo (plik tymczasowy, `fsync`,
+Plik `config\settings.json` zapisywany jest atomowo (plik tymczasowy, `fsync`,
 zamiana nazwy), więc przerwanie zapisu nie uszkodzi konfiguracji. Aplikacja
 odczytuje go przy starcie. Poniżej pola, które zwykle się zmienia.
 
@@ -104,6 +104,10 @@ odczytuje go przy starcie. Poniżej pola, które zwykle się zmienia.
 `quantized` wybiera wariant INT8 (ok. 125 MB) zamiast pełnego FP32 (ok. 500 MB).
 Zmiana `model_key`, `quantized` albo `max_sequence_length` unieważnia indeks
 wektorowy i wymaga jego przebudowy.
+
+Modele instaluje i przełącza grupa poleceń `finddocs model` (opis niżej).
+`finddocs model use` ustawia `model_key` i synchronizuje pozostałe pola
+z manifestem modelu, więc ręczna edycja tej sekcji zwykle nie jest potrzebna.
 
 ### OCR
 
@@ -267,6 +271,27 @@ finddocs demo --register
 
 Tworzy fikcyjne dokumenty po polsku i rejestruje je jako źródło `demo`.
 Zbiór nie zawiera prawdziwych danych osobowych ani firmowych.
+
+### Modele embeddingów
+
+```bash
+finddocs model list
+finddocs model import --use
+finddocs model import D:\Modele\moj-model --name moj-model
+finddocs model import intfloat/multilingual-e5-small
+finddocs model use mmlw-retrieval-roberta-base
+finddocs model remove moj-model
+```
+
+`import` bez argumentu pobiera domyślny model MMLW z Hugging Face; pobranie
+wymaga zgody w konsoli (w skryptach `--yes`) i przechodzi przez politykę
+sieciową w kategorii `model_download`. Argumentem może być katalog z gotowym
+eksportem ONNX, katalog z checkpointem HuggingFace (konwersja wymaga dodatku
+`finddocs[export]`) albo repozytorium `organizacja/nazwa`. Każdy model jest
+walidowany próbnym przebiegiem przed instalacją i od razu widoczny na liście
+modeli w GUI. Zmiana aktywnego modelu wymaga przebudowy części wektorowej
+(`finddocs maintenance rebuild --vectors-only`, potem `finddocs index`).
+Szczegóły i opcje: [instalacja z PyPI](instalacja-pip.md).
 
 ### Indeksowanie
 

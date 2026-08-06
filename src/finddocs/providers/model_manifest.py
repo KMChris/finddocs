@@ -116,6 +116,8 @@ class LocalModelManifest:
     passage_prefix: str
     opset: int
     quantized: bool
+    display_name: str = ""
+    pad_token: str = ""
     files: dict[str, dict[str, Any]] = field(default_factory=dict)
 
     @classmethod
@@ -203,15 +205,66 @@ def candidate_model_dirs(model_key: str, extra: Path | None = None) -> list[Path
 def find_model_dir(model_key: str, extra: Path | None = None) -> Path | None:
     """Zwraca pierwszy katalog z kompletnym modelem ONNX albo None."""
     for candidate in candidate_model_dirs(model_key, extra):
-        if (candidate / MANIFEST_FILENAME).exists() and (
-            (candidate / "model.onnx").exists() or (candidate / "model.int8.onnx").exists()
-        ):
+        if _is_complete_model_dir(candidate):
             return candidate
     return None
 
 
+def _is_complete_model_dir(directory: Path) -> bool:
+    return (directory / MANIFEST_FILENAME).exists() and (
+        (directory / "model.onnx").exists() or (directory / "model.int8.onnx").exists()
+    )
+
+
+def model_base_dirs() -> list[Path]:
+    """Katalogi, w ktorych moga byc zainstalowane modele, w kolejnosci preferencji."""
+    from finddocs.app_paths import AppPaths
+
+    package_root = Path(__file__).resolve().parents[3]
+    frozen_root = Path(__file__).resolve().parents[1] / "resources" / "models"
+    return [
+        AppPaths.default().models_dir,
+        package_root / "models",
+        frozen_root,
+    ]
+
+
+def installed_models() -> list[tuple[str, Path, LocalModelManifest]]:
+    """Wszystkie zainstalowane modele: klucz, katalog i manifest.
+
+    Przeszukuje katalog modeli uzytkownika oraz katalogi obok kodu. Katalogi
+    z uszkodzonym manifestem sa pomijane. Przy powtorzonym kluczu wygrywa
+    pierwsza lokalizacja, tak samo jak w :func:`candidate_model_dirs`.
+    """
+    result: list[tuple[str, Path, LocalModelManifest]] = []
+    seen: set[str] = set()
+    for base in model_base_dirs():
+        if not base.is_dir():
+            continue
+        for entry in sorted(base.iterdir()):
+            if not entry.is_dir() or entry.name in seen:
+                continue
+            for candidate in (entry / ONNX_SUBDIR, entry):
+                if not _is_complete_model_dir(candidate):
+                    continue
+                try:
+                    manifest = LocalModelManifest.load(candidate)
+                except (OSError, ValueError, TypeError, ModelNotAvailableError):
+                    break
+                result.append((entry.name, candidate, manifest))
+                seen.add(entry.name)
+                break
+    return result
+
+
 def describe_models() -> list[dict[str, Any]]:
-    """Opis wszystkich znanych modeli dla ekranu konfiguracji i dokumentacji."""
+    """Opis modeli dla ekranu konfiguracji i dokumentacji.
+
+    Lista zawiera modele wbudowane w rejestr oraz wszystkie modele
+    zainstalowane lokalnie, takze te zaimportowane poleceniem
+    ``finddocs model import``. Dzieki temu wlasny model pojawia sie
+    w interfejsie bez zadnej dodatkowej konfiguracji.
+    """
     result: list[dict[str, Any]] = []
     for descriptor in KNOWN_MODELS.values():
         local = find_model_dir(descriptor.key)
@@ -230,6 +283,25 @@ def describe_models() -> list[dict[str, Any]]:
                 "uwagi": descriptor.notes,
             }
         )
+    for key, directory, manifest in installed_models():
+        if key in KNOWN_MODELS:
+            continue
+        size_bytes = sum(p.stat().st_size for p in directory.glob("*") if p.is_file())
+        result.append(
+            {
+                "klucz": key,
+                "nazwa": manifest.display_name or key,
+                "licencja": manifest.license,
+                "zrodlo": manifest.source,
+                "wymiar": manifest.dimension,
+                "pobranie_mb": 0,
+                "onnx_int8_mb": size_bytes // (1024 * 1024),
+                "zainstalowany": True,
+                "katalog": str(directory),
+                "domyślny": False,
+                "uwagi": "Model zaimportowany lokalnie.",
+            }
+        )
     return result
 
 
@@ -243,5 +315,7 @@ __all__ = [
     "candidate_model_dirs",
     "describe_models",
     "find_model_dir",
+    "installed_models",
+    "model_base_dirs",
     "sha256_of",
 ]

@@ -65,7 +65,8 @@ class OnnxEmbeddingProvider(EmbeddingProvider):
         self._tokenizer = Tokenizer.from_file(str(tokenizer_path))
         self._max_len = int(max_sequence_length or self.manifest.max_sequence_length or 512)
         self._tokenizer.enable_truncation(max_length=self._max_len)
-        self._tokenizer.enable_padding(pad_id=self._pad_id(), pad_token=self._pad_token())
+        pad_id, pad_token = self._resolve_padding()
+        self._tokenizer.enable_padding(pad_id=pad_id, pad_token=pad_token)
 
         import onnxruntime as ort
 
@@ -118,13 +119,22 @@ class OnnxEmbeddingProvider(EmbeddingProvider):
 
     # --- pomocnicze --------------------------------------------------------
 
-    def _pad_id(self) -> int:
-        token = self._pad_token()
-        value = self._tokenizer.token_to_id(token)
-        return int(value) if value is not None else 1
+    def _resolve_padding(self) -> tuple[int, str]:
+        """Dobiera token wypelnienia: najpierw z manifestu, potem typowe warianty.
 
-    def _pad_token(self) -> str:
-        return "<pad>"
+        Modele rodziny RoBERTa uzywaja ``<pad>``, rodziny BERT ``[PAD]``.
+        Manifest moze wskazac dowolny inny token. Gdy zaden kandydat nie
+        wystepuje w slowniku, zostaje historyczna para (1, "<pad>").
+        """
+        candidates: list[str] = []
+        for token in (self.manifest.pad_token, "<pad>", "[PAD]"):
+            if token and token not in candidates:
+                candidates.append(token)
+        for token in candidates:
+            value = self._tokenizer.token_to_id(token)
+            if value is not None:
+                return int(value), token
+        return 1, "<pad>"
 
     @property
     def info(self) -> ProviderInfo:
@@ -159,7 +169,9 @@ class OnnxEmbeddingProvider(EmbeddingProvider):
         feeds = {k: v for k, v in feeds.items() if k in self._input_names}
         outputs = session.run(None, feeds)
         hidden = np.asarray(outputs[0], dtype="float32")
-        pooled = self._pool(hidden, mask)
+        # Niektore gotowe eksporty ONNX zwracaja od razu wektor zbiorczy
+        # [batch, wymiar] zamiast stanow ukrytych [batch, sekwencja, wymiar].
+        pooled = hidden if hidden.ndim == 2 else self._pool(hidden, mask)
         if self.manifest.normalize:
             pooled = l2_normalize(pooled)
         final: np.ndarray = pooled.astype("float32", copy=False)
@@ -217,10 +229,9 @@ def create_local_provider(
     if directory is None:
         descriptor = KNOWN_MODELS.get(model_key)
         hint = (
-            f" Model można pobrać z {descriptor.source_url} i wyeksportowac skryptem "
-            "tools/export_model_onnx.py."
+            f" Model można zainstalować poleceniem: finddocs model import {descriptor.repo}"
             if descriptor
-            else ""
+            else " Model można zainstalować poleceniem: finddocs model import"
         )
         raise ModelNotAvailableError(
             f"Nie znaleziono lokalnego modelu '{model_key}'.{hint}",

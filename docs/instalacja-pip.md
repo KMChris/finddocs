@@ -69,50 +69,85 @@ sekcje:
 * `indexing`, `chunking`, `search`: opisane w
   [instrukcji administratora](instrukcja-administratora.md).
 
-## Wyszukiwanie semantyczne: lokalnie pobrany model
+## Wyszukiwanie semantyczne: instalacja modelu
 
 Po samej instalacji z pip działa wyszukiwanie dokładne. Tryby semantyczny
-i hybrydowy wymagają modelu MMLW w formacie ONNX. Pakiet nie pobiera modelu
-sam z siebie: pobranie i eksport wykonuje się raz, ręcznie, a aplikacja
-korzysta wyłącznie z plików lokalnych.
-
-### Przygotowanie modelu
-
-Potrzebne jest sklonowane repozytorium FindDocs (zawiera skrypt eksportu) oraz
-środowisko z torch i transformers. Te biblioteki służą tylko do eksportu,
-aplikacja ich nie potrzebuje:
+i hybrydowy wymagają lokalnego modelu embeddingów w formacie ONNX. Model
+instaluje się jednym poleceniem CLI, bez klonowania repozytorium:
 
 ```bat
-git clone https://github.com/KMChris/finddocs
-cd finddocs
-git clone https://huggingface.co/sdadas/mmlw-retrieval-roberta-base models/mmlw-retrieval-roberta-base
-py -m pip install torch transformers onnx
-py tools/export_model_onnx.py models/mmlw-retrieval-roberta-base --quantize
+pip install "finddocs[export]"
+finddocs model import --use
 ```
 
-Wynik eksportu trafia do `models/mmlw-retrieval-roberta-base/onnx` i zawiera:
-`manifest.json` (opis modelu i sumy kontrolne), `model.onnx` (pełna precyzja),
-`model.int8.onnx` (wariant skwantyzowany) oraz pliki tokenizera
-(`tokenizer.json`, `tokenizer_config.json`, `special_tokens_map.json`,
-`added_tokens.json`, `unigram.json`, `config.json`).
+Polecenie pobiera domyślny polski model `sdadas/mmlw-retrieval-roberta-base`
+z Hugging Face, konwertuje go do ONNX z kwantyzacją INT8, sprawdza poprawność
+próbnym przebiegiem i zapisuje w `%LOCALAPPDATA%\FindDocs\models`. Opcja
+`--use` od razu przełącza konfigurację na zainstalowany model.
 
-### Wskazanie modelu aplikacji
+Dwie uwagi:
 
+* Pobranie wymaga jednorazowego połączenia z `huggingface.co` (oraz serwerami
+  plików `*.hf.co`). CLI pyta o zgodę przed nawiązaniem połączenia; w skryptach
+  zgodę wyraża opcja `--yes`. Żadne inne połączenia nie są nawiązywane.
+* Dodatek `finddocs[export]` (torch, transformers, onnx, onnxscript) jest
+  potrzebny tylko do konwersji checkpointów. Po imporcie można go usunąć:
+  `pip uninstall -y torch transformers onnx onnxscript`. Modele publikowane
+  od razu w formacie ONNX (na przykład `intfloat/multilingual-e5-small`)
+  instalują się bez tego dodatku.
+
+### Import własnego modelu
+
+Źródłem może być katalog na dysku albo repozytorium Hugging Face:
+
+```bat
+finddocs model import D:\Modele\moj-model
+finddocs model import intfloat/multilingual-e5-small
+```
+
+Katalog może zawierać checkpoint HuggingFace (config.json z wagami; nastąpi
+konwersja do ONNX) albo gotowy eksport ONNX (pliki `model.onnx` lub
+`model.int8.onnx` razem z `tokenizer.json`). Obsługiwane rodziny modeli przy
+konwersji: RoBERTa, XLM-RoBERTa, BERT i DistilBERT, wyłącznie z szybkim
+tokenizerem (`tokenizer.json`).
+
+Ustawienia modelu są wykrywane automatycznie: wymiar wektora z próbnego
+przebiegu, tryb poolingu z konfiguracji sentence-transformers, token
+wypełnienia z plików tokenizera. Dla modeli spoza wbudowanej listy przedrostki
+zapytania i treści są puste; jeśli model ich wymaga (na przykład rodzina E5),
+podaje się je przy imporcie:
+
+```bat
+finddocs model import organizacja/model --query-prefix "query: " --passage-prefix "passage: "
+```
+
+Pozostałe opcje: `--name` (własna nazwa), `--pooling cls|mean` (wymuszenie
+poolingu), `--no-quantize` (bez wariantu INT8), `--keep-fp32` (zachowaj pełną
+precyzję obok INT8), `--force` (nadpisanie istniejącego modelu).
+
+### Zarządzanie modelami
+
+```bat
+finddocs model list
+finddocs model use <klucz>
+finddocs model remove <klucz>
+```
+
+Każdy zaimportowany model pojawia się automatycznie na liście modeli w GUI
+na ekranie **Źródła i konfiguracja**. `finddocs model use` przełącza aktywny
+model i synchronizuje ustawienia (przedrostki, długość sekwencji) z jego
+manifestem.
+
+### Ręczne wskazanie modelu
+
+Model przygotowany na innej maszynie można też podłączyć bez importu.
 Aplikacja szuka modelu w następującej kolejności:
 
 1. katalog wpisany w `embedding.model_path` w `settings.json`
    (sprawdzany jest też jego podkatalog `onnx`),
-2. `%LOCALAPPDATA%\FindDocs\models\mmlw-retrieval-roberta-base\onnx`
+2. `%LOCALAPPDATA%\FindDocs\models\<klucz>\onnx`
    (albo ten sam katalog bez podkatalogu `onnx`),
 3. katalog `models` obok kodu, używany przy uruchamianiu z repozytorium.
-
-Najprościej skopiować wyeksportowany katalog do katalogu danych:
-
-```bat
-robocopy models\mmlw-retrieval-roberta-base\onnx %LOCALAPPDATA%\FindDocs\models\mmlw-retrieval-roberta-base\onnx /E
-```
-
-Zamiast kopiowania można wskazać dowolne położenie w `settings.json`:
 
 ```json
 "embedding": {
@@ -124,6 +159,8 @@ Zamiast kopiowania można wskazać dowolne położenie w `settings.json`:
 
 Ustawienie `quantized: true` (domyślne) wybiera wariant INT8, mniejszy
 i szybszy na CPU. Wartość `false` wymusza `model.onnx` w pełnej precyzji.
+Katalog modelu musi zawierać `manifest.json`; katalogi bez manifestu
+importuje się poleceniem `finddocs model import`, które go utworzy.
 
 ### Sprawdzenie i uzupełnienie indeksu
 

@@ -64,7 +64,8 @@ dev = [
     "types-openpyxl",
     "types-pywin32",
 ]
-export = ["torch>=2.2", "transformers>=4.40", "onnx>=1.16"]
+# onnxscript jest potrzebny nowym wersjom torch (eksporter dynamo od 2.9).
+export = ["torch>=2.2", "transformers>=4.40", "onnx>=1.16", "onnxscript>=0.1"]
 
 [project.scripts]
 finddocs = "finddocs.cli:main"
@@ -183,6 +184,11 @@ module = [
     "pywintypes",
     "tokenizers",
     "onnxruntime",
+    "onnxruntime.*",
+    "torch",
+    "transformers",
+    "safetensors",
+    "safetensors.*",
     "charset_normalizer",
     "PIL",
     "PIL.*",
