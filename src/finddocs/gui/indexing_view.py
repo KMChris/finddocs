@@ -22,6 +22,7 @@ from finddocs.gui import i18n
 from finddocs.gui.context import AppContext
 from finddocs.gui.dialogs import ask_yes_no, show_error, show_info, show_warning
 from finddocs.gui.tables import configure_columns, format_stamp
+from finddocs.gui.theme import accent_icon, theme_icon
 from finddocs.gui.workers import CallableTask, ProgressBridge, thread_pool
 from finddocs.jobs.indexing_job import JobOptions
 from finddocs.logging_setup import get_logger
@@ -69,32 +70,39 @@ class IndexingView(QWidget):
 
         self.start_button = QPushButton(i18n.INDEXING_START)
         self.start_button.setObjectName("Primary")
+        self.start_button.setIcon(accent_icon("play"))
         self.start_button.clicked.connect(self.start_scan)
         row.addWidget(self.start_button)
 
         self.pause_button = QPushButton(i18n.INDEXING_PAUSE)
+        self.pause_button.setIcon(theme_icon("pause"))
         self.pause_button.clicked.connect(self.pause_job)
         row.addWidget(self.pause_button)
 
         self.resume_button = QPushButton(i18n.INDEXING_RESUME)
+        self.resume_button.setIcon(theme_icon("play"))
         self.resume_button.clicked.connect(self.resume_job)
         row.addWidget(self.resume_button)
 
         self.cancel_button = QPushButton(i18n.INDEXING_CANCEL)
+        self.cancel_button.setIcon(theme_icon("cross"))
         self.cancel_button.clicked.connect(self.cancel_job)
         row.addWidget(self.cancel_button)
 
         self.rescan_button = QPushButton(i18n.INDEXING_RESCAN)
+        self.rescan_button.setIcon(theme_icon("refresh"))
         self.rescan_button.clicked.connect(self.start_scan)
         row.addWidget(self.rescan_button)
 
         self.full_button = QPushButton(i18n.INDEXING_FULL)
+        self.full_button.setIcon(theme_icon("database"))
         self.full_button.clicked.connect(self.start_full_reindex)
         row.addWidget(self.full_button)
 
         row.addStretch(1)
 
         self.export_button = QPushButton(i18n.INDEXING_EXPORT)
+        self.export_button.setIcon(theme_icon("export"))
         self.export_button.clicked.connect(self.export_report)
         row.addWidget(self.export_button)
         return row

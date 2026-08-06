@@ -24,7 +24,7 @@ from finddocs.gui.indexing_view import IndexingView
 from finddocs.gui.report_view import ReportView
 from finddocs.gui.search_view import SearchView
 from finddocs.gui.sources_view import SourcesView
-from finddocs.gui.theme import Palette
+from finddocs.gui.theme import Palette, theme_icon
 from finddocs.logging_setup import get_logger
 from finddocs.version import APP_VERSION
 
@@ -111,14 +111,15 @@ class MainWindow(QMainWindow):
         self.nav = QListWidget()
         self.nav.setObjectName("SidebarList")
         self.nav.setFrameShape(QListWidget.Shape.NoFrame)
-        for label in (
-            i18n.NAV_SEARCH,
-            i18n.NAV_SOURCES,
-            i18n.NAV_INDEXING,
-            i18n.NAV_REPORT,
-            i18n.NAV_DIAGNOSTICS,
+        self.nav.setIconSize(QSize(18, 18))
+        for label, icon_name in (
+            (i18n.NAV_SEARCH, "search"),
+            (i18n.NAV_SOURCES, "folder"),
+            (i18n.NAV_INDEXING, "database"),
+            (i18n.NAV_REPORT, "chart"),
+            (i18n.NAV_DIAGNOSTICS, "pulse"),
         ):
-            QListWidgetItem(label, self.nav)
+            QListWidgetItem(theme_icon(icon_name, self.palette_colors), label, self.nav)
         self.nav.currentRowChanged.connect(self._on_nav_changed)
         layout.addWidget(self.nav, stretch=1)
 

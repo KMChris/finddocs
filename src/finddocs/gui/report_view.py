@@ -22,6 +22,7 @@ from finddocs.gui import i18n
 from finddocs.gui.context import AppContext
 from finddocs.gui.dialogs import show_error, show_info
 from finddocs.gui.tables import configure_columns, format_stamp
+from finddocs.gui.theme import accent_icon, theme_icon
 from finddocs.gui.workers import CallableTask, thread_pool
 from finddocs.logging_setup import get_logger
 from finddocs.types import CoverageReport
@@ -53,14 +54,17 @@ class ReportView(QWidget):
         buttons.setSpacing(8)
         refresh = QPushButton(i18n.REPORT_REFRESH)
         refresh.setObjectName("Primary")
+        refresh.setIcon(accent_icon("refresh"))
         refresh.clicked.connect(self.refresh)
         buttons.addWidget(refresh)
 
         export_json = QPushButton(i18n.REPORT_EXPORT_JSON)
+        export_json.setIcon(theme_icon("export"))
         export_json.clicked.connect(lambda: self.export("json"))
         buttons.addWidget(export_json)
 
         export_csv = QPushButton(i18n.REPORT_EXPORT_CSV)
+        export_csv.setIcon(theme_icon("export"))
         export_csv.clicked.connect(lambda: self.export("csv"))
         buttons.addWidget(export_csv)
         buttons.addStretch(1)

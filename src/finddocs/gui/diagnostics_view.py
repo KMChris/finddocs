@@ -21,6 +21,7 @@ from finddocs.gui import i18n
 from finddocs.gui.context import AppContext
 from finddocs.gui.dialogs import show_error, show_info, show_warning
 from finddocs.gui.tables import configure_columns
+from finddocs.gui.theme import accent_icon, theme_icon
 from finddocs.gui.workers import CallableTask, thread_pool
 from finddocs.logging_setup import get_logger
 
@@ -91,6 +92,7 @@ class DiagnosticsView(QWidget):
 
         refresh = QPushButton("Odśwież")
         refresh.setObjectName("Primary")
+        refresh.setIcon(accent_icon("refresh"))
         refresh.clicked.connect(self.refresh)
         row.addWidget(refresh)
 
@@ -103,14 +105,17 @@ class DiagnosticsView(QWidget):
         row.addWidget(compact)
 
         backup = QPushButton(i18n.DIAG_BACKUP)
+        backup.setIcon(theme_icon("copy"))
         backup.clicked.connect(self.backup_index)
         row.addWidget(backup)
 
         bundle = QPushButton(i18n.DIAG_EXPORT_BUNDLE)
+        bundle.setIcon(theme_icon("export"))
         bundle.clicked.connect(self.export_bundle)
         row.addWidget(bundle)
 
         logs = QPushButton(i18n.DIAG_OPEN_LOGS)
+        logs.setIcon(theme_icon("folder"))
         logs.clicked.connect(lambda: self.context.open_path(self.context.paths.logs_dir))
         row.addWidget(logs)
 

@@ -22,8 +22,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor, QFont, QPalette
+# Ikony motywu sa w SVG. Sam import wystarcza, zeby PyInstaller dolaczyl
+# biblioteke Qt6Svg i wtyczki SVG do pakietu; w kodzie modul nie jest uzywany.
+import PySide6.QtSvg  # noqa: F401
+from PySide6.QtCore import QSize, Qt
+from PySide6.QtGui import QColor, QFont, QIcon, QPalette
 from PySide6.QtWidgets import QApplication, QProxyStyle, QStyle, QStyleOption, QWidget
 
 FONT_FAMILY = "Segoe UI Variable Text, Segoe UI, Inter, sans-serif"
@@ -100,6 +103,33 @@ DARK = Palette(
 )
 
 
+#: Kolory plakietek na karcie wyniku: rola -> (tlo, tekst), osobno dla palet.
+#: Tla sa pastelowe, a tekst ciemniejszy (jasna paleta) albo jasniejszy (ciemna),
+#: zeby kazda plakietka miala wyrazny kontrast.
+BADGE_COLORS: dict[str, dict[str, tuple[str, str]]] = {
+    "light": {
+        "match": ("#e8f1fb", "#0b5394"),
+        "type": ("#efe6fb", "#5b21a8"),
+        "date": ("#e3f2e9", "#0f6b2f"),
+        "author": ("#fdeee0", "#8a4b0f"),
+        "ocr": ("#fff3bf", "#6b5300"),
+        "score-high": ("#e3f4e3", "#0f7b0f"),
+        "score-mid": ("#fdf2df", "#9d5d00"),
+        "score-low": ("#ececec", "#5d5d5d"),
+    },
+    "dark": {
+        "match": ("#1d3a54", "#9ed0ff"),
+        "type": ("#372350", "#d4b8f9"),
+        "date": ("#1c3a28", "#93d7a7"),
+        "author": ("#46300f", "#f2c483"),
+        "ocr": ("#5c4a00", "#ffeaa0"),
+        "score-high": ("#1e3b1e", "#95dd95"),
+        "score-mid": ("#453309", "#f2d67c"),
+        "score-low": ("#3a3a3a", "#b0b0b0"),
+    },
+}
+
+
 class TabFocusStyle(QProxyStyle):
     """Styl, w ktorym przyciski przyjmuja fokus tylko z klawiatury.
 
@@ -141,11 +171,48 @@ def _icon_url(name: str, variant: str) -> str:
     return (ICON_DIR / f"{name}-{variant}.png").as_posix()
 
 
+#: Paleta ostatnio zastosowana przez ``apply_theme``. Widoki, ktore nie dostaja
+#: palety w konstruktorze, biora z niej wariant ikon.
+_active_palette: Palette = LIGHT
+
+
+def active_palette() -> Palette:
+    """Paleta ostatnio zastosowana przez ``apply_theme`` (domyslnie jasna)."""
+    return _active_palette
+
+
+def _compose_icon(normal_name: str, name: str, variant: str) -> QIcon:
+    """Ikona z wariantem wyciszonym dla stanu wylaczonego przycisku."""
+    icon = QIcon(str(ICON_DIR / f"{normal_name}-{variant}.svg"))
+    icon.addFile(str(ICON_DIR / f"{name}-muted-{variant}.svg"), QSize(), QIcon.Mode.Disabled)
+    return icon
+
+
+def theme_icon(name: str, palette: Palette | None = None) -> QIcon:
+    """Ikona motywu w kolorze tekstu, dopasowana do aktywnej palety."""
+    variant = (palette or _active_palette).variant
+    return _compose_icon(name, name, variant)
+
+
+def accent_icon(name: str, palette: Palette | None = None) -> QIcon:
+    """Ikona na przycisk akcentowy: jasny glif, wyciszony gdy przycisk wylaczony."""
+    variant = (palette or _active_palette).variant
+    return _compose_icon(f"{name}-accent", name, variant)
+
+
 def build_stylesheet(palette: Palette) -> str:
     """Arkusz stylow Qt dla calej aplikacji."""
     p = palette
     check = _icon_url("check", p.variant)
     chevron = _icon_url("chevron", p.variant)
+    # Tlo najechania na przycisk ikonowy lezacy na bialej karcie musi byc
+    # ciemniejsze niz karta, a w trybie ciemnym jasniejsze.
+    icon_hover = p.background if p.variant == "light" else p.surface_alt
+    badge_rules = "\n".join(
+        f'QLabel#Badge[badgeRole="{role}"] {{'
+        f" background-color: {bg}; color: {fg}; border-color: transparent; }}"
+        for role, (bg, fg) in BADGE_COLORS[p.variant].items()
+    )
     return f"""
     QWidget {{
         color: {p.text};
@@ -341,6 +408,41 @@ def build_stylesheet(palette: Palette) -> str:
     QPushButton#ModeButton:checked:focus {{
         border: 1px solid {p.text};
     }}
+    QPushButton#IconButton {{
+        background: transparent;
+        border: 1px solid transparent;
+        border-radius: {RADIUS - 2}px;
+        padding: 0;
+        min-height: 0;
+    }}
+    QPushButton#IconButton:hover {{
+        background-color: {icon_hover};
+    }}
+    QPushButton#IconButton:pressed {{
+        background-color: {p.border};
+    }}
+    QPushButton#IconButton:focus {{
+        border: 1px solid {p.accent};
+    }}
+    QPushButton#PrimaryIcon {{
+        background-color: {p.accent};
+        border: 1px solid {p.accent};
+        border-radius: {RADIUS}px;
+        padding: 0;
+    }}
+    QPushButton#PrimaryIcon:hover {{
+        background-color: {p.accent_hover};
+    }}
+    QPushButton#PrimaryIcon:pressed {{
+        background-color: {p.accent_pressed};
+    }}
+    QPushButton#PrimaryIcon:focus {{
+        border: 1px solid {p.text};
+    }}
+    QPushButton#PrimaryIcon:disabled {{
+        background-color: {p.surface_alt};
+        border: 1px solid {p.border};
+    }}
     QFrame#ResultCard {{
         background-color: {p.surface};
         border: 1px solid {p.border};
@@ -364,13 +466,7 @@ def build_stylesheet(palette: Palette) -> str:
         padding: 2px 9px;
         color: {p.text_muted};
     }}
-    QLabel#BadgeOcr {{
-        background-color: {p.highlight};
-        color: {p.highlight_text};
-        border: none;
-        border-radius: 10px;
-        padding: 2px 9px;
-    }}
+    {badge_rules}
     QLabel#Snippet {{
         background-color: {p.surface_alt};
         border-radius: {RADIUS}px;
@@ -590,8 +686,9 @@ _base_style_key: str | None = None
 
 def apply_theme(app: QApplication, preference: str = "system") -> Palette:
     """Ustawia styl, czcionke, arkusz stylow i palete. Zwraca uzyta palete."""
-    global _base_style_key
+    global _active_palette, _base_style_key
     palette = resolve_palette(app, preference)
+    _active_palette = palette
     if _base_style_key is None:
         _base_style_key = app.style().objectName() or "windowsvista"
     app.setStyle(TabFocusStyle(_base_style_key))
@@ -610,6 +707,7 @@ def highlight_css(palette: Palette) -> str:
 
 
 __all__ = [
+    "BADGE_COLORS",
     "DARK",
     "FONT_FAMILY",
     "ICON_DIR",
@@ -619,10 +717,13 @@ __all__ = [
     "RADIUS_LARGE",
     "Palette",
     "TabFocusStyle",
+    "accent_icon",
+    "active_palette",
     "apply_theme",
     "build_qt_palette",
     "build_stylesheet",
     "highlight_css",
     "is_dark_mode",
     "resolve_palette",
+    "theme_icon",
 ]

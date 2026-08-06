@@ -34,6 +34,7 @@ from finddocs.gui import i18n
 from finddocs.gui.context import AppContext
 from finddocs.gui.dialogs import ask_yes_no, show_error, show_info, show_warning
 from finddocs.gui.tables import configure_columns
+from finddocs.gui.theme import theme_icon
 from finddocs.gui.workers import CallableTask, thread_pool
 from finddocs.logging_setup import get_logger
 from finddocs.providers.model_manifest import describe_models
@@ -190,10 +191,12 @@ class SourcesView(QWidget):
         buttons = QHBoxLayout()
         buttons.setSpacing(8)
         add_local = QPushButton(i18n.SOURCES_ADD_LOCAL)
+        add_local.setIcon(theme_icon("plus"))
         add_local.clicked.connect(self.add_local_source)
         buttons.addWidget(add_local)
 
         add_sp = QPushButton(i18n.SOURCES_ADD_SHAREPOINT)
+        add_sp.setIcon(theme_icon("plus"))
         add_sp.clicked.connect(self.add_sharepoint_source)
         buttons.addWidget(add_sp)
 
@@ -213,6 +216,7 @@ class SourcesView(QWidget):
 
         remove = QPushButton(i18n.SOURCES_REMOVE)
         remove.setObjectName("Danger")
+        remove.setIcon(theme_icon("trash"))
         remove.clicked.connect(self.remove_selected)
         buttons.addWidget(remove)
         layout.addLayout(buttons)
@@ -242,6 +246,7 @@ class SourcesView(QWidget):
         change.clicked.connect(self.change_storage)
         row.addWidget(change)
         open_button = QPushButton("Otwórz katalog")
+        open_button.setIcon(theme_icon("folder"))
         open_button.clicked.connect(lambda: self.context.open_path(self.context.paths.root))
         row.addWidget(open_button)
         row.addStretch(1)

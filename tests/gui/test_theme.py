@@ -54,6 +54,65 @@ def test_arkusz_stylow_wskazuje_istniejace_obrazki_motywu() -> None:
             assert path.with_name(f"{name}-{palette.variant}@2x.png").exists()
 
 
+#: Glify uzywane przez widoki; brak pliku oznaczalby pusta ikone w GUI.
+GLYPH_NAMES = (
+    "search",
+    "stop",
+    "folder",
+    "copy",
+    "refresh",
+    "database",
+    "chart",
+    "pulse",
+    "play",
+    "pause",
+    "cross",
+    "plus",
+    "trash",
+    "export",
+    "filter",
+    "chevron-left",
+    "chevron-right",
+)
+
+#: Glify z wariantem na tle akcentu (przyciski Primary i PrimaryIcon).
+ACCENT_GLYPH_NAMES = ("search", "stop", "play", "refresh")
+
+
+def test_glify_svg_istnieja_we_wszystkich_klasach() -> None:
+    for variant in ("light", "dark"):
+        for name in GLYPH_NAMES:
+            for infix in ("", "-muted"):
+                path = theme.ICON_DIR / f"{name}{infix}-{variant}.svg"
+                assert path.exists(), f"brakuje glifu {path}"
+        for name in ACCENT_GLYPH_NAMES:
+            path = theme.ICON_DIR / f"{name}-accent-{variant}.svg"
+            assert path.exists(), f"brakuje glifu {path}"
+
+
+def test_theme_icon_ma_wariant_zwykly_i_wylaczony(qapp: QApplication) -> None:
+    """Ikona musi sie renderowac takze w stanie wylaczonym przycisku."""
+    from PySide6.QtCore import QSize
+    from PySide6.QtGui import QIcon
+
+    for palette in (theme.LIGHT, theme.DARK):
+        for icon in (theme.theme_icon("play", palette), theme.accent_icon("play", palette)):
+            assert not icon.isNull()
+            assert not icon.pixmap(QSize(16, 16), QIcon.Mode.Normal).isNull()
+            assert not icon.pixmap(QSize(16, 16), QIcon.Mode.Disabled).isNull()
+
+
+def test_role_plakietek_sa_w_arkuszu_stylow_obu_palet() -> None:
+    for palette in (theme.LIGHT, theme.DARK):
+        css = theme.build_stylesheet(palette)
+        roles = theme.BADGE_COLORS[palette.variant]
+        assert set(theme.BADGE_COLORS["light"]) == set(theme.BADGE_COLORS["dark"])
+        for role, (background, foreground) in roles.items():
+            assert f'QLabel#Badge[badgeRole="{role}"]' in css
+            assert background in css
+            assert foreground in css
+
+
 def test_paleta_qt_jest_spojna_z_motywem() -> None:
     for palette in (theme.LIGHT, theme.DARK):
         qt_palette = theme.build_qt_palette(palette)

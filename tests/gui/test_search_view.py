@@ -7,13 +7,13 @@ from collections.abc import Callable
 
 import pytest
 from PySide6.QtCore import QDate
-from PySide6.QtWidgets import QApplication, QPushButton, QWidget
+from PySide6.QtWidgets import QApplication, QLabel, QPushButton, QWidget
 
 from finddocs.gui import i18n
 from finddocs.gui.context import AppContext
 from finddocs.gui.search_view import SearchView
 from finddocs.gui.theme import Palette
-from finddocs.gui.widgets.result_card import ResultCard
+from finddocs.gui.widgets.result_card import ResultCard, score_role
 from finddocs.types import ChunkHit, DocumentHit, MatchKind, SearchMode, SourceKind, TextOrigin
 
 QUERY = "przelewow"
@@ -100,8 +100,9 @@ def test_query_returns_result_cards(
     qtbot.waitUntil(lambda: bool(result_cards(view)), timeout=TIMEOUT_MS)  # type: ignore[attr-defined]
     assert len(result_cards(view)) == corpus_stats["przelewow"]
     assert i18n.RESULTS_COUNT_EXACT.format(count=corpus_stats["przelewow"]) in view._summary.text()
-    assert view.search_button.isEnabled()
-    assert not view.cancel_button.isEnabled()
+    assert not view.is_searching()
+    assert view.query_edit.isEnabled()
+    assert view.search_button.toolTip() == i18n.SEARCH_BUTTON
 
 
 @pytest.mark.gui
@@ -310,25 +311,70 @@ def test_clear_filters_resets_every_field(make_search_view: Callable[..., Search
 
 @pytest.mark.gui
 def test_result_card_emits_actions(qtbot: object, gui_palette: Palette) -> None:
-    """Karta wyniku emituje sygnaly otwarcia, lokalizacji i kopiowania."""
+    """Nazwa pliku otwiera dokument, a przyciski ikonowe emituja swoje akcje."""
     hit = _sample_hit()
     card = ResultCard(hit, gui_palette)
     qtbot.addWidget(card)  # type: ignore[attr-defined]
-    buttons = {button.text(): button for button in card.findChildren(QPushButton)}
 
-    signals = [
-        (card.open_document, i18n.RESULT_OPEN),
-        (card.open_location, i18n.RESULT_OPEN_LOCATION),
-        (card.copy_link, i18n.RESULT_COPY_LINK),
-    ]
-    for signal, label in signals:
-        assert label in buttons, f"Karta powinna miec przycisk {label}."
+    assert hit.name in card.title_label.text()
+    assert card.title_label.toolTip() == i18n.RESULT_OPEN
+    opened: list[object] = []
+    card.open_document.connect(opened.append)
+    card.title_label.linkActivated.emit("open")
+    assert opened == [hit]
+
+    for signal, button, label in (
+        (card.open_location, card.location_button, i18n.RESULT_OPEN_LOCATION),
+        (card.copy_link, card.copy_button, i18n.RESULT_COPY_LINK),
+    ):
+        assert button.toolTip() == label, "Przycisk ikonowy musi opisywac akcje podpowiedzia."
+        assert not button.icon().isNull()
         received: list[object] = []
         signal.connect(received.append)
 
-        buttons[label].click()
+        button.click()
 
         assert received == [hit]
+
+
+@pytest.mark.gui
+def test_result_card_badges_maja_kolorowe_role(qtbot: object, gui_palette: Palette) -> None:
+    """Plakietki dostaja role kolorow: dopasowanie, typ, data, autor, OCR, sila."""
+    card = ResultCard(_sample_hit(), gui_palette)
+    qtbot.addWidget(card)  # type: ignore[attr-defined]
+
+    roles = {
+        str(label.property("badgeRole"))
+        for label in card.findChildren(QLabel)
+        if label.objectName() == "Badge"
+    }
+    assert {"match", "type", "date", "author", "ocr", "score-high"} <= roles
+
+
+def test_score_role_thresholds() -> None:
+    assert score_role(0.9) == "score-high"
+    assert score_role(0.5) == "score-mid"
+    assert score_role(0.1) == "score-low"
+
+
+@pytest.mark.gui
+def test_search_button_toggles_between_szukaj_and_przerwij(
+    make_search_view: Callable[..., SearchView],
+) -> None:
+    """W trakcie wyszukiwania przycisk lupy zamienia sie w Przerwij."""
+    view = make_search_view()
+    assert view.search_button.toolTip() == i18n.SEARCH_BUTTON
+
+    view._set_busy(True)
+    assert view.is_searching()
+    assert view.search_button.toolTip() == i18n.SEARCH_CANCEL
+    assert not view.query_edit.isEnabled()
+    assert view.search_button.isEnabled()
+
+    view.cancel_search()
+    assert not view.is_searching()
+    assert view.search_button.toolTip() == i18n.SEARCH_BUTTON
+    assert view.query_edit.isEnabled()
 
 
 @pytest.mark.gui
@@ -348,11 +394,6 @@ def test_copy_link_writes_to_clipboard(
     clipboard = QApplication.clipboard()
     clipboard.setText("")
 
-    copy_button = next(
-        button
-        for button in card.findChildren(QPushButton)
-        if button.text() == i18n.RESULT_COPY_LINK
-    )
-    copy_button.click()
+    card.copy_button.click()
 
     assert clipboard.text() == expected

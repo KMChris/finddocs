@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import datetime as _dt
 
-from PySide6.QtCore import QDate, Qt, Signal
+from PySide6.QtCore import QDate, QSize, Qt, Signal
 from PySide6.QtGui import QFont, QFontMetrics
 from PySide6.QtWidgets import (
     QApplication,
@@ -25,7 +25,7 @@ from PySide6.QtWidgets import (
 
 from finddocs.gui import i18n
 from finddocs.gui.context import AppContext
-from finddocs.gui.theme import Palette
+from finddocs.gui.theme import Palette, accent_icon, theme_icon
 from finddocs.gui.widgets.result_card import EmptyState, ResultCard
 from finddocs.gui.workers import CancellationFlag, SearchTask, thread_pool
 from finddocs.logging_setup import get_logger
@@ -59,6 +59,7 @@ class SearchView(QWidget):
         self._task: SearchTask | None = None
         self._token: CancellationFlag | None = None
         self._response: SearchResponse | None = None
+        self._busy = False
         self._page = 0
         self._page_size = context.config.search.page_size
 
@@ -109,15 +110,18 @@ class SearchView(QWidget):
         self.query_edit.returnPressed.connect(self.run_search)
         row.addWidget(self.query_edit, stretch=1)
 
-        self.search_button = QPushButton(i18n.SEARCH_BUTTON)
-        self.search_button.setObjectName("Primary")
-        self.search_button.clicked.connect(self.run_search)
+        # Jeden kwadratowy przycisk: lupa uruchamia wyszukiwanie, a w trakcie
+        # pracy zamienia sie w ikone zatrzymania z podpowiedzia Przerwij.
+        self.search_button = QPushButton()
+        self.search_button.setObjectName("PrimaryIcon")
+        self.search_button.setIcon(accent_icon("search", self.palette_colors))
+        self.search_button.setIconSize(QSize(18, 18))
+        side = max(self.query_edit.sizeHint().height(), 40)
+        self.search_button.setFixedSize(QSize(side, side))
+        self.search_button.setToolTip(i18n.SEARCH_BUTTON)
+        self.search_button.setAccessibleName(i18n.SEARCH_BUTTON)
+        self.search_button.clicked.connect(self._on_search_clicked)
         row.addWidget(self.search_button)
-
-        self.cancel_button = QPushButton(i18n.SEARCH_CANCEL)
-        self.cancel_button.clicked.connect(self.cancel_search)
-        self.cancel_button.setEnabled(False)
-        row.addWidget(self.cancel_button)
         return container
 
     def _mode_button_width(self) -> int:
@@ -161,6 +165,7 @@ class SearchView(QWidget):
         row.addStretch(1)
 
         self.filters_toggle = QPushButton(i18n.SEARCH_FILTERS)
+        self.filters_toggle.setIcon(theme_icon("filter", self.palette_colors))
         self.filters_toggle.setCheckable(True)
         self.filters_toggle.toggled.connect(self._toggle_filters)
         row.addWidget(self.filters_toggle)
@@ -229,8 +234,12 @@ class SearchView(QWidget):
         row = QHBoxLayout()
         row.setSpacing(8)
         self.previous_button = QPushButton(i18n.PAGINATION_PREVIOUS)
+        self.previous_button.setIcon(theme_icon("chevron-left", self.palette_colors))
         self.previous_button.clicked.connect(lambda: self.change_page(-1))
         self.next_button = QPushButton(i18n.PAGINATION_NEXT)
+        self.next_button.setIcon(theme_icon("chevron-right", self.palette_colors))
+        # Odwrocony kierunek ukladu stawia ikone po prawej stronie napisu.
+        self.next_button.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         self.next_button.clicked.connect(lambda: self.change_page(1))
         self.page_label = QLabel("")
         self.page_label.setObjectName("Muted")
@@ -329,6 +338,16 @@ class SearchView(QWidget):
         self.query_edit.setFocus()
         self.query_edit.selectAll()
 
+    def is_searching(self) -> bool:
+        """Czy wyszukiwanie jest w toku (przycisk dziala wtedy jako Przerwij)."""
+        return self._busy
+
+    def _on_search_clicked(self) -> None:
+        if self._busy:
+            self.cancel_search()
+        else:
+            self.run_search()
+
     def run_search(self, *, reset_page: bool = True) -> None:
         query = self.query_edit.text().strip()
         if not query:
@@ -403,8 +422,12 @@ class SearchView(QWidget):
         self.status_message.emit("Wyszukiwanie przerwane.")
 
     def _set_busy(self, busy: bool) -> None:
-        self.search_button.setEnabled(not busy)
-        self.cancel_button.setEnabled(busy)
+        self._busy = busy
+        icon = accent_icon("stop" if busy else "search", self.palette_colors)
+        label = i18n.SEARCH_CANCEL if busy else i18n.SEARCH_BUTTON
+        self.search_button.setIcon(icon)
+        self.search_button.setToolTip(label)
+        self.search_button.setAccessibleName(label)
         self.query_edit.setEnabled(not busy)
 
     def _count_text(self, response: SearchResponse) -> str:
@@ -499,7 +522,7 @@ class SearchView(QWidget):
 
     def keyPressEvent(self, event: object) -> None:
         key = getattr(event, "key", lambda: None)()
-        if key == Qt.Key.Key_Escape and self.cancel_button.isEnabled():
+        if key == Qt.Key.Key_Escape and self._busy:
             self.cancel_search()
             return
         super().keyPressEvent(event)  # type: ignore[arg-type]
