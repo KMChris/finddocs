@@ -113,6 +113,22 @@ def test_role_plakietek_sa_w_arkuszu_stylow_obu_palet() -> None:
             assert foreground in css
 
 
+def test_podswietlenie_list_rozwijanych_i_tabel_ma_kontrast() -> None:
+    """Ostylowany ::item nie dziedziczy selection-background-color z widoku.
+
+    Bez jawnych stanow tekst podswietlonej pozycji przyjmuje kolor tekstu
+    zaznaczenia na tle powierzchni, czyli bialy na bialym w jasnym motywie.
+    """
+    for palette in (theme.LIGHT, theme.DARK):
+        css = theme.build_stylesheet(palette)
+        combo = css.split("QComboBox QAbstractItemView::item:hover", 1)[1].split("}", 1)[0]
+        assert f"background-color: {palette.accent}" in combo
+        assert f"color: {palette.accent_text}" in combo
+        table = css.split("QTableWidget::item:selected", 1)[1].split("}", 1)[0]
+        assert f"background-color: {palette.accent}" in table
+        assert f"color: {palette.accent_text}" in table
+
+
 def test_paleta_qt_jest_spojna_z_motywem() -> None:
     for palette in (theme.LIGHT, theme.DARK):
         qt_palette = theme.build_qt_palette(palette)

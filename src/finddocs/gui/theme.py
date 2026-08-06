@@ -341,6 +341,11 @@ def build_stylesheet(palette: Palette) -> str:
         padding: 6px 8px;
         border-radius: {RADIUS - 2}px;
     }}
+    QComboBox QAbstractItemView::item:hover,
+    QComboBox QAbstractItemView::item:selected {{
+        background-color: {p.accent};
+        color: {p.accent_text};
+    }}
     QPushButton {{
         background-color: {p.surface};
         border: 1px solid {p.border};
@@ -494,6 +499,10 @@ def build_stylesheet(palette: Palette) -> str:
     }}
     QTableWidget::item, QTableView::item {{
         padding: 4px 6px;
+    }}
+    QTableWidget::item:selected, QTableView::item:selected {{
+        background-color: {p.accent};
+        color: {p.accent_text};
     }}
     QHeaderView::section {{
         background-color: {p.surface_alt};
