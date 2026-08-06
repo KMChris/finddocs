@@ -50,6 +50,13 @@ Silnik OCR jest opcjonalny i instaluje się jako dodatek:
 pip install "finddocs[ocr-rapid]"
 ```
 
+Dodatek `all` instaluje komplet dla samodzielnego stanowiska: silnik OCR
+oraz narzędzia importu i konwersji modeli embeddingów:
+
+```bash
+pip install "finddocs[all]"
+```
+
 Po instalacji polecenie `finddocs-gui` uruchamia interfejs graficzny,
 a `finddocs` daje dostęp do poleceń administracyjnych. Wyszukiwanie dokładne
 działa od razu. Wyszukiwanie semantyczne i hybrydowe wymaga lokalnego modelu

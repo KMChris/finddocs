@@ -27,6 +27,14 @@ Sam pakiet bez OCR instaluje się poleceniem `pip install finddocs`. Dodatki:
 | --- | --- |
 | `ocr-rapid` | silnik RapidOCR na ONNX Runtime, z modelami wbudowanymi w pakiet, bez instalatora systemowego |
 | `ocr-easy` | silnik EasyOCR, cięższy i wymagający własnych modeli |
+| `export` | torch, transformers, onnx i onnxscript: konwersja checkpointów Hugging Face do ONNX oraz kwantyzacja INT8 |
+| `all` | komplet dla samodzielnego stanowiska, równoważny `finddocs[ocr-rapid,export]` |
+
+Dodatek `all` celowo nie zawiera `ocr-easy`: przy ustawieniu `ocr.engine`
+na `auto` EasyOCR ma pierwszeństwo przed RapidOCR, więc jego doinstalowanie
+zmieniłoby używany silnik. Kto chce EasyOCR, instaluje `finddocs[all,ocr-easy]`.
+Wszystkie dodatki na Pythonach od 3.11 do 3.14 instalują się z gotowych kół,
+bez kompilacji ze źródeł.
 
 Tesseract, jeżeli jest preferowany, instaluje się osobno według rozdziału [OCR](ocr.md).
 

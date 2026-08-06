@@ -68,6 +68,11 @@ dev = [
 ]
 # onnxscript jest potrzebny nowym wersjom torch (eksporter dynamo od 2.9).
 export = ["torch>=2.2", "transformers>=4.40", "onnx>=1.16", "onnxscript>=0.1"]
+# Komplet dla samodzielnego stanowiska: zalecany silnik OCR oraz narzedzia
+# importu i konwersji modeli. easyocr celowo zostaje osobno: tryb auto wybiera
+# go przed rapidocr, wiec dolozenie go tutaj podmieniloby silnik OCR kazdemu,
+# kto zainstalowal [all]. Kto go chce, instaluje finddocs[all,ocr-easy].
+all = ["finddocs[ocr-rapid,export]"]
 
 [project.scripts]
 finddocs = "finddocs.cli:main"
