@@ -32,7 +32,7 @@ Skróty w menu Start pozostaną.
 Instalacja cicha dla wdrożenia masowego:
 
 ```bat
-FindDocs-0.2.1-instalator.exe /VERYSILENT /NORESTART /LOG="%TEMP%\finddocs-update.log"
+FindDocs-0.2.2-instalator.exe /VERYSILENT /NORESTART /LOG="%TEMP%\finddocs-update.log"
 ```
 
 ## Po aktualizacji

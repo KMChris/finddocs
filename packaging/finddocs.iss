@@ -10,7 +10,7 @@
 ; uprawnieniami, co jest typowe w srodowisku korporacyjnym.
 
 #define AppName "FindDocs"
-#define AppVersion "0.2.1"
+#define AppVersion "0.2.2"
 #define AppPublisher "Krzysztof Mizgała"
 #define AppExeName "FindDocs.exe"
 #define SourceDir "output\FindDocs"
