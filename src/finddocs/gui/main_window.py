@@ -181,6 +181,8 @@ class MainWindow(QMainWindow):
         ]
         if status.get("semantyka_dostepna"):
             parts.append(f"Model: {status.get('model')}")
+        elif not self.context.config.embedding.semantic_enabled:
+            parts.append("Tryb semantyczny wyłączony")
         else:
             parts.append("Tryb semantyczny niedostępny")
         parts.append(i18n.format_bytes(int(status.get("rozmiar_bajty", 0))))

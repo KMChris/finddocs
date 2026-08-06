@@ -123,7 +123,9 @@ class IndexService:
             self._notes.append(message)
             self._rebuild_required = True
 
-        if load_provider:
+        # Swiadome wylaczenie semantyki nie jest bledem: bez dostawcy i indeksu
+        # wektorowego aplikacja dziala w trybie dokladnym, bez zadnych uwag.
+        if load_provider and self.config.embedding.semantic_enabled:
             self._load_provider(vector_compatible=bool(state["wektory_zgodne"]))
 
         if state["pierwszy_start"] or state["fts_zgodny"]:

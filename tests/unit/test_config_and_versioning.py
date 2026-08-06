@@ -195,6 +195,39 @@ def test_zmiana_fragmentacji_uniewaznia_takze_indeks_wektorowy():
     assert zmieniona.vector_compat_hash() != bazowa.vector_compat_hash()
 
 
+def test_wylaczenie_semantyki_nie_uniewaznia_zadnego_indeksu():
+    """Przelacznik semantyki nie moze wymuszac przebudowy po ponownym wlaczeniu.
+
+    Brakujace wektory uzupelnia zwykle skanowanie, wiec skroty zgodnosci
+    zostaja bez zmian.
+    """
+    bazowa = AppConfig()
+    zmieniona = AppConfig()
+    zmieniona.embedding.semantic_enabled = False
+
+    assert zmieniona.index_compat_hash() == bazowa.index_compat_hash()
+    assert zmieniona.vector_compat_hash() == bazowa.vector_compat_hash()
+
+
+def test_stara_konfiguracja_bez_flagi_semantyki_ma_ja_wlaczona():
+    dane = config_to_dict(AppConfig())
+    del dane["embedding"]["semantic_enabled"]
+
+    config = config_from_dict(dane)
+
+    assert config.embedding.semantic_enabled is True
+
+
+def test_flaga_semantyki_przezywa_zapis_i_odczyt(tmp_home):
+    config = AppConfig(data_root=str(tmp_home.root))
+    config.embedding.semantic_enabled = False
+
+    sciezka = save_config(config, tmp_home.config_file)
+    odczytana = load_config(sciezka)
+
+    assert odczytana.embedding.semantic_enabled is False
+
+
 # --- serializacja slownikowa ---------------------------------------------------
 
 

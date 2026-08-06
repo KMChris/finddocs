@@ -313,6 +313,7 @@ def collect_component_info(config: AppConfig) -> dict[str, Any]:
         "magazyn_poswiadczen": _credential_store_info(paths),
         "dostawca_embeddingow": config.embedding.provider,
         "model_embeddingow": config.embedding.model_key,
+        "semantyka_wlaczona": config.embedding.semantic_enabled,
     }
 
 

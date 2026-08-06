@@ -93,6 +93,14 @@ class SourceConfig:
 class EmbeddingSettings:
     """Ustawienia dostawcy embeddingow."""
 
+    semantic_enabled: bool = True
+    """Wylaczenie pomija liczenie embeddingow przy indeksowaniu i tryby semantyczne.
+
+    Indeks pelnotekstowy dziala bez zmian. Po ponownym wlaczeniu zwykle
+    skanowanie uzupelnia brakujace wektory, bo dokumenty bez wektorow sa
+    kwalifikowane do ponownego przetworzenia.
+    """
+
     provider: str = "local_onnx"
     """local_onnx albo internal_api (drugi jest przygotowany, ale wylaczony)."""
 
