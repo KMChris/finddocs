@@ -52,10 +52,9 @@ pip install "finddocs[ocr-rapid]"
 
 Po instalacji polecenie `finddocs-gui` uruchamia interfejs graficzny,
 a `finddocs` daje dostęp do poleceń administracyjnych. Wyszukiwanie dokładne
-działa od razu. Wyszukiwanie semantyczne i hybrydowe wymaga modelu embeddingów:
-przygotuj go według sekcji o uruchomieniu developerskim (potrzebne jest
-sklonowane repozytorium ze skryptem eksportu), a następnie umieść katalog
-modelu w `%LOCALAPPDATA%\FindDocs\models` albo wskaż go w konfiguracji.
+działa od razu. Wyszukiwanie semantyczne i hybrydowe wymaga modelu embeddingów
+przygotowanego lokalnie. Pełny opis instalacji, konfiguracji i podłączenia
+modelu: [docs/instalacja-pip.md](https://github.com/KMChris/finddocs/blob/main/docs/instalacja-pip.md).
 
 ## Szybki start bez SharePointa
 
@@ -74,7 +73,7 @@ finddocs search "procedura przelewów 24.07.2015"
 
 ## Uruchomienie developerskie
 
-Wymagany Python 3.11 lub 3.12 na Windows 11.
+Wymagany Python od 3.11 do 3.14 na Windows 11.
 
 ```bash
 py -3.11 -m venv .venv
@@ -152,6 +151,7 @@ Szczegóły i diagramy: [docs/architektura.md](https://github.com/KMChris/finddo
 | Dokument | Zawartość |
 | --- | --- |
 | [Instrukcja użytkownika](https://github.com/KMChris/finddocs/blob/main/docs/instrukcja-uzytkownika.md) | obsługa aplikacji |
+| [Instalacja z PyPI](https://github.com/KMChris/finddocs/blob/main/docs/instalacja-pip.md) | pip, konfiguracja, lokalny model embeddingów |
 | [Instrukcja administratora](https://github.com/KMChris/finddocs/blob/main/docs/instrukcja-administratora.md) | wdrożenie, konfiguracja, CLI |
 | [Integracja z SharePoint](https://github.com/KMChris/finddocs/blob/main/docs/integracja-sharepoint.md) | Microsoft Graph, Entra ID, uprawnienia |
 | [Architektura](https://github.com/KMChris/finddocs/blob/main/docs/architektura.md) | warstwy, diagramy, decyzje |
