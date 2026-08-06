@@ -38,7 +38,7 @@ Pełna instrukcja: [docs/instrukcja-uzytkownika.md](https://github.com/KMChris/f
 
 ## Instalacja przez pip
 
-Wymagany Python 3.11 lub 3.12 na Windows 11.
+Wymagany Python od 3.11 do 3.14 na Windows 11.
 
 ```bash
 pip install finddocs

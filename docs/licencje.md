@@ -59,7 +59,8 @@ ani zapytan poza komputer uzytkownika w konfiguracji domyslnej.
 | pywin32 | 308 | Python Software Foundation License | DPAPI, automatyzacja Office przez COM | https://github.com/mhammond/pywin32 |
 | pywin32-ctypes | 0.2.3 | BSD-3-Clause | zaleznosc posrednia | https://github.com/enthought/pywin32-ctypes |
 | PyYAML | 6.0.3 | MIT License | zaleznosc posrednia | https://pyyaml.org/ |
-| rapidocr-onnxruntime | 1.4.4 | Apache-2.0 | silnik OCR (opcjonalny) | https://github.com/RapidAI/RapidOCR |
+| rapidocr | 3.9.2 | Apache-2.0 | silnik OCR (opcjonalny, Python od 3.13) | https://github.com/RapidAI/RapidOCR |
+| rapidocr-onnxruntime | 1.4.4 | Apache-2.0 | silnik OCR (opcjonalny, Python do 3.12) | https://github.com/RapidAI/RapidOCR |
 | requests | 2.34.2 | Apache Software License | zaleznosc posrednia | https://requests.readthedocs.io |
 | setuptools | 83.0.0 | MIT | zaleznosc posrednia | https://github.com/pypa/setuptools |
 | shapely | 2.1.2 | BSD License | zaleznosc posrednia | https://shapely.readthedocs.io/ |
