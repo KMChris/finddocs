@@ -129,6 +129,64 @@ def test_podswietlenie_list_rozwijanych_i_tabel_ma_kontrast() -> None:
         assert f"color: {palette.accent_text}" in table
 
 
+def test_segmenty_maja_reguly_dla_kazdego_polozenia() -> None:
+    """Bez regul polozenia segmenty mialyby ostre rogi i podwojna krawedz."""
+    for palette in (theme.LIGHT, theme.DARK):
+        css = theme.build_stylesheet(palette)
+        for position in ("first", "middle", "last", "only"):
+            assert f'QPushButton#Segment[segmentPos="{position}"]' in css
+        # Segment wybrany musi miec wlasne tlo i tekst o kontrascie akcentu.
+        checked = css.split("QPushButton#Segment:checked {", 1)[1].split("}", 1)[0]
+        assert f"background-color: {palette.accent}" in checked
+        assert f"color: {palette.accent_text}" in checked
+
+
+def test_role_banera_sa_w_arkuszu_stylow_obu_palet() -> None:
+    for palette in (theme.LIGHT, theme.DARK):
+        css = theme.build_stylesheet(palette)
+        assert set(theme.BANNER_COLORS["light"]) == set(theme.BANNER_COLORS["dark"])
+        for role, (background, foreground) in theme.BANNER_COLORS[palette.variant].items():
+            assert f'QFrame#Banner[bannerRole="{role}"]' in css
+            assert background in css
+            assert foreground in css
+
+
+def test_stopnie_pisma_pochodza_ze_skali_typografii() -> None:
+    """Rozmiary w arkuszu maja isc ze skali, a nie z liczb wpisanych na miejscu."""
+    css = theme.build_stylesheet(theme.LIGHT)
+    assert f"font-size: {theme.FONT_SIZE_SMALL}pt" in css
+    assert f"font-size: {theme.FONT_SIZE_TITLE}pt" in css
+    assert f"font-size: {theme.FONT_SIZE_PAGE}pt" in css
+    assert f"font-size: {theme.FONT_SIZE_QUERY}pt" in css
+    scale = {
+        theme.FONT_SIZE_SMALL,
+        theme.FONT_SIZE,
+        theme.FONT_SIZE_TITLE,
+        theme.FONT_SIZE_QUERY,
+        theme.FONT_SIZE_BRAND,
+        theme.FONT_SIZE_PAGE,
+    }
+    used = {int(part.split("pt", 1)[0]) for part in css.split("font-size: ")[1:]}
+    assert used <= scale, f"stopnie spoza skali typografii: {sorted(used - scale)}"
+
+
+def test_karta_wyniku_odroznia_fokus_od_najechania() -> None:
+    """Fokus z klawiatury musi byc wyrazniejszy niz najechanie myszka."""
+    for palette in (theme.LIGHT, theme.DARK):
+        css = theme.build_stylesheet(palette)
+        focus = css.split("QFrame#ResultCard:focus {", 1)[1].split("}", 1)[0]
+        assert f"border: 2px solid {palette.accent}" in focus
+
+
+def test_muted_icon_renderuje_sie_w_obu_paletach(qapp: QApplication) -> None:
+    from PySide6.QtCore import QSize
+
+    for palette in (theme.LIGHT, theme.DARK):
+        icon = theme.muted_icon("search", palette)
+        assert not icon.isNull()
+        assert not icon.pixmap(QSize(40, 40)).isNull()
+
+
 def test_paleta_qt_jest_spojna_z_motywem() -> None:
     for palette in (theme.LIGHT, theme.DARK):
         qt_palette = theme.build_qt_palette(palette)

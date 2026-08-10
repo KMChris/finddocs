@@ -119,6 +119,33 @@ def test_navigation_switches_stack(main_window: MainWindow) -> None:
 
 
 @pytest.mark.gui
+def test_skroty_przelaczaja_ekrany(main_window: MainWindow) -> None:
+    """Ctrl+1 do Ctrl+5 odpowiadaja pozycjom panelu nawigacji."""
+    from PySide6.QtGui import QKeySequence, QShortcut
+
+    registered = {shortcut.key().toString() for shortcut in main_window.findChildren(QShortcut)}
+    expected = {QKeySequence(f"Ctrl+{n}").toString() for n in range(1, 6)}
+
+    assert expected <= registered
+    for row in range(main_window.nav.count()):
+        assert main_window.nav.item(row).toolTip().endswith(f"(Ctrl+{row + 1})")
+
+
+@pytest.mark.gui
+def test_kropka_stanu_odzwierciedla_tryb_semantyczny(main_window: MainWindow) -> None:
+    """Kolor kropki mowi to samo co napis, tylko szybciej."""
+    main_window.refresh_index_status()
+    assert main_window.semantic_dot.property("dotRole") == "warn"
+    assert main_window.semantic_dot.toolTip() == i18n.STATUS_SEMANTIC_UNAVAILABLE
+
+    main_window.context.config.embedding.semantic_enabled = False
+    main_window.refresh_index_status()
+
+    assert main_window.semantic_dot.property("dotRole") == "off"
+    assert main_window.semantic_dot.toolTip() == i18n.STATUS_SEMANTIC_DISABLED
+
+
+@pytest.mark.gui
 def test_status_message_reaches_status_bar(main_window: MainWindow) -> None:
     """Widoki zglaszaja komunikaty przez sygnal status_message do paska stanu."""
     main_window.search_view.status_message.emit("Komunikat testowy")

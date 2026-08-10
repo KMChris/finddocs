@@ -6,7 +6,8 @@ import datetime as _dt
 from collections.abc import Callable
 
 import pytest
-from PySide6.QtCore import QDate
+from PySide6.QtCore import QDate, QEvent, Qt
+from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import QApplication, QLabel, QPushButton, QWidget
 
 from finddocs.gui import i18n
@@ -292,6 +293,53 @@ def test_extension_filter_narrows_results(
 
 
 @pytest.mark.gui
+def test_przycisk_filtrow_liczy_aktywne_filtry(
+    make_search_view: Callable[..., SearchView],
+) -> None:
+    """Zwiniety panel nie moze ukrywac faktu, ze wyniki sa zawezone."""
+    view = make_search_view()
+    assert view.filters_toggle.text() == i18n.SEARCH_FILTERS
+    assert not view.clear_filters_button.isEnabled()
+
+    view.filter_path.setText("procedury/2024")
+    assert view.active_filter_count() == 1
+    assert view.filters_toggle.text() == i18n.SEARCH_FILTERS_ACTIVE.format(count=1)
+    assert view.clear_filters_button.isEnabled()
+
+    view.filter_ocr.setChecked(True)
+    view.filter_date_from.setDate(QDate(2015, 7, 24))
+    assert view.active_filter_count() == 3
+    assert view.filters_toggle.text() == i18n.SEARCH_FILTERS_ACTIVE.format(count=3)
+
+    view.clear_filters()
+
+    assert view.filters_toggle.text() == i18n.SEARCH_FILTERS
+    assert not view.clear_filters_button.isEnabled()
+
+
+@pytest.mark.gui
+def test_wiersz_stron_pojawia_sie_dopiero_przy_wielu_stronach(
+    qtbot: object,
+    make_search_view: Callable[..., SearchView],
+    result_cards: Callable[[QWidget], list[ResultCard]],
+) -> None:
+    """Jedna strona wynikow nie potrzebuje przyciskow przewijania stron."""
+    view = make_search_view(page_size=2)
+    assert view._pagination.isHidden()
+
+    view.query_edit.setText(QUERY)
+    view.run_search()
+    qtbot.waitUntil(lambda: bool(result_cards(view)), timeout=TIMEOUT_MS)  # type: ignore[attr-defined]
+
+    # Piec dokumentow po dwa na strone daje trzy strony, wiec wiersz jest potrzebny.
+    assert not view._pagination.isHidden()
+
+    view._page_size = 100
+    view.run_search()
+    qtbot.waitUntil(lambda: view._pagination.isHidden(), timeout=TIMEOUT_MS)  # type: ignore[attr-defined]
+
+
+@pytest.mark.gui
 def test_clear_filters_resets_every_field(make_search_view: Callable[..., SearchView]) -> None:
     """clear_filters czysci listy, sciezke, daty i pole OCR."""
     view = make_search_view()
@@ -366,6 +414,56 @@ def test_score_role_thresholds() -> None:
     assert score_role(0.9) == "score-high"
     assert score_role(0.5) == "score-mid"
     assert score_role(0.1) == "score-low"
+
+
+@pytest.mark.gui
+def test_karta_wyniku_otwiera_dokument_z_klawiatury(qtbot: object, gui_palette: Palette) -> None:
+    """Karta przyjmuje fokus, a Enter na niej otwiera dokument."""
+    hit = _sample_hit()
+    card = ResultCard(hit, gui_palette)
+    qtbot.addWidget(card)  # type: ignore[attr-defined]
+    opened: list[object] = []
+    card.open_document.connect(opened.append)
+
+    assert card.focusPolicy() == Qt.FocusPolicy.StrongFocus
+    for key in (Qt.Key.Key_Return, Qt.Key.Key_Space):
+        card.keyPressEvent(QKeyEvent(QEvent.Type.KeyPress, key, Qt.KeyboardModifier.NoModifier))
+
+    assert opened == [hit, hit]
+
+
+@pytest.mark.gui
+def test_dwuklik_w_karte_otwiera_dokument(qtbot: object, gui_palette: Palette) -> None:
+    """Caly prostokat karty wyglada na klikalny, wiec musi reagowac na dwuklik."""
+    hit = _sample_hit()
+    card = ResultCard(hit, gui_palette)
+    qtbot.addWidget(card)  # type: ignore[attr-defined]
+    opened: list[object] = []
+    card.open_document.connect(opened.append)
+
+    qtbot.mouseDClick(card, Qt.MouseButton.LeftButton)  # type: ignore[attr-defined]
+
+    assert opened == [hit]
+
+
+@pytest.mark.gui
+def test_plakietki_niosa_krotki_napis_i_pelne_zdanie_w_podpowiedzi(
+    qtbot: object, gui_palette: Palette
+) -> None:
+    """Data i sila dopasowania musza byc krotkie, zeby nie zaslaniac fragmentu."""
+    card = ResultCard(_sample_hit(), gui_palette)
+    qtbot.addWidget(card)  # type: ignore[attr-defined]
+    badges = {
+        str(label.property("badgeRole")): label
+        for label in card.findChildren(QLabel)
+        if label.objectName() == "Badge"
+    }
+
+    assert badges["date"].text() == "2024-05-17"
+    assert badges["date"].toolTip() == i18n.BADGE_MODIFIED_TOOLTIP
+    assert badges["score-high"].text() == i18n.RESULT_SCORE_SHORT.format(value="75%")
+    assert badges["score-high"].toolTip() == i18n.RESULT_SCORE_TOOLTIP
+    assert badges["author"].text() == "Kowalski Jan"
 
 
 @pytest.mark.gui

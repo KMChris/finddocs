@@ -205,6 +205,51 @@ def test_real_job_finishes_and_releases_buttons(
 
 
 @pytest.mark.gui
+def test_statystyki_przed_startem_nie_pokazuja_zer_tam_gdzie_nie_ma_licznika(
+    indexing_view: IndexingView,
+) -> None:
+    """Czas, polaczenie i miejsce tymczasowe nie sa licznikami, wiec nie sa zerami."""
+    labels = indexing_view._stat_labels
+
+    assert labels["discovered"].text() == "0"
+    assert labels["processed"].text() == "0"
+    assert labels["elapsed"].text() == i18n.format_duration(0)
+    assert labels["connection"].text() == i18n.STAT_NONE
+    assert labels["temp"].text() == i18n.format_bytes(0)
+
+
+@pytest.mark.gui
+def test_podpowiedz_postepu_jest_ukryta_przed_uruchomieniem(
+    indexing_view: IndexingView,
+) -> None:
+    """Karta etapu nie moze opisywac postepu zadania, ktorego jeszcze nie ma."""
+    assert indexing_view.progress_hint.isHidden()
+    assert indexing_view.current_file_label.isHidden()
+
+    indexing_view._on_progress(_snapshot())
+
+    assert not indexing_view.progress_hint.isHidden()
+    assert not indexing_view.current_file_label.isHidden()
+
+
+@pytest.mark.gui
+def test_nazwy_zakladek_niosa_liczbe_wierszy(
+    qtbot: object, indexed_gui_context: AppContext, corpus_stats: dict[str, int]
+) -> None:
+    """Bez liczby w nazwie trzeba otworzyc zakladke, zeby sprawdzic, czy jest pusta."""
+    view = IndexingView(indexed_gui_context)
+    qtbot.addWidget(view)  # type: ignore[attr-defined]
+
+    view.refresh_tables()
+
+    skipped = i18n.INDEXING_TAB_COUNT.format(
+        name=i18n.INDEXING_TAB_SKIPPED, count=corpus_stats["niewyszukiwalne"]
+    )
+    assert view._tabs.tabText(1) == skipped
+    assert view._tabs.tabText(0).startswith(i18n.INDEXING_TAB_ERRORS)
+
+
+@pytest.mark.gui
 def test_progress_snapshot_updates_labels(indexing_view: IndexingView) -> None:
     """Migawka postepu aktualizuje etap, pasek i wszystkie etykiety statystyk."""
     indexing_view._on_progress(_snapshot())
