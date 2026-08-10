@@ -1,13 +1,18 @@
-"""Ekran raportu pokrycia indeksu."""
+"""Ekran raportu pokrycia.
+
+Ekran odpowiada na jedno pytanie: czy da sie wyszukac wszystko, co zostalo
+wykryte. Odpowiedz jest w banerze na gorze, kolorem: zielony gdy zbior jest
+kompletny, pomaranczowy gdy nie. Liczby sa nizej, dla osoby, ktora chce
+wiedziec dokladnie, czego brakuje.
+"""
 
 from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QFileDialog,
-    QGridLayout,
     QGroupBox,
     QHBoxLayout,
     QLabel,
@@ -22,7 +27,9 @@ from finddocs.gui import i18n
 from finddocs.gui.context import AppContext
 from finddocs.gui.dialogs import show_error, show_info
 from finddocs.gui.tables import configure_columns, format_stamp
-from finddocs.gui.theme import accent_icon, theme_icon
+from finddocs.gui.theme import SPACE_SM, accent_icon, theme_icon
+from finddocs.gui.widgets.page import Banner, PageHeader, page_layout
+from finddocs.gui.widgets.stat_grid import StatGrid
 from finddocs.gui.workers import CallableTask, thread_pool
 from finddocs.logging_setup import get_logger
 from finddocs.types import CoverageReport
@@ -30,6 +37,61 @@ from finddocs.types import CoverageReport
 log = get_logger(__name__)
 
 NON_SEARCHABLE_LIMIT = 2000
+
+#: Pary (klucz, podpis) siatki podsumowania. Struktura jest stala, wiec
+#: odswiezenie raportu podmienia same wartosci.
+SUMMARY_ENTRIES: tuple[tuple[str, str], ...] = (
+    ("discovered", "Wykryte pliki"),
+    ("indexed", "Zaindeksowane"),
+    ("partial", "Zaindeksowane częściowo"),
+    ("requiring_ocr", "Wymagające OCR"),
+    ("ocr_succeeded", "OCR udany"),
+    ("ocr_failed", "OCR nieudany"),
+    ("skipped", "Pominięte"),
+    ("unsupported", "Nieobsługiwane"),
+    ("corrupted", "Uszkodzone"),
+    ("password_protected", "Zabezpieczone hasłem"),
+    ("empty", "Bez treści"),
+    ("download_errors", "Błędy pobierania"),
+    ("other_errors", "Inne błędy"),
+    ("total_chunks", "Fragmenty"),
+    ("total_vectors", "Wektory"),
+    ("index_size", "Rozmiar indeksu"),
+    ("schema_version", "Wersja schematu"),
+    ("app_version", "Wersja aplikacji"),
+    ("model_key", "Model embeddingów"),
+    ("model_dimension", "Wymiar wektora"),
+    ("last_scan", "Ostatnie skanowanie"),
+    ("last_full_index", "Ostatnie pełne indeksowanie"),
+)
+
+
+def summary_values(report: CoverageReport) -> dict[str, str]:
+    """Wartosci siatki podsumowania odczytane z raportu."""
+    return {
+        "discovered": str(report.discovered),
+        "indexed": str(report.indexed),
+        "partial": str(report.partial),
+        "requiring_ocr": str(report.requiring_ocr),
+        "ocr_succeeded": str(report.ocr_succeeded),
+        "ocr_failed": str(report.ocr_failed),
+        "skipped": str(report.skipped),
+        "unsupported": str(report.unsupported),
+        "corrupted": str(report.corrupted),
+        "password_protected": str(report.password_protected),
+        "empty": str(report.empty),
+        "download_errors": str(report.download_errors),
+        "other_errors": str(report.other_errors),
+        "total_chunks": str(report.total_chunks),
+        "total_vectors": str(report.total_vectors),
+        "index_size": i18n.format_bytes(report.index_size_bytes),
+        "schema_version": str(report.schema_version),
+        "app_version": str(report.app_version),
+        "model_key": report.model_key or i18n.STAT_NONE,
+        "model_dimension": str(report.model_dimension or i18n.STAT_NONE),
+        "last_scan": format_stamp(str(report.last_scan_at or "")) or i18n.STAT_NONE,
+        "last_full_index": format_stamp(str(report.last_full_index_at or "")) or i18n.STAT_NONE,
+    }
 
 
 class ReportView(QWidget):
@@ -42,43 +104,44 @@ class ReportView(QWidget):
         self.context = context
         self._report: CoverageReport | None = None
 
-        root = QVBoxLayout(self)
-        root.setContentsMargins(24, 20, 24, 16)
-        root.setSpacing(12)
+        root = page_layout(self)
 
-        title = QLabel(i18n.REPORT_TITLE)
-        title.setObjectName("PageTitle")
-        root.addWidget(title)
+        self.header = PageHeader(i18n.REPORT_TITLE)
+        root.addWidget(self.header)
 
         buttons = QHBoxLayout()
-        buttons.setSpacing(8)
+        buttons.setSpacing(SPACE_SM)
         refresh = QPushButton(i18n.REPORT_REFRESH)
         refresh.setObjectName("Primary")
         refresh.setIcon(accent_icon("refresh"))
         refresh.clicked.connect(self.refresh)
         buttons.addWidget(refresh)
 
-        export_json = QPushButton(i18n.REPORT_EXPORT_JSON)
-        export_json.setIcon(theme_icon("export"))
-        export_json.clicked.connect(lambda: self.export("json"))
-        buttons.addWidget(export_json)
+        self.export_json_button = QPushButton(i18n.REPORT_EXPORT_JSON)
+        self.export_json_button.setIcon(theme_icon("export"))
+        self.export_json_button.clicked.connect(lambda: self.export("json"))
+        buttons.addWidget(self.export_json_button)
 
-        export_csv = QPushButton(i18n.REPORT_EXPORT_CSV)
-        export_csv.setIcon(theme_icon("export"))
-        export_csv.clicked.connect(lambda: self.export("csv"))
-        buttons.addWidget(export_csv)
+        self.export_csv_button = QPushButton(i18n.REPORT_EXPORT_CSV)
+        self.export_csv_button.setIcon(theme_icon("export"))
+        self.export_csv_button.clicked.connect(lambda: self.export("csv"))
+        buttons.addWidget(self.export_csv_button)
         buttons.addStretch(1)
         root.addLayout(buttons)
 
-        self.completeness = QLabel("")
-        self.completeness.setWordWrap(True)
+        # Eksport bez policzonego raportu konczyl sie oknem z pouczeniem.
+        # Wylaczony przycisk mowi to samo, zanim ktos go kliknie.
+        self._set_export_enabled(False)
+
+        self.completeness = Banner()
+        self.completeness.show_message(i18n.REPORT_NEEDS_REFRESH, "info")
         root.addWidget(self.completeness)
 
-        self.summary_box = QGroupBox("Podsumowanie")
-        self.summary_grid = QGridLayout(self.summary_box)
-        self.summary_grid.setHorizontalSpacing(32)
-        # Podpis przylega do swojej wartosci, a grupy rozdziela pusty wiersz.
-        self.summary_grid.setVerticalSpacing(2)
+        self.summary_box = QGroupBox(i18n.REPORT_SUMMARY)
+        summary_layout = QVBoxLayout(self.summary_box)
+        self.summary = StatGrid(SUMMARY_ENTRIES, columns=3)
+        self.summary.set_values({key: i18n.STAT_NONE for key, _ in SUMMARY_ENTRIES})
+        summary_layout.addWidget(self.summary)
         root.addWidget(self.summary_box)
 
         self.table = QTableWidget(0, 5)
@@ -116,66 +179,34 @@ class ReportView(QWidget):
         if not isinstance(report, CoverageReport):
             return
         self._report = report
-        self._render_summary(report)
+        self._set_export_enabled(True)
+        self.summary.set_values(summary_values(report))
+        self._render_completeness(report)
         self._render_table(report)
         self.status_message.emit("Raport pokrycia zaktualizowany.")
 
-    def _render_summary(self, report: CoverageReport) -> None:
-        while self.summary_grid.count():
-            item = self.summary_grid.takeAt(0)
-            widget = item.widget() if item is not None else None
-            if widget is not None:
-                widget.deleteLater()
+    def _set_export_enabled(self, enabled: bool) -> None:
+        self.export_json_button.setEnabled(enabled)
+        self.export_csv_button.setEnabled(enabled)
 
-        entries = [
-            ("Wykryte pliki", report.discovered),
-            ("Zaindeksowane", report.indexed),
-            ("Zaindeksowane częściowo", report.partial),
-            ("Wymagające OCR", report.requiring_ocr),
-            ("OCR udany", report.ocr_succeeded),
-            ("OCR nieudany", report.ocr_failed),
-            ("Pominięte", report.skipped),
-            ("Nieobsługiwane", report.unsupported),
-            ("Uszkodzone", report.corrupted),
-            ("Zabezpieczone hasłem", report.password_protected),
-            ("Bez treści", report.empty),
-            ("Błędy pobierania", report.download_errors),
-            ("Inne błędy", report.other_errors),
-            ("Fragmenty", report.total_chunks),
-            ("Wektory", report.total_vectors),
-            ("Rozmiar indeksu", i18n.format_bytes(report.index_size_bytes)),
-            ("Wersja schematu", report.schema_version),
-            ("Wersja aplikacji", report.app_version),
-            ("Model embeddingów", report.model_key or "brak"),
-            ("Wymiar wektora", report.model_dimension or "brak"),
-            ("Ostatnie skanowanie", format_stamp(str(report.last_scan_at or "")) or "brak"),
-            (
-                "Ostatnie pełne indeksowanie",
-                format_stamp(str(report.last_full_index_at or "")) or "brak",
-            ),
-        ]
-        for position, (label_text, value) in enumerate(entries):
-            column = position % 3
-            row = position // 3
-            caption = QLabel(str(label_text))
-            caption.setObjectName("Muted")
-            display = QLabel(str(value))
-            display.setObjectName("StatValue")
-            display.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-            self.summary_grid.addWidget(caption, row * 3, column)
-            self.summary_grid.addWidget(display, row * 3 + 1, column)
-        rows = -(-len(entries) // 3)
-        for row in range(rows - 1):
-            self.summary_grid.setRowMinimumHeight(row * 3 + 2, 12)
-
+    def _render_completeness(self, report: CoverageReport) -> None:
+        """Odpowiedz na pytanie o kompletnosc, wyrazona kolorem banera."""
         if report.non_searchable:
-            self.completeness.setText(
-                i18n.REPORT_INCOMPLETE.format(count=len(report.non_searchable))
+            self.completeness.show_message(
+                i18n.REPORT_INCOMPLETE.format(
+                    count=i18n.documents_count(len(report.non_searchable))
+                ),
+                "warning",
+            )
+            self.header.set_meta(
+                i18n.documents_count(len(report.non_searchable)) + " bez możliwości wyszukania"
             )
         elif report.discovered:
-            self.completeness.setText(i18n.REPORT_COMPLETE)
+            self.completeness.show_message(i18n.REPORT_COMPLETE, "success")
+            self.header.set_meta(i18n.documents_count(report.indexed))
         else:
-            self.completeness.setText("Indeks jest pusty.")
+            self.completeness.show_message(i18n.REPORT_EMPTY, "info")
+            self.header.set_meta("")
 
     def _render_table(self, report: CoverageReport) -> None:
         self.table.setRowCount(0)
@@ -227,4 +258,4 @@ class ReportView(QWidget):
         thread_pool().start(task)
 
 
-__all__ = ["NON_SEARCHABLE_LIMIT", "ReportView"]
+__all__ = ["NON_SEARCHABLE_LIMIT", "SUMMARY_ENTRIES", "ReportView", "summary_values"]

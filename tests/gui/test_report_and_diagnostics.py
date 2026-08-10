@@ -40,17 +40,30 @@ def diagnostics_view(qtbot: object, gui_context: AppContext) -> DiagnosticsView:
 # --- raport pokrycia ------------------------------------------------------------
 
 
+def _wait_for_report(qtbot: object, view: ReportView) -> None:
+    """Czeka na policzony raport.
+
+    Baner kompletnosci ma tresc od poczatku (prosbe o odswiezenie), wiec sam
+    niepusty napis nie oznacza, ze raport jest juz gotowy.
+    """
+    qtbot.waitUntil(lambda: view._report is not None, timeout=TIMEOUT_MS)  # type: ignore[attr-defined]
+
+
 @pytest.mark.gui
 def test_report_shows_summary_after_refresh(qtbot: object, report_view: ReportView) -> None:
     """Odswiezenie wypelnia podsumowanie i informacje o kompletnosci zbioru."""
     report_view.refresh()
 
-    qtbot.waitUntil(lambda: bool(report_view.completeness.text()), timeout=TIMEOUT_MS)  # type: ignore[attr-defined]
+    _wait_for_report(qtbot, report_view)
     labels = _summary_labels(report_view)
     assert "Wykryte pliki" in labels
     assert "Zaindeksowane" in labels
     assert "Rozmiar indeksu" in labels
     assert "Wersja aplikacji" in labels
+    # Siatka podsumowania trzyma wartosci pod kluczami, wiec test nie musi
+    # zgadywac, w ktorym miejscu ukladu lezy dana liczba.
+    assert int(report_view.summary.value("discovered")) > 0
+    assert report_view.summary.value("app_version")
 
 
 @pytest.mark.gui
@@ -60,9 +73,12 @@ def test_report_reports_incomplete_set(
     """Gdy sa dokumenty niewyszukiwalne, komunikat mowi wprost o niekompletnosci."""
     report_view.refresh()
 
-    qtbot.waitUntil(lambda: bool(report_view.completeness.text()), timeout=TIMEOUT_MS)  # type: ignore[attr-defined]
-    expected = i18n.REPORT_INCOMPLETE.format(count=corpus_stats["niewyszukiwalne"])
+    _wait_for_report(qtbot, report_view)
+    expected = i18n.REPORT_INCOMPLETE.format(
+        count=i18n.documents_count(corpus_stats["niewyszukiwalne"])
+    )
     assert report_view.completeness.text() == expected
+    assert report_view.completeness.property("bannerRole") == "warning"
     assert i18n.REPORT_COMPLETE not in report_view.completeness.text()
 
     assert report_view.table.rowCount() == corpus_stats["niewyszukiwalne"]
@@ -78,8 +94,9 @@ def test_report_on_empty_index(qtbot: object, gui_context: AppContext) -> None:
 
     view.refresh()
 
-    qtbot.waitUntil(lambda: bool(view.completeness.text()), timeout=TIMEOUT_MS)  # type: ignore[attr-defined]
-    assert view.completeness.text() == "Indeks jest pusty."
+    _wait_for_report(qtbot, view)
+    assert view.completeness.text() == i18n.REPORT_EMPTY
+    assert view.completeness.property("bannerRole") == "info"
     assert view.table.rowCount() == 0
 
 
@@ -90,6 +107,10 @@ def test_report_export_without_data_asks_for_refresh(
     """Eksport przed odswiezeniem konczy sie podpowiedzia, a nie zapisem pliku."""
     view = ReportView(gui_context)
     qtbot.addWidget(view)  # type: ignore[attr-defined]
+
+    # Przyciski eksportu sa wylaczone, dopoki nie ma czego eksportowac.
+    assert not view.export_json_button.isEnabled()
+    assert not view.export_csv_button.isEnabled()
 
     view.export("csv")
 

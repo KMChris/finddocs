@@ -109,10 +109,9 @@ def fake_runner(monkeypatch: pytest.MonkeyPatch, gui_context_with_source: AppCon
 def test_buttons_are_idle_before_start(indexing_view: IndexingView) -> None:
     """Przed uruchomieniem mozna zaczac skanowanie, ale nie ma czego wstrzymywac."""
     assert indexing_view.start_button.isEnabled()
-    assert indexing_view.rescan_button.isEnabled()
+    assert indexing_view.start_button.text() == i18n.INDEXING_SCAN
     assert indexing_view.full_button.isEnabled()
     assert not indexing_view.pause_button.isEnabled()
-    assert not indexing_view.resume_button.isEnabled()
     assert not indexing_view.cancel_button.isEnabled()
 
 
@@ -125,29 +124,30 @@ def test_buttons_change_state_during_job(
 
     assert [options.kind for options in fake_runner.submitted] == [JobKind.RESCAN]
     assert not indexing_view.start_button.isEnabled()
-    assert not indexing_view.rescan_button.isEnabled()
     assert not indexing_view.full_button.isEnabled()
     assert indexing_view.pause_button.isEnabled()
-    assert not indexing_view.resume_button.isEnabled()
+    assert indexing_view.pause_button.text() == i18n.INDEXING_PAUSE
     assert indexing_view.cancel_button.isEnabled()
 
+    # Jeden przycisk obsluguje wstrzymanie i wznowienie, wiec po klikniecie
+    # zmienia napis na przeciwna akcje.
     indexing_view.pause_button.click()
 
     assert fake_runner.is_paused
-    assert not indexing_view.pause_button.isEnabled()
-    assert indexing_view.resume_button.isEnabled()
+    assert indexing_view.pause_button.isEnabled()
+    assert indexing_view.pause_button.text() == i18n.INDEXING_RESUME
 
-    indexing_view.resume_button.click()
+    indexing_view.pause_button.click()
 
     assert not fake_runner.is_paused
-    assert indexing_view.pause_button.isEnabled()
-    assert not indexing_view.resume_button.isEnabled()
+    assert indexing_view.pause_button.text() == i18n.INDEXING_PAUSE
 
     indexing_view.cancel_button.click()
 
     assert not fake_runner.is_running
     assert indexing_view.start_button.isEnabled()
     assert not indexing_view.cancel_button.isEnabled()
+    assert not indexing_view.pause_button.isEnabled()
 
 
 @pytest.mark.gui
@@ -195,7 +195,6 @@ def test_real_job_finishes_and_releases_buttons(
 
     assert indexing_view.start_button.isEnabled()
     assert not indexing_view.pause_button.isEnabled()
-    assert not indexing_view.resume_button.isEnabled()
     assert not indexing_view.cancel_button.isEnabled()
     assert indexing_view.progress_bar.value() == 100
     assert int(indexing_view._stat_labels["processed"].text()) > 0

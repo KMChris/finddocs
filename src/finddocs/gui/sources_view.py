@@ -35,13 +35,22 @@ from finddocs.gui.context import AppContext
 from finddocs.gui.dialogs import ask_yes_no, show_error, show_info, show_warning
 from finddocs.gui.model_dialog import ModelSettingsDialog
 from finddocs.gui.tables import configure_columns
-from finddocs.gui.theme import theme_icon
+from finddocs.gui.theme import SPACE_LG, SPACE_SM, theme_icon
+from finddocs.gui.widgets.page import Banner, PageHeader, page_layout
 from finddocs.gui.workers import CallableTask, thread_pool
 from finddocs.logging_setup import get_logger
 from finddocs.providers.model_manifest import describe_models, sync_embedding_settings
 from finddocs.types import SourceKind
 
 log = get_logger(__name__)
+
+#: Rola danych wiersza, w ktorej trzymamy identyfikator zrodla.
+SOURCE_ID_ROLE = Qt.ItemDataRole.UserRole
+
+#: Widoczna wysokosc listy zrodel: od dwoch do szesciu wierszy. Ponizej tego
+#: zakresu tabela wyglada na uszkodzona, powyzej jest pustym prostokatem.
+TABLE_MIN_HEIGHT = 120
+TABLE_MAX_HEIGHT = 260
 
 
 class SharePointDialog(QDialog):
@@ -155,20 +164,21 @@ class SourcesView(QWidget):
         super().__init__()
         self.context = context
 
-        root = QVBoxLayout(self)
-        root.setContentsMargins(24, 20, 24, 16)
-        root.setSpacing(12)
+        root = page_layout(self)
 
-        title = QLabel(i18n.NAV_SOURCES)
-        title.setObjectName("PageTitle")
-        root.addWidget(title)
+        self.header = PageHeader(i18n.NAV_SOURCES)
+        root.addWidget(self.header)
 
-        root.addWidget(self._build_sources_box(), stretch=1)
+        # Ekran ustawien czyta sie od gory. Rozciagniecie listy zrodel na cala
+        # wysokosc dawalo pusta tabele na kilkaset pikseli, wiec karty maja
+        # wysokosc wynikajaca z tresci, a wolne miejsce zostaje na dole.
+        root.addWidget(self._build_sources_box())
         row = QHBoxLayout()
-        row.setSpacing(16)
+        row.setSpacing(SPACE_LG)
         row.addWidget(self._build_storage_box(), stretch=1)
         row.addWidget(self._build_model_box(), stretch=1)
         root.addLayout(row)
+        root.addStretch(1)
 
         self.refresh()
 
@@ -177,56 +187,78 @@ class SourcesView(QWidget):
     def _build_sources_box(self) -> QWidget:
         box = QGroupBox(i18n.SOURCES_TITLE)
         layout = QVBoxLayout(box)
-        layout.setSpacing(10)
+        layout.setSpacing(SPACE_SM + 2)
 
-        self.table = QTableWidget(0, 5)
-        self.table.setHorizontalHeaderLabels(
-            ["Nazwa", "Rodzaj", "Lokalizacja", "Aktywne", "Identyfikator"]
-        )
+        self.empty_banner = Banner()
+        layout.addWidget(self.empty_banner)
+
+        # Identyfikator zrodla jest wartoscia techniczna. Trzymamy go w danych
+        # wiersza, a nie w osobnej kolumnie, ktora nic nie mowi uzytkownikowi.
+        self.table = QTableWidget(0, 4)
+        self.table.setHorizontalHeaderLabels(["Nazwa", "Rodzaj", "Lokalizacja", "Aktywne"])
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
         self.table.verticalHeader().setVisible(False)
+        self.table.itemSelectionChanged.connect(self._refresh_buttons)
+        self.table.setMinimumHeight(TABLE_MIN_HEIGHT)
+        self.table.setMaximumHeight(TABLE_MAX_HEIGHT)
         configure_columns(self.table, (2,))
         layout.addWidget(self.table)
 
         buttons = QHBoxLayout()
-        buttons.setSpacing(8)
+        buttons.setSpacing(SPACE_SM)
         add_local = QPushButton(i18n.SOURCES_ADD_LOCAL)
+        add_local.setObjectName("Primary")
         add_local.setIcon(theme_icon("plus"))
+        add_local.setToolTip(i18n.SOURCES_ADD_LOCAL_HINT)
         add_local.clicked.connect(self.add_local_source)
         buttons.addWidget(add_local)
 
         add_sp = QPushButton(i18n.SOURCES_ADD_SHAREPOINT)
         add_sp.setIcon(theme_icon("plus"))
+        add_sp.setToolTip(i18n.SOURCES_ADD_SHAREPOINT_HINT)
         add_sp.clicked.connect(self.add_sharepoint_source)
         buttons.addWidget(add_sp)
 
         demo = QPushButton(i18n.SOURCES_DEMO)
+        demo.setToolTip(i18n.SOURCES_DEMO_HINT)
         demo.clicked.connect(self.generate_demo)
         buttons.addWidget(demo)
 
         buttons.addStretch(1)
 
-        test = QPushButton(i18n.SOURCES_TEST)
-        test.clicked.connect(self.test_selected)
-        buttons.addWidget(test)
+        # Trzy akcje ponizej dzialaja na zaznaczonym wierszu, wiec bez zaznaczenia
+        # sa wylaczone. Wczesniej klikniecie konczylo sie oknem z pouczeniem.
+        self.test_button = QPushButton(i18n.SOURCES_TEST)
+        self.test_button.setToolTip(i18n.SOURCES_TEST_HINT)
+        self.test_button.clicked.connect(self.test_selected)
+        buttons.addWidget(self.test_button)
 
-        toggle = QPushButton(i18n.SOURCES_TOGGLE)
-        toggle.clicked.connect(self.toggle_selected)
-        buttons.addWidget(toggle)
+        self.toggle_button = QPushButton(i18n.SOURCES_TOGGLE)
+        self.toggle_button.setToolTip(i18n.SOURCES_TOGGLE_HINT)
+        self.toggle_button.clicked.connect(self.toggle_selected)
+        buttons.addWidget(self.toggle_button)
 
-        remove = QPushButton(i18n.SOURCES_REMOVE)
-        remove.setObjectName("Danger")
-        remove.setIcon(theme_icon("trash"))
-        remove.clicked.connect(self.remove_selected)
-        buttons.addWidget(remove)
+        self.remove_button = QPushButton(i18n.SOURCES_REMOVE)
+        self.remove_button.setObjectName("Danger")
+        self.remove_button.setIcon(theme_icon("trash"))
+        self.remove_button.setToolTip(i18n.SOURCES_REMOVE_HINT)
+        self.remove_button.clicked.connect(self.remove_selected)
+        buttons.addWidget(self.remove_button)
         layout.addLayout(buttons)
         return box
+
+    def _refresh_buttons(self) -> None:
+        """Akcje wymagajace zaznaczenia sa dostepne tylko wtedy, gdy jest wybor."""
+        selected = self._selected_source() is not None
+        for button in (self.test_button, self.toggle_button, self.remove_button):
+            button.setEnabled(selected)
 
     def _build_storage_box(self) -> QWidget:
         box = QGroupBox(i18n.STORAGE_TITLE)
         layout = QVBoxLayout(box)
-        layout.setSpacing(8)
+        layout.setSpacing(SPACE_SM)
 
         self.path_label = QLabel("")
         self.path_label.setWordWrap(True)
@@ -242,25 +274,26 @@ class SourcesView(QWidget):
         layout.addWidget(self.size_label)
 
         row = QHBoxLayout()
-        row.setSpacing(8)
+        row.setSpacing(SPACE_SM)
         change = QPushButton(i18n.STORAGE_CHANGE)
         change.clicked.connect(self.change_storage)
         row.addWidget(change)
-        open_button = QPushButton("Otwórz katalog")
+        open_button = QPushButton(i18n.STORAGE_OPEN)
         open_button.setIcon(theme_icon("folder"))
         open_button.clicked.connect(lambda: self.context.open_path(self.context.paths.root))
         row.addWidget(open_button)
         row.addStretch(1)
         layout.addLayout(row)
+        layout.addStretch(1)
         return box
 
     def _build_model_box(self) -> QWidget:
         box = QGroupBox(i18n.MODEL_TITLE)
         layout = QVBoxLayout(box)
-        layout.setSpacing(8)
+        layout.setSpacing(SPACE_SM)
 
         combo_row = QHBoxLayout()
-        combo_row.setSpacing(8)
+        combo_row.setSpacing(SPACE_SM)
         self.model_combo = QComboBox()
         combo_row.addWidget(self.model_combo, stretch=1)
         self.model_settings_button = QPushButton(i18n.MODEL_SETTINGS_BUTTON)
@@ -297,10 +330,17 @@ class SourcesView(QWidget):
                 "katalog lokalny" if source.kind is SourceKind.LOCAL_DIR else "SharePoint",
                 source.describe_location(),
                 "tak" if source.enabled else "nie",
-                source.source_id,
             ]
             for column, value in enumerate(values):
-                self.table.setItem(position, column, QTableWidgetItem(value))
+                item = QTableWidgetItem(value)
+                if column == 0:
+                    item.setData(SOURCE_ID_ROLE, source.source_id)
+                self.table.setItem(position, column, item)
+        if self.context.config.sources:
+            self.empty_banner.hide_message()
+        else:
+            self.empty_banner.show_message(i18n.SOURCES_EMPTY_HINT, "info")
+        self._refresh_buttons()
 
         paths = self.context.paths
         self.path_label.setText(f"{i18n.STORAGE_PATH}: {paths.root}")
@@ -341,11 +381,11 @@ class SourcesView(QWidget):
         rows = self.table.selectionModel().selectedRows() if self.table.selectionModel() else []
         if not rows:
             return None
-        item = self.table.item(rows[0].row(), 4)
+        item = self.table.item(rows[0].row(), 0)
         if item is None:
             return None
         try:
-            return self.context.config.source(item.text())
+            return self.context.config.source(str(item.data(SOURCE_ID_ROLE)))
         except Exception:
             return None
 
@@ -382,7 +422,7 @@ class SourcesView(QWidget):
     def test_selected(self) -> None:
         source = self._selected_source()
         if source is None:
-            show_info(self, "Wybierz źródło z listy.")
+            show_info(self, i18n.SOURCES_SELECT_FIRST)
             return
 
         def work() -> str:

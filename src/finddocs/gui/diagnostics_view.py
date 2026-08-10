@@ -13,7 +13,6 @@ from PySide6.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
     QTabWidget,
-    QVBoxLayout,
     QWidget,
 )
 
@@ -21,7 +20,8 @@ from finddocs.gui import i18n
 from finddocs.gui.context import AppContext
 from finddocs.gui.dialogs import show_error, show_info, show_warning
 from finddocs.gui.tables import configure_columns
-from finddocs.gui.theme import accent_icon, theme_icon
+from finddocs.gui.theme import SPACE_SM, accent_icon, theme_icon
+from finddocs.gui.widgets.page import PageHeader, page_layout
 from finddocs.gui.workers import CallableTask, thread_pool
 from finddocs.logging_setup import get_logger
 
@@ -55,13 +55,10 @@ class DiagnosticsView(QWidget):
         super().__init__()
         self.context = context
 
-        root = QVBoxLayout(self)
-        root.setContentsMargins(24, 20, 24, 16)
-        root.setSpacing(12)
+        root = page_layout(self)
 
-        title = QLabel(i18n.DIAG_TITLE)
-        title.setObjectName("PageTitle")
-        root.addWidget(title)
+        self.header = PageHeader(i18n.DIAG_TITLE)
+        root.addWidget(self.header)
 
         root.addLayout(self._build_buttons())
 
@@ -87,35 +84,46 @@ class DiagnosticsView(QWidget):
         root.addWidget(hint)
 
     def _build_buttons(self) -> QHBoxLayout:
-        row = QHBoxLayout()
-        row.setSpacing(8)
+        """Wiersz akcji: odswiezenie, konserwacja, eksport.
 
-        refresh = QPushButton("Odśwież")
+        Napisy sa krotkie, a pelne zdanie jest w podpowiedzi. Szesc przyciskow
+        z peryfrazami nie zmiescilo sie w oknie o najmniejszym dozwolonym
+        rozmiarze i Qt przycinalo im tekst.
+        """
+        row = QHBoxLayout()
+        row.setSpacing(SPACE_SM)
+
+        refresh = QPushButton(i18n.DIAG_REFRESH)
         refresh.setObjectName("Primary")
         refresh.setIcon(accent_icon("refresh"))
         refresh.clicked.connect(self.refresh)
         row.addWidget(refresh)
 
         check = QPushButton(i18n.DIAG_CHECK)
+        check.setToolTip(i18n.DIAG_CHECK_HINT)
         check.clicked.connect(self.check_consistency)
         row.addWidget(check)
 
         compact = QPushButton(i18n.DIAG_COMPACT)
+        compact.setToolTip(i18n.DIAG_COMPACT_HINT)
         compact.clicked.connect(self.compact_vectors)
         row.addWidget(compact)
 
         backup = QPushButton(i18n.DIAG_BACKUP)
         backup.setIcon(theme_icon("copy"))
+        backup.setToolTip(i18n.DIAG_BACKUP_HINT)
         backup.clicked.connect(self.backup_index)
         row.addWidget(backup)
 
         bundle = QPushButton(i18n.DIAG_EXPORT_BUNDLE)
         bundle.setIcon(theme_icon("export"))
+        bundle.setToolTip(i18n.DIAG_EXPORT_BUNDLE_HINT)
         bundle.clicked.connect(self.export_bundle)
         row.addWidget(bundle)
 
         logs = QPushButton(i18n.DIAG_OPEN_LOGS)
         logs.setIcon(theme_icon("folder"))
+        logs.setToolTip(i18n.DIAG_OPEN_LOGS_HINT)
         logs.clicked.connect(lambda: self.context.open_path(self.context.paths.logs_dir))
         row.addWidget(logs)
 

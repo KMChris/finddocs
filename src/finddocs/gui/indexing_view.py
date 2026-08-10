@@ -1,11 +1,20 @@
-"""Ekran indeksowania: postep, sterowanie, bledy i pliki pominiete."""
+"""Ekran indeksowania: postep, sterowanie, bledy i pliki pominiete.
+
+Wiersz sterowania ma tyle przyciskow, ile jest roznych operacji:
+
+* skanowanie zrodel (dawne ,,Start'' i ,,Skanuj ponownie'' zlecaly to samo
+  zadanie, wiec obok siebie sugerowaly dwie rozne operacje);
+* wstrzymanie albo wznowienie, czyli jeden przycisk przelaczany, bo w danej
+  chwili sensowna jest tylko jedna z tych dwoch akcji;
+* anulowanie;
+* pelne przeindeksowanie, jedyna operacja liczaca wszystko od nowa.
+"""
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QFileDialog,
-    QGridLayout,
     QGroupBox,
     QHBoxLayout,
     QLabel,
@@ -22,7 +31,9 @@ from finddocs.gui import i18n
 from finddocs.gui.context import AppContext
 from finddocs.gui.dialogs import ask_yes_no, show_error, show_info, show_warning
 from finddocs.gui.tables import configure_columns, format_stamp
-from finddocs.gui.theme import accent_icon, theme_icon
+from finddocs.gui.theme import SPACE_SM, accent_icon, theme_icon
+from finddocs.gui.widgets.page import PageHeader, page_layout
+from finddocs.gui.widgets.stat_grid import StatGrid
 from finddocs.gui.workers import CallableTask, ProgressBridge, thread_pool
 from finddocs.jobs.indexing_job import JobOptions
 from finddocs.logging_setup import get_logger
@@ -31,6 +42,34 @@ from finddocs.types import DocumentStatus, JobKind, JobState, ProgressSnapshot
 log = get_logger(__name__)
 
 ERROR_TABLE_LIMIT = 500
+
+#: Pary (klucz, podpis) siatki statystyk. Kolejnosc decyduje o ukladzie.
+STAT_ENTRIES: tuple[tuple[str, str], ...] = (
+    ("discovered", i18n.STAT_DISCOVERED),
+    ("processed", i18n.STAT_PROCESSED),
+    ("unchanged", i18n.STAT_UNCHANGED),
+    ("skipped", i18n.STAT_SKIPPED),
+    ("failed", i18n.STAT_FAILED),
+    ("deleted", i18n.STAT_DELETED),
+    ("ocr_documents", i18n.STAT_OCR),
+    ("ocr_pages", i18n.STAT_OCR_PAGES),
+    ("elapsed", i18n.STAT_ELAPSED),
+    ("connection", i18n.STAT_CONNECTION),
+    ("temp", i18n.STAT_TEMP),
+)
+
+
+def idle_stats() -> dict[str, str]:
+    """Wartosci statystyk przed uruchomieniem zadania.
+
+    Liczniki startuja od zera, ale czas trwania, stan polaczenia i zajete
+    miejsce nie sa licznikami. ,,Polaczenie: 0'' nic nie znaczy.
+    """
+    values: dict[str, str] = {key: "0" for key, _ in STAT_ENTRIES}
+    values["elapsed"] = i18n.format_duration(0)
+    values["connection"] = i18n.STAT_NONE
+    values["temp"] = i18n.format_bytes(0)
+    return values
 
 
 class IndexingView(QWidget):
@@ -47,13 +86,10 @@ class IndexingView(QWidget):
         self.bridge.completed.connect(self._on_completed)
         self._last_state: JobState | None = None
 
-        root = QVBoxLayout(self)
-        root.setContentsMargins(24, 20, 24, 16)
-        root.setSpacing(12)
+        root = page_layout(self)
 
-        title = QLabel(i18n.INDEXING_TITLE)
-        title.setObjectName("PageTitle")
-        root.addWidget(title)
+        self.header = PageHeader(i18n.INDEXING_TITLE, meta=i18n.INDEXING_IDLE)
+        root.addWidget(self.header)
 
         root.addLayout(self._build_buttons())
         root.addWidget(self._build_progress())
@@ -66,36 +102,31 @@ class IndexingView(QWidget):
 
     def _build_buttons(self) -> QHBoxLayout:
         row = QHBoxLayout()
-        row.setSpacing(8)
+        row.setSpacing(SPACE_SM)
 
-        self.start_button = QPushButton(i18n.INDEXING_START)
+        self.start_button = QPushButton(i18n.INDEXING_SCAN)
         self.start_button.setObjectName("Primary")
         self.start_button.setIcon(accent_icon("play"))
+        self.start_button.setToolTip(i18n.INDEXING_SCAN_HINT)
         self.start_button.clicked.connect(self.start_scan)
         row.addWidget(self.start_button)
 
+        # Jeden przycisk na wstrzymanie i wznowienie: w danej chwili tylko jedna
+        # z tych akcji ma sens, wiec druga bylaby wylacznie szarym napisem.
         self.pause_button = QPushButton(i18n.INDEXING_PAUSE)
         self.pause_button.setIcon(theme_icon("pause"))
-        self.pause_button.clicked.connect(self.pause_job)
+        self.pause_button.clicked.connect(self.toggle_pause)
         row.addWidget(self.pause_button)
-
-        self.resume_button = QPushButton(i18n.INDEXING_RESUME)
-        self.resume_button.setIcon(theme_icon("play"))
-        self.resume_button.clicked.connect(self.resume_job)
-        row.addWidget(self.resume_button)
 
         self.cancel_button = QPushButton(i18n.INDEXING_CANCEL)
         self.cancel_button.setIcon(theme_icon("cross"))
+        self.cancel_button.setToolTip(i18n.INDEXING_CANCEL_HINT)
         self.cancel_button.clicked.connect(self.cancel_job)
         row.addWidget(self.cancel_button)
 
-        self.rescan_button = QPushButton(i18n.INDEXING_RESCAN)
-        self.rescan_button.setIcon(theme_icon("refresh"))
-        self.rescan_button.clicked.connect(self.start_scan)
-        row.addWidget(self.rescan_button)
-
         self.full_button = QPushButton(i18n.INDEXING_FULL)
         self.full_button.setIcon(theme_icon("database"))
+        self.full_button.setToolTip(i18n.INDEXING_FULL_HINT)
         self.full_button.clicked.connect(self.start_full_reindex)
         row.addWidget(self.full_button)
 
@@ -110,9 +141,9 @@ class IndexingView(QWidget):
     def _build_progress(self) -> QWidget:
         box = QGroupBox(i18n.STAGE_LABEL)
         layout = QVBoxLayout(box)
-        layout.setSpacing(8)
+        layout.setSpacing(SPACE_SM)
 
-        self.stage_label = QLabel("Gotowe do uruchomienia")
+        self.stage_label = QLabel(i18n.INDEXING_IDLE)
         layout.addWidget(self.stage_label)
 
         self.progress_bar = QProgressBar()
@@ -121,51 +152,28 @@ class IndexingView(QWidget):
         self.progress_bar.setFormat("%p%")
         layout.addWidget(self.progress_bar)
 
-        self.progress_hint = QLabel(i18n.PROGRESS_UNKNOWN)
-        self.progress_hint.setObjectName("Muted")
+        # Podpowiedz o postepie i nazwa pliku maja sens tylko w trakcie pracy.
+        # Przed uruchomieniem sa ukryte, zeby karta nie klamala o stanie zadania.
+        self.progress_hint = QLabel("")
+        self.progress_hint.setObjectName("Hint")
+        self.progress_hint.setVisible(False)
         layout.addWidget(self.progress_hint)
 
         self.current_file_label = QLabel("")
-        self.current_file_label.setObjectName("Muted")
+        self.current_file_label.setObjectName("Hint")
         self.current_file_label.setWordWrap(True)
+        self.current_file_label.setVisible(False)
         layout.addWidget(self.current_file_label)
         return box
 
     def _build_stats(self) -> QWidget:
         box = QGroupBox("Statystyki")
-        grid = QGridLayout(box)
-        grid.setHorizontalSpacing(32)
-        # Podpis przylega do swojej wartosci, a grupy rozdziela pusty wiersz.
-        grid.setVerticalSpacing(2)
-
-        self._stat_labels: dict[str, QLabel] = {}
-        entries = [
-            ("discovered", i18n.STAT_DISCOVERED),
-            ("processed", i18n.STAT_PROCESSED),
-            ("unchanged", i18n.STAT_UNCHANGED),
-            ("skipped", i18n.STAT_SKIPPED),
-            ("failed", i18n.STAT_FAILED),
-            ("deleted", i18n.STAT_DELETED),
-            ("ocr_documents", i18n.STAT_OCR),
-            ("ocr_pages", i18n.STAT_OCR_PAGES),
-            ("elapsed", i18n.STAT_ELAPSED),
-            ("connection", i18n.STAT_CONNECTION),
-            ("temp", i18n.STAT_TEMP),
-        ]
-        for index, (key, label_text) in enumerate(entries):
-            column = index % 4
-            row = index // 4
-            caption = QLabel(label_text)
-            caption.setObjectName("Muted")
-            value = QLabel("0")
-            value.setObjectName("StatValue")
-            value.setAlignment(Qt.AlignmentFlag.AlignLeft)
-            grid.addWidget(caption, row * 3, column)
-            grid.addWidget(value, row * 3 + 1, column)
-            self._stat_labels[key] = value
-        rows = -(-len(entries) // 4)
-        for row in range(rows - 1):
-            grid.setRowMinimumHeight(row * 3 + 2, 12)
+        layout = QVBoxLayout(box)
+        self.stats = StatGrid(STAT_ENTRIES, columns=4)
+        self.stats.set_values(idle_stats())
+        # Testy i kod widoku siegaja po etykiety wartosci po kluczu.
+        self._stat_labels = self.stats.labels
+        layout.addWidget(self.stats)
         return box
 
     def _build_tables(self) -> QWidget:
@@ -176,8 +184,8 @@ class IndexingView(QWidget):
         self.skipped_table = self._make_table(
             ["Plik", "Lokalizacja", "Status", "Powód"], stretch=(0, 1, 3)
         )
-        tabs.addTab(self.error_table, i18n.INDEXING_SHOW_ERRORS)
-        tabs.addTab(self.skipped_table, i18n.INDEXING_SHOW_SKIPPED)
+        tabs.addTab(self.error_table, i18n.INDEXING_TAB_ERRORS)
+        tabs.addTab(self.skipped_table, i18n.INDEXING_TAB_SKIPPED)
         tabs.currentChanged.connect(lambda _index: self.refresh_tables())
         self._tabs = tabs
         return tabs
@@ -220,14 +228,14 @@ class IndexingView(QWidget):
         self.status_message.emit("Uruchomiono indeksowanie.")
         self._refresh_buttons()
 
-    def pause_job(self) -> None:
-        if self.context.require_runner().pause():
+    def toggle_pause(self) -> None:
+        """Wstrzymuje zadanie, a gdy jest wstrzymane, wznawia je."""
+        runner = self.context.require_runner()
+        if runner.is_paused:
+            if runner.resume():
+                self.status_message.emit("Indeksowanie wznowione.")
+        elif runner.pause():
             self.status_message.emit("Indeksowanie wstrzymane.")
-        self._refresh_buttons()
-
-    def resume_job(self) -> None:
-        if self.context.require_runner().resume():
-            self.status_message.emit("Indeksowanie wznowione.")
         self._refresh_buttons()
 
     def cancel_job(self) -> None:
@@ -273,8 +281,10 @@ class IndexingView(QWidget):
             return
         state_label = i18n.JOB_STATE_LABELS.get(snapshot.state, snapshot.state.value)
         self.stage_label.setText(f"{snapshot.stage_label} ({state_label})")
+        self.header.set_meta(state_label)
 
         fraction = snapshot.progress_fraction
+        self.progress_hint.setVisible(True)
         if fraction is None:
             self.progress_bar.setRange(0, 0)
             self.progress_hint.setText(i18n.PROGRESS_UNKNOWN)
@@ -285,20 +295,25 @@ class IndexingView(QWidget):
                 i18n.PROGRESS_APPROXIMATE.format(value=f"{fraction * 100:.1f}%")
             )
 
+        self.current_file_label.setVisible(bool(snapshot.current_file))
         self.current_file_label.setText(
-            i18n.STAT_CURRENT + ": " + (snapshot.current_file or "brak")
+            i18n.STAT_CURRENT + ": " + (snapshot.current_file or i18n.STAT_NONE)
         )
-        self._stat_labels["discovered"].setText(str(snapshot.discovered))
-        self._stat_labels["processed"].setText(str(snapshot.processed))
-        self._stat_labels["unchanged"].setText(str(snapshot.unchanged))
-        self._stat_labels["skipped"].setText(str(snapshot.skipped))
-        self._stat_labels["failed"].setText(str(snapshot.failed))
-        self._stat_labels["deleted"].setText(str(snapshot.deleted))
-        self._stat_labels["ocr_documents"].setText(str(snapshot.ocr_documents))
-        self._stat_labels["ocr_pages"].setText(str(snapshot.ocr_pages))
-        self._stat_labels["elapsed"].setText(i18n.format_duration(snapshot.elapsed_seconds))
-        self._stat_labels["connection"].setText(snapshot.connection_status)
-        self._stat_labels["temp"].setText(i18n.format_bytes(snapshot.temp_bytes_used))
+        self.stats.set_values(
+            {
+                "discovered": snapshot.discovered,
+                "processed": snapshot.processed,
+                "unchanged": snapshot.unchanged,
+                "skipped": snapshot.skipped,
+                "failed": snapshot.failed,
+                "deleted": snapshot.deleted,
+                "ocr_documents": snapshot.ocr_documents,
+                "ocr_pages": snapshot.ocr_pages,
+                "elapsed": i18n.format_duration(snapshot.elapsed_seconds),
+                "connection": snapshot.connection_status or i18n.STAT_NONE,
+                "temp": i18n.format_bytes(snapshot.temp_bytes_used),
+            }
+        )
         self._last_state = snapshot.state
         self._refresh_buttons()
 
@@ -320,6 +335,7 @@ class IndexingView(QWidget):
                 self,
                 snapshot.message or "Indeksowanie zakończyło się błędem.",
             )
+        self.current_file_label.setVisible(False)
         self.refresh_tables()
         self.index_changed.emit()
         self._refresh_buttons()
@@ -329,11 +345,11 @@ class IndexingView(QWidget):
         running = runner is not None and runner.is_running
         paused = runner is not None and runner.is_paused
         self.start_button.setEnabled(not running)
-        self.rescan_button.setEnabled(not running)
         self.full_button.setEnabled(not running)
-        self.pause_button.setEnabled(running and not paused)
-        self.resume_button.setEnabled(running and paused)
         self.cancel_button.setEnabled(running)
+        self.pause_button.setEnabled(running)
+        self.pause_button.setText(i18n.INDEXING_RESUME if paused else i18n.INDEXING_PAUSE)
+        self.pause_button.setIcon(theme_icon("play" if paused else "pause"))
 
     # --- tabele -----------------------------------------------------------
 
@@ -365,6 +381,7 @@ class IndexingView(QWidget):
             documents = index.repository.non_searchable_documents(limit=ERROR_TABLE_LIMIT)
         except Exception as exc:
             log.warning("gui.skipped_refresh_failed", error_type=type(exc).__name__)
+            self._refresh_tab_labels()
             return
         for document in documents:
             if document.status is DocumentStatus.PENDING:
@@ -379,6 +396,19 @@ class IndexingView(QWidget):
             ]
             for column, value in enumerate(values):
                 self.skipped_table.setItem(position, column, QTableWidgetItem(value))
+        self._refresh_tab_labels()
+
+    def _refresh_tab_labels(self) -> None:
+        """Nazwa zakladki niesie liczbe wierszy, wiec nie trzeba jej otwierac."""
+        for position, (name, table) in enumerate(
+            (
+                (i18n.INDEXING_TAB_ERRORS, self.error_table),
+                (i18n.INDEXING_TAB_SKIPPED, self.skipped_table),
+            )
+        ):
+            count = table.rowCount()
+            label = i18n.INDEXING_TAB_COUNT.format(name=name, count=count) if count else name
+            self._tabs.setTabText(position, label)
 
 
-__all__ = ["ERROR_TABLE_LIMIT", "IndexingView"]
+__all__ = ["ERROR_TABLE_LIMIT", "STAT_ENTRIES", "IndexingView", "idle_stats"]

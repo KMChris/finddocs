@@ -108,19 +108,34 @@ RESULTS_TOOK = "czas: {ms} ms"
 # --- ekran zrodel ------------------------------------------------------------
 
 SOURCES_TITLE = "Źródła dokumentów"
-SOURCES_ADD_LOCAL = "Dodaj katalog lokalny"
+# Napisy na przyciskach sa krotkie, bo caly wiersz musi sie zmiescic takze
+# w oknie o najmniejszym dozwolonym rozmiarze. Pelne zdanie jest w podpowiedzi.
+SOURCES_ADD_LOCAL = "Dodaj katalog"
+SOURCES_ADD_LOCAL_HINT = "Dodaj katalog lokalny albo zasób sieciowy jako źródło dokumentów"
 SOURCES_ADD_SHAREPOINT = "Dodaj SharePoint"
+SOURCES_ADD_SHAREPOINT_HINT = "Dodaj bibliotekę dokumentów SharePoint przez Microsoft Graph"
 SOURCES_TEST = "Testuj połączenie"
-SOURCES_REMOVE = "Usuń źródło"
-SOURCES_TOGGLE = "Włącz albo wyłącz"
+SOURCES_TEST_HINT = "Sprawdź, czy wybrane źródło jest dostępne"
+SOURCES_REMOVE = "Usuń"
+SOURCES_REMOVE_HINT = "Usuń wybrane źródło z konfiguracji oraz jego dokumenty z indeksu"
+SOURCES_TOGGLE = "Przełącz"
+SOURCES_TOGGLE_HINT = "Włącz albo wyłącz wybrane źródło"
 SOURCES_EMPTY = "Nie skonfigurowano żadnego źródła."
-SOURCES_DEMO = "Wygeneruj zbiór demonstracyjny"
+SOURCES_EMPTY_HINT = (
+    "Nie skonfigurowano żadnego źródła. Dodaj katalog lokalny albo bibliotekę SharePoint. "
+    "Przycisk „Zbiór demonstracyjny” tworzy kilkanaście przykładowych dokumentów, "
+    "na których można sprawdzić działanie aplikacji."
+)
+SOURCES_DEMO = "Zbiór demonstracyjny"
+SOURCES_DEMO_HINT = "Utwórz katalog z przykładowymi polskimi dokumentami i dodaj go jako źródło"
+SOURCES_SELECT_FIRST = "Wybierz źródło z listy."
 SOURCES_SIGN_IN = "Zaloguj do SharePoint"
 SOURCES_SIGN_OUT = "Wyloguj"
 
 STORAGE_TITLE = "Przechowywanie indeksu"
 STORAGE_PATH = "Katalog danych"
 STORAGE_CHANGE = "Zmień katalog"
+STORAGE_OPEN = "Otwórz katalog"
 STORAGE_FREE = "Wolne miejsce: {value}"
 STORAGE_INDEX_SIZE = "Rozmiar indeksu: {value}"
 
@@ -195,15 +210,25 @@ MODEL_RELOAD_WHILE_INDEXING = (
 # --- ekran indeksowania ------------------------------------------------------
 
 INDEXING_TITLE = "Indeksowanie"
-INDEXING_START = "Start"
+#: Jeden przycisk zamiast dawnych ,,Start'' i ,,Skanuj ponownie''. Oba zlecaly
+#: to samo zadanie, wiec obok siebie sugerowaly dwie rozne operacje.
+INDEXING_SCAN = "Skanuj źródła"
+INDEXING_SCAN_HINT = (
+    "Dodaje nowe pliki, aktualizuje zmienione i usuwa z indeksu te, których już nie ma w źródle."
+)
 INDEXING_PAUSE = "Pauza"
 INDEXING_RESUME = "Wznów"
 INDEXING_CANCEL = "Anuluj"
-INDEXING_RESCAN = "Skanuj ponownie"
+INDEXING_CANCEL_HINT = "Przerywa zadanie. Indeks pozostaje spójny, pracę można wznowić później."
 INDEXING_FULL = "Pełne przeindeksowanie"
+INDEXING_FULL_HINT = "Przetwarza wszystkie dokumenty od nowa, także te, które się nie zmieniły."
 INDEXING_EXPORT = "Eksportuj raport"
-INDEXING_SHOW_ERRORS = "Pokaż błędy"
-INDEXING_SHOW_SKIPPED = "Pokaż pliki pominięte"
+INDEXING_TAB_ERRORS = "Błędy"
+INDEXING_TAB_SKIPPED = "Pliki pominięte"
+#: Nazwa zakladki z liczba wierszy. Bez liczby trzeba kliknac, zeby sprawdzic,
+#: czy w ogole jest tam cos do ogladania.
+INDEXING_TAB_COUNT = "{name} ({count})"
+INDEXING_IDLE = "Gotowe do uruchomienia"
 
 STAGE_LABEL = "Etap"
 STAT_DISCOVERED = "Wykryte pliki"
@@ -218,6 +243,7 @@ STAT_CURRENT = "Przetwarzany plik"
 STAT_ELAPSED = "Czas trwania"
 STAT_CONNECTION = "Połączenie"
 STAT_TEMP = "Przestrzeń tymczasowa"
+STAT_NONE = "brak"
 PROGRESS_UNKNOWN = "Postęp będzie znany po zakończeniu wykrywania plików"
 PROGRESS_APPROXIMATE = "Postęp przybliżony: {value}"
 
@@ -243,12 +269,15 @@ REPORT_TITLE = "Raport pokrycia"
 REPORT_EXPORT_JSON = "Eksportuj do JSON"
 REPORT_EXPORT_CSV = "Eksportuj do CSV"
 REPORT_REFRESH = "Odśwież"
+REPORT_SUMMARY = "Podsumowanie"
 REPORT_NON_SEARCHABLE = "Dokumenty, których nie można wyszukać"
 REPORT_COMPLETE = "Wszystkie wykryte dokumenty są wyszukiwalne."
 REPORT_INCOMPLETE = (
-    "Zbiór nie jest kompletny. Nie można wyszukać {count} dokumentów. "
+    "Zbiór nie jest kompletny. Nie można wyszukać {count}. "
     "Szczegóły znajdują się na liście poniżej."
 )
+REPORT_EMPTY = "Indeks jest pusty. Uruchom skanowanie na ekranie Indeksowanie."
+REPORT_NEEDS_REFRESH = "Naciśnij Odśwież, żeby policzyć raport."
 
 # --- diagnostyka -------------------------------------------------------------
 
@@ -258,11 +287,21 @@ DIAG_COMPONENTS = "Komponenty"
 DIAG_INDEX = "Indeks"
 DIAG_CONSISTENCY = "Spójność indeksu"
 DIAG_NETWORK = "Polityka połączeń sieciowych"
-DIAG_EXPORT_BUNDLE = "Eksportuj pakiet diagnostyczny"
-DIAG_OPEN_LOGS = "Otwórz katalog logów"
+DIAG_REFRESH = "Odśwież"
+# Krotkie napisy na przyciskach, pelne zdanie w podpowiedzi: caly wiersz
+# szesciu akcji musi sie zmiescic takze w najwezszym dozwolonym oknie.
+DIAG_EXPORT_BUNDLE = "Pakiet diagnostyczny"
+DIAG_EXPORT_BUNDLE_HINT = (
+    "Zapisz archiwum z konfiguracją, logami i statystykami. Pakiet nie zawiera treści dokumentów."
+)
+DIAG_OPEN_LOGS = "Katalog logów"
+DIAG_OPEN_LOGS_HINT = "Otwórz katalog z plikami logów w Eksploratorze plików"
 DIAG_CHECK = "Sprawdź spójność"
-DIAG_COMPACT = "Kompaktuj indeks wektorowy"
-DIAG_BACKUP = "Wykonaj kopię indeksu"
+DIAG_CHECK_HINT = "Porównaj metadane, indeks pełnotekstowy i indeks wektorowy"
+DIAG_COMPACT = "Kompaktuj wektory"
+DIAG_COMPACT_HINT = "Usuń z indeksu wektorowego wpisy po skasowanych dokumentach"
+DIAG_BACKUP = "Kopia indeksu"
+DIAG_BACKUP_HINT = "Zapisz kopię plików indeksu w katalogu kopii zapasowych"
 DIAG_LOG_QUERIES = "Zapisuj zapytania w logu diagnostycznym"
 DIAG_LOG_QUERIES_HINT = (
     "Domyślnie wyłączone. Włącz tylko na czas diagnozy. Zapytania zostaną zapisane "
@@ -286,6 +325,12 @@ STATUS_LABELS: dict[DocumentStatus, str] = {
 }
 
 # --- komunikaty ogolne -------------------------------------------------------
+
+#: Pasek stanu okna glownego.
+STATUS_SEPARATOR = "   |   "
+STATUS_INDEX_UNAVAILABLE = "Indeks niedostępny"
+STATUS_SEMANTIC_DISABLED = "Tryb semantyczny wyłączony"
+STATUS_SEMANTIC_UNAVAILABLE = "Tryb semantyczny niedostępny"
 
 BUTTON_OK = "OK"
 BUTTON_CANCEL = "Anuluj"
