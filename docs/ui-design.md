@@ -20,8 +20,10 @@ Konsekwencje tej zasady widoczne w kodzie:
 * wiersz stron pojawia się dopiero wtedy, gdy stron jest więcej niż jedna;
 * panel filtrów jest zwinięty, a to, że jednak działa, sygnalizuje liczba
   na przycisku **Filtry**;
-* uwagi wyszukiwarki idą do banera, a nie do szarego tekstu, który czytelnik
-  pomija. Te uwagi mówią o kompletności wyników, więc muszą być widoczne.
+* baner nad listą wyników dostaje wyłącznie uwagi zależne od zapytania
+  (obcięta lista, niedostępny indeks semantyczny). Stała charakterystyka trybu
+  jest w podpowiedzi pod przełącznikiem trybów: ostrzeżenie pokazywane przy
+  każdym wyszukiwaniu przestaje być ostrzeżeniem i uczy pomijania banera.
 
 ## Tokeny
 

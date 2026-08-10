@@ -15,7 +15,17 @@ from finddocs.gui.context import AppContext
 from finddocs.gui.search_view import SearchView
 from finddocs.gui.theme import Palette
 from finddocs.gui.widgets.result_card import ResultCard, score_role
-from finddocs.types import ChunkHit, DocumentHit, MatchKind, SearchMode, SourceKind, TextOrigin
+from finddocs.search.service import HYBRID_NOTE, SEMANTIC_NOTE, TRUNCATED_NOTE
+from finddocs.types import (
+    ChunkHit,
+    DocumentHit,
+    MatchKind,
+    QueryAnalysis,
+    SearchMode,
+    SearchResponse,
+    SourceKind,
+    TextOrigin,
+)
 
 QUERY = "przelewow"
 MISSING_QUERY = "kwantowagalaktykaniewystepujaca"
@@ -149,6 +159,64 @@ def test_hybrid_mode_reports_missing_semantic_index(
     assert "semantyczny jest niedostępny" in view.notes_banner.text()
     assert view.notes_banner.property("bannerRole") == "warning"
     assert not view.notes_banner.isHidden()
+
+
+def _response_with_notes(notes: list[str]) -> SearchResponse:
+    """Odpowiedz zbudowana recznie, do testow banera uwag."""
+    return SearchResponse(
+        hits=[],
+        total_documents=0,
+        total_is_exact=False,
+        mode=SearchMode.HYBRID,
+        took_ms=1,
+        query_analysis=QueryAnalysis(
+            raw_query="zapytanie", normalized_query="zapytanie", semantic_text="zapytanie"
+        ),
+        notes=notes,
+    )
+
+
+@pytest.mark.gui
+def test_uwagi_edukacyjne_nie_otwieraja_banera(
+    make_search_view: Callable[..., SearchView],
+) -> None:
+    """Stala charakterystyka trybu zostaje w podpowiedzi, nie w banerze."""
+    view = make_search_view()
+
+    view._render(_response_with_notes([HYBRID_NOTE, SEMANTIC_NOTE]))
+
+    assert view.notes_banner.isHidden()
+    assert view.notes_banner.text() == ""
+
+
+@pytest.mark.gui
+def test_uwaga_dynamiczna_trafia_do_banera_bez_edukacyjnej(
+    make_search_view: Callable[..., SearchView],
+) -> None:
+    """Baner pokazuje uwage zalezna od zapytania i pomija edukacyjna."""
+    view = make_search_view()
+
+    view._render(_response_with_notes([HYBRID_NOTE, TRUNCATED_NOTE]))
+
+    assert not view.notes_banner.isHidden()
+    assert view.notes_banner.text() == TRUNCATED_NOTE
+
+
+@pytest.mark.gui
+def test_tryb_dokladny_nie_otwiera_banera(
+    qtbot: object,
+    make_search_view: Callable[..., SearchView],
+    result_cards: Callable[[QWidget], list[ResultCard]],
+) -> None:
+    """Wyszukiwanie dokladne bez uwag zostawia baner ukryty."""
+    view = make_search_view()
+    _mode_button(view, SearchMode.EXACT).setChecked(True)
+    view.query_edit.setText(QUERY)
+
+    view.run_search()
+
+    qtbot.waitUntil(lambda: bool(result_cards(view)), timeout=TIMEOUT_MS)  # type: ignore[attr-defined]
+    assert view.notes_banner.isHidden()
 
 
 @pytest.mark.gui

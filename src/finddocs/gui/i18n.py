@@ -50,7 +50,10 @@ MODE_LABELS: dict[SearchMode, str] = {
 }
 
 MODE_HINTS: dict[SearchMode, str] = {
-    SearchMode.HYBRID: "Łączy dopasowania dosłowne z podobieństwem znaczeniowym.",
+    SearchMode.HYBRID: (
+        "Łączy dopasowania dosłowne z podobieństwem znaczeniowym. "
+        "Pełną listę dopasowań dosłownych daje tryb Dokładne."
+    ),
     SearchMode.EXACT: "Zwraca wszystkie dokumenty zawierające podane wartości.",
     SearchMode.SEMANTIC: "Ranking przybliżony. Nie gwarantuje kompletności wyników.",
 }

@@ -4,8 +4,9 @@ Uklad ekranu jest podporzadkowany jednemu zadaniu: wpisac zapytanie i przejrzec
 wyniki. Dlatego chrome nad lista jest tak niski, jak to mozliwe:
 
 * liczba wynikow jest w wierszu tytulu, a nie w osobnym wierszu;
-* uwagi o niekompletnosci wynikow ida do kolorowego banera, bo szary tekst
-  czytelnik pomija, a to wlasnie one mowia, czego wyszukiwarka nie gwarantuje;
+* baner nad lista dostaje wylacznie uwagi zalezne od zapytania (obcieta lista,
+  brak indeksu semantycznego). Stala charakterystyka trybu jest w podpowiedzi
+  pod przelacznikiem: ostrzezenie widoczne zawsze przestaje byc ostrzezeniem;
 * wiersz stron pojawia sie tylko wtedy, gdy jest wiecej niz jedna strona.
 """
 
@@ -49,6 +50,7 @@ from finddocs.gui.widgets.segmented import SegmentedControl
 from finddocs.gui.workers import CancellationFlag, SearchTask, thread_pool
 from finddocs.logging_setup import get_logger
 from finddocs.search.highlight import strip_highlight
+from finddocs.search.service import HYBRID_NOTE, SEMANTIC_NOTE
 from finddocs.types import (
     DateRange,
     DocumentHit,
@@ -69,6 +71,12 @@ NO_DATE = QDate(1900, 1, 1)
 #: Liczba kolumn panelu filtrow. Kolumny dziela szerokosc rowno, wiec pola
 #: sasiadujacych wierszy sa wyrownane niezaleznie od dlugosci podpisow.
 FILTER_COLUMNS = 4
+
+#: Uwagi opisujace nature trybu, niezalezne od zapytania. Ich tresc niesie
+#: podpowiedz pod przelacznikiem trybow, wiec baner ich nie powtarza. Powtarzane
+#: przy kazdym wyszukiwaniu ostrzezenie uczy pomijania banera i zaslania uwagi,
+#: ktore naprawde dotycza biezacego zapytania.
+EDUCATION_NOTES: frozenset[str] = frozenset({HYBRID_NOTE, SEMANTIC_NOTE})
 
 
 class SearchView(QWidget):
@@ -514,9 +522,10 @@ class SearchView(QWidget):
     def _render(self, response: SearchResponse) -> None:
         self._clear_results()
         self.header.set_meta(self._count_text(response))
-        # Uwagi wyszukiwarki mowia o niekompletnosci albo o ograniczeniu trybu,
-        # wiec traktujemy je jako ostrzezenie, nie jako informacje dodatkowa.
-        self.notes_banner.show_message(" ".join(response.notes), "warning")
+        # Do banera ida tylko uwagi zalezne od zapytania. Sa ostrzezeniem
+        # o niekompletnosci biezacej listy, wiec musza byc widoczne.
+        dynamic_notes = [note for note in response.notes if note not in EDUCATION_NOTES]
+        self.notes_banner.show_message(" ".join(dynamic_notes), "warning")
 
         if not response.hits:
             self._show_empty(i18n.SEARCH_NO_RESULTS_TITLE, i18n.SEARCH_NO_RESULTS, keep_meta=True)
@@ -611,4 +620,4 @@ class SearchView(QWidget):
         super().keyPressEvent(event)  # type: ignore[arg-type]
 
 
-__all__ = ["FILTER_COLUMNS", "NO_DATE", "SearchView"]
+__all__ = ["EDUCATION_NOTES", "FILTER_COLUMNS", "NO_DATE", "SearchView"]
