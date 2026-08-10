@@ -93,6 +93,10 @@ class SearchView(QWidget):
     """Pole zapytania, tryby, filtry i lista wynikow."""
 
     status_message = Signal(str)
+    #: Akcje ekranu powitalnego. Nawigacje i wykonanie robi okno glowne,
+    #: bo widok wyszukiwania nie zna widoku zrodel.
+    welcome_add_source = Signal()
+    welcome_create_demo = Signal()
 
     def __init__(self, context: AppContext, palette: Palette) -> None:
         super().__init__()
@@ -152,7 +156,7 @@ class SearchView(QWidget):
 
         self._build_shortcuts()
         self._update_filter_count()
-        self._show_empty(i18n.SEARCH_EMPTY_TITLE, i18n.SEARCH_EMPTY_STATE)
+        self.show_default_empty()
 
     # --- budowa interfejsu ------------------------------------------------
 
@@ -583,13 +587,37 @@ class SearchView(QWidget):
         else:
             self.run_search()
 
+    def show_default_empty(self) -> None:
+        """Stan poczatkowy listy: powitanie bez zrodel, opis trybow ze zrodlami.
+
+        Nowy uzytkownik nie musi odkrywac ekranu Zrodla: pierwsze kroki robi
+        przyciskami wprost ze stanu pustego.
+        """
+        if self._response is not None:
+            return
+        if not self.context.config.sources:
+            self._show_empty(
+                i18n.WELCOME_TITLE,
+                i18n.WELCOME_TEXT,
+                glyph="folder",
+                actions=[
+                    (i18n.SOURCES_ADD_LOCAL, self.welcome_add_source.emit),
+                    (i18n.SOURCES_DEMO, self.welcome_create_demo.emit),
+                ],
+            )
+            return
+        self._show_empty(i18n.SEARCH_EMPTY_TITLE, i18n.SEARCH_EMPTY_STATE)
+
     def run_search(self, *, reset_page: bool = True) -> None:
         query = self.query_edit.text().strip()
         if not query:
-            self._show_empty(i18n.SEARCH_EMPTY_TITLE, i18n.SEARCH_EMPTY_STATE)
+            self.show_default_empty()
             return
         index = self.context.index
         if index is not None and index.status().indexed_documents == 0:
+            if not self.context.config.sources:
+                self.show_default_empty()
+                return
             self._show_empty(
                 i18n.SEARCH_INDEX_EMPTY_TITLE, i18n.SEARCH_INDEX_EMPTY, glyph="database"
             )
@@ -718,13 +746,25 @@ class SearchView(QWidget):
                 widget.deleteLater()
 
     def _show_empty(
-        self, title: str, message: str, *, glyph: str = "search", keep_meta: bool = False
+        self,
+        title: str,
+        message: str,
+        *,
+        glyph: str = "search",
+        keep_meta: bool = False,
+        actions: list[tuple[str, Callable[[], None]]] | None = None,
     ) -> None:
         self._clear_results()
         if not keep_meta:
             self.header.set_meta("")
             self.notes_banner.hide_message()
-        placeholder = EmptyState(message, title=title, glyph=glyph, palette=self.palette_colors)
+        placeholder = EmptyState(
+            message,
+            title=title,
+            glyph=glyph,
+            palette=self.palette_colors,
+            actions=actions or (),
+        )
         # Wspolczynnik rozciagania oddaje stanowi pustemu cala wolna wysokosc,
         # dzieki czemu komunikat jest wysrodkowany, a nie przyklejony do gory.
         self._results_layout.insertWidget(0, placeholder, 1)

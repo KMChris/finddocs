@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import html
 import re
+from collections.abc import Callable, Sequence
 
 from PySide6.QtCore import QEvent, QObject, QSize, Qt, Signal, SignalInstance
 from PySide6.QtGui import QEnterEvent, QFocusEvent, QKeyEvent, QMouseEvent
@@ -455,6 +456,8 @@ class EmptyState(QWidget):
 
     Stan pusty zajmuje cala wolna przestrzen listy wynikow. Komunikat przyklejony
     do gornej krawedzi duzego pustego prostokata wyglada jak bledny render.
+    Opcjonalne akcje pozwalaja zaczac prace z tego miejsca (pierwsze
+    uruchomienie), zamiast odsylac opisowo na inny ekran.
     """
 
     def __init__(
@@ -464,6 +467,7 @@ class EmptyState(QWidget):
         title: str = "",
         glyph: str = "search",
         palette: Palette | None = None,
+        actions: Sequence[tuple[str, Callable[[], None]]] = (),
     ) -> None:
         super().__init__()
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
@@ -491,6 +495,23 @@ class EmptyState(QWidget):
         self._label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._label.setWordWrap(True)
         layout.addWidget(self._label)
+
+        self.action_buttons: list[QPushButton] = []
+        if actions:
+            layout.addSpacing(SPACE_SM)
+            buttons = QHBoxLayout()
+            buttons.setSpacing(SPACE_SM)
+            buttons.addStretch(1)
+            for position, (label, callback) in enumerate(actions):
+                button = QPushButton(label)
+                if position == 0:
+                    button.setObjectName("Primary")
+                button.clicked.connect(callback)
+                buttons.addWidget(button)
+                self.action_buttons.append(button)
+            buttons.addStretch(1)
+            layout.addLayout(buttons)
+
         layout.addSpacing(SPACE_MD)
         layout.addStretch(1)
 

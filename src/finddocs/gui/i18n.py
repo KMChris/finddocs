@@ -60,6 +60,11 @@ SEARCH_EMPTY_STATE = (
     "Tryb Hybrydowe łączy oba podejścia."
 )
 SEARCH_RUNNING = "Wyszukiwanie w toku..."
+WELCOME_TITLE = "Witaj w FindDocs"
+WELCOME_TEXT = (
+    "Nie ma jeszcze żadnego źródła dokumentów.\n"
+    "Dodaj katalog albo utwórz zbiór demonstracyjny, a potem uruchom skanowanie."
+)
 SEARCH_INDEX_EMPTY_TITLE = "Indeks jest pusty"
 SEARCH_INDEX_EMPTY = "Przejdź do ekranu Indeksowanie i uruchom skanowanie źródła."
 

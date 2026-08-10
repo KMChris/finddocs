@@ -240,13 +240,13 @@ def test_mode_hint_follows_selection(make_search_view: Callable[..., SearchView]
 @pytest.mark.gui
 def test_empty_index_asks_for_indexing(
     qtbot: object,
-    gui_context: AppContext,
+    gui_context_with_source: AppContext,
     gui_palette: Palette,
     empty_state_text: Callable[[QWidget], str],
     empty_state_title: Callable[[QWidget], str],
 ) -> None:
-    """Pusty indeks konczy sie komunikatem o koniecznosci zaindeksowania."""
-    view = SearchView(gui_context, gui_palette)
+    """Pusty indeks przy skonfigurowanym zrodle prosi o skanowanie."""
+    view = SearchView(gui_context_with_source, gui_palette)
     qtbot.addWidget(view)  # type: ignore[attr-defined]
     view.query_edit.setText(QUERY)
 
@@ -254,6 +254,65 @@ def test_empty_index_asks_for_indexing(
 
     assert empty_state_title(view) == i18n.SEARCH_INDEX_EMPTY_TITLE
     assert empty_state_text(view) == i18n.SEARCH_INDEX_EMPTY
+
+
+@pytest.mark.gui
+def test_brak_zrodel_pokazuje_powitanie_z_akcjami(
+    qtbot: object,
+    gui_context: AppContext,
+    gui_palette: Palette,
+    empty_state_title: Callable[[QWidget], str],
+) -> None:
+    """Pierwsze uruchomienie zaczyna sie od przyciskow, nie od odsylacza."""
+    view = SearchView(gui_context, gui_palette)
+    qtbot.addWidget(view)  # type: ignore[attr-defined]
+
+    assert empty_state_title(view) == i18n.WELCOME_TITLE
+    placeholder = next(
+        widget
+        for widget in view._results_host.findChildren(QWidget)
+        if hasattr(widget, "action_buttons") and widget.action_buttons
+    )
+    labels = [button.text() for button in placeholder.action_buttons]
+    assert labels == [i18n.SOURCES_ADD_LOCAL, i18n.SOURCES_DEMO]
+
+    emitted: list[str] = []
+    view.welcome_add_source.connect(lambda: emitted.append("add"))
+    view.welcome_create_demo.connect(lambda: emitted.append("demo"))
+    placeholder.action_buttons[0].click()
+    placeholder.action_buttons[1].click()
+
+    assert emitted == ["add", "demo"]
+
+
+@pytest.mark.gui
+def test_powitanie_znika_po_dodaniu_zrodla(
+    qtbot: object,
+    gui_context: AppContext,
+    gui_palette: Palette,
+    gui_corpus: object,
+    empty_state_title: Callable[[QWidget], str],
+) -> None:
+    from pathlib import Path
+
+    view = SearchView(gui_context, gui_palette)
+    qtbot.addWidget(view)  # type: ignore[attr-defined]
+    assert empty_state_title(view) == i18n.WELCOME_TITLE
+
+    from finddocs.config import LocalDirSourceSettings, SourceConfig
+    from finddocs.types import SourceKind
+
+    gui_context.config.sources.append(
+        SourceConfig(
+            source_id="nowe",
+            kind=SourceKind.LOCAL_DIR,
+            label="Nowe",
+            local=LocalDirSourceSettings(root_path=str(Path(str(gui_corpus)))),
+        )
+    )
+    view.show_default_empty()
+
+    assert empty_state_title(view) == i18n.SEARCH_EMPTY_TITLE
 
 
 @pytest.mark.gui

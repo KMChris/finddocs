@@ -112,6 +112,8 @@ class MainWindow(QMainWindow):
         self.sources_view.sources_changed.connect(self._on_sources_changed)
         self.settings_view.theme_change_requested.connect(self.theme_change_requested)
         self.settings_view.search_settings_changed.connect(self.search_view.apply_config)
+        self.search_view.welcome_add_source.connect(self._welcome_add_source)
+        self.search_view.welcome_create_demo.connect(self._welcome_create_demo)
 
         self.status = QStatusBar()
         self.setStatusBar(self.status)
@@ -256,6 +258,15 @@ class MainWindow(QMainWindow):
         self.nav.setCurrentRow(0)
         self.search_view.focus_query()
 
+    def _welcome_add_source(self) -> None:
+        """Akcja powitania: przejscie do zrodel i otwarcie wyboru katalogu."""
+        self.nav.setCurrentRow(1)
+        self.sources_view.add_local_source()
+
+    def _welcome_create_demo(self) -> None:
+        self.nav.setCurrentRow(1)
+        self.sources_view.generate_demo()
+
     def _on_index_changed(self) -> None:
         self.refresh_index_status()
         self.search_view.refresh_filter_values()
@@ -263,6 +274,8 @@ class MainWindow(QMainWindow):
 
     def _on_sources_changed(self) -> None:
         self.refresh_index_status()
+        # Po dodaniu pierwszego zrodla powitanie zamienia sie w opis trybow.
+        self.search_view.show_default_empty()
 
     def show_status(self, message: str) -> None:
         if message:
