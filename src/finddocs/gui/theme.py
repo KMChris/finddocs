@@ -404,8 +404,11 @@ def build_stylesheet(palette: Palette) -> str:
         font-size: {FONT_SIZE_SMALL}pt;
     }}
     QLabel#StatValue {{
-        font-size: {FONT_SIZE_TITLE}pt;
+        font-size: {FONT_SIZE_BRAND}pt;
         font-weight: 600;
+    }}
+    QLabel#StatValue[valueRole="danger"] {{
+        color: {p.danger};
     }}
     QFrame#Divider {{
         background-color: {p.border};

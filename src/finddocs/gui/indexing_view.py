@@ -8,11 +8,18 @@ Wiersz sterowania ma tyle przyciskow, ile jest roznych operacji:
   chwili sensowna jest tylko jedna z tych dwoch akcji;
 * anulowanie;
 * pelne przeindeksowanie, jedyna operacja liczaca wszystko od nowa.
+
+W spoczynku ekran nie pokazuje paska 0% ani statystyk z samych zer: pasek
+0% wyglada jak zadanie, ktore stoi. Zamiast tego jest podsumowanie ostatniego
+przebiegu z historii zadan. Karty postepu i statystyk pojawiaja sie wraz
+z pierwsza migawka biezacego zadania.
 """
 
 from __future__ import annotations
 
-from PySide6.QtCore import Signal
+import json
+
+from PySide6.QtCore import QEvent, QObject, Qt, Signal
 from PySide6.QtWidgets import (
     QFileDialog,
     QGroupBox,
@@ -92,10 +99,16 @@ class IndexingView(QWidget):
         root.addWidget(self.header)
 
         root.addLayout(self._build_buttons())
+        root.addWidget(self._build_last_run())
         root.addWidget(self._build_progress())
         root.addWidget(self._build_stats())
         root.addWidget(self._build_tables(), stretch=1)
 
+        # Karty postepu i statystyk opisuja biezace zadanie, wiec przed jego
+        # uruchomieniem sa ukryte. W ich miejscu jest ostatni przebieg.
+        self.progress_box.setVisible(False)
+        self.stats_box.setVisible(False)
+        self._refresh_last_run()
         self._refresh_buttons()
 
     # --- budowa -----------------------------------------------------------
@@ -138,6 +151,53 @@ class IndexingView(QWidget):
         row.addWidget(self.export_button)
         return row
 
+    def _build_last_run(self) -> QWidget:
+        """Podsumowanie ostatniego zakonczonego przebiegu, widoczne w spoczynku."""
+        box = QGroupBox(i18n.INDEXING_LAST_RUN)
+        layout = QVBoxLayout(box)
+        layout.setSpacing(SPACE_SM)
+        self.last_run_label = QLabel("")
+        self.last_run_label.setWordWrap(True)
+        layout.addWidget(self.last_run_label)
+        self.last_run_box = box
+        return box
+
+    def _refresh_last_run(self) -> None:
+        """Wypelnia podsumowanie z historii zadan. Bez historii karta znika."""
+        finished_states = {
+            JobState.COMPLETED.value,
+            JobState.FAILED.value,
+            JobState.CANCELLED.value,
+        }
+        row = None
+        index = self.context.index
+        if index is not None:
+            try:
+                rows = index.repository.recent_jobs(limit=20)
+            except Exception as exc:
+                log.warning("gui.last_run_failed", error_type=type(exc).__name__)
+                rows = []
+            row = next((r for r in rows if str(r["state"]) in finished_states), None)
+        if row is None:
+            self.last_run_box.setVisible(False)
+            return
+        try:
+            progress = json.loads(str(row["progress"] or "{}"))
+        except ValueError:
+            progress = {}
+        kind = str(row["kind"] or "")
+        kind_label = i18n.JOB_KIND_LABELS.get(kind, kind)
+        state_label = i18n.JOB_STATE_LABELS.get(JobState(str(row["state"])), str(row["state"]))
+        stamp = format_stamp(str(row["finished_at"] or row["created_at"] or ""))
+        summary = i18n.INDEXING_LAST_RUN_SUMMARY.format(
+            processed=progress.get("processed", 0),
+            failed=progress.get("failed", 0),
+            skipped=progress.get("skipped", 0),
+            elapsed=i18n.format_duration(float(progress.get("elapsed_seconds", 0.0))),
+        )
+        self.last_run_label.setText(f"{kind_label}, {stamp}: {state_label}.\n{summary}")
+        self.last_run_box.setVisible(True)
+
     def _build_progress(self) -> QWidget:
         box = QGroupBox(i18n.STAGE_LABEL)
         layout = QVBoxLayout(box)
@@ -164,6 +224,7 @@ class IndexingView(QWidget):
         self.current_file_label.setWordWrap(True)
         self.current_file_label.setVisible(False)
         layout.addWidget(self.current_file_label)
+        self.progress_box = box
         return box
 
     def _build_stats(self) -> QWidget:
@@ -173,8 +234,24 @@ class IndexingView(QWidget):
         self.stats.set_values(idle_stats())
         # Testy i kod widoku siegaja po etykiety wartosci po kluczu.
         self._stat_labels = self.stats.labels
+        # Liczba bledow wieksza od zera to jedyna liczba wymagajaca reakcji,
+        # wiec jest klikalna i prowadzi do zakladki z lista bledow.
+        failed = self.stats.labels["failed"]
+        failed.setCursor(Qt.CursorShape.PointingHandCursor)
+        failed.setToolTip(i18n.STAT_FAILED_HINT)
+        failed.installEventFilter(self)
         layout.addWidget(self.stats)
+        self.stats_box = box
         return box
+
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
+        if (
+            watched is self.stats.labels.get("failed")
+            and event.type() is QEvent.Type.MouseButtonRelease
+        ):
+            self._tabs.setCurrentIndex(0)
+            return True
+        return super().eventFilter(watched, event)
 
     def _build_tables(self) -> QWidget:
         tabs = QTabWidget()
@@ -282,6 +359,12 @@ class IndexingView(QWidget):
     def _on_progress(self, snapshot: object) -> None:
         if not isinstance(snapshot, ProgressSnapshot):
             return
+        # Pierwsza migawka zadania odsuwa podsumowanie ostatniego przebiegu
+        # i pokazuje karty biezacego postepu.
+        if self.progress_box.isHidden():
+            self.progress_box.setVisible(True)
+            self.stats_box.setVisible(True)
+            self.last_run_box.setVisible(False)
         state_label = i18n.JOB_STATE_LABELS.get(snapshot.state, snapshot.state.value)
         self.stage_label.setText(f"{snapshot.stage_label} ({state_label})")
         self.header.set_meta(state_label)
@@ -317,6 +400,8 @@ class IndexingView(QWidget):
                 "temp": i18n.format_bytes(snapshot.temp_bytes_used),
             }
         )
+        # Bledy to jedyna liczba wymagajaca reakcji, wiec dostaje kolor bledu.
+        self.stats.set_value_role("failed", "danger" if snapshot.failed else "")
         self._last_state = snapshot.state
         self._refresh_buttons()
 

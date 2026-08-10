@@ -16,6 +16,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QGridLayout, QLabel, QWidget
 
 from finddocs.gui.theme import SPACE_MD, SPACE_XL
+from finddocs.gui.widgets.page import repolish
 
 #: Odstep pionowy miedzy podpisem i jego wartoscia. Ma byc maly, zeby para
 #: czytala sie jako jedna calosc.
@@ -65,6 +66,14 @@ class StatGrid(QWidget):
     def value(self, key: str) -> str:
         label = self.labels.get(key)
         return label.text() if label is not None else ""
+
+    def set_value_role(self, key: str, role: str) -> None:
+        """Nadaje wartosci role koloru (np. ``danger``). Pusta rola ja zdejmuje."""
+        label = self.labels.get(key)
+        if label is None or label.property("valueRole") == role:
+            return
+        label.setProperty("valueRole", role)
+        repolish(label)
 
 
 __all__ = ["CAPTION_GAP", "ROW_GAP", "StatGrid"]

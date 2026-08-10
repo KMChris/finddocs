@@ -233,6 +233,66 @@ def test_podpowiedz_postepu_jest_ukryta_przed_uruchomieniem(
 
 
 @pytest.mark.gui
+def test_karty_postepu_pojawiaja_sie_z_pierwsza_migawka(indexing_view: IndexingView) -> None:
+    """W spoczynku pasek 0% wyglada jak zadanie, ktore stoi, wiec go nie ma."""
+    assert indexing_view.progress_box.isHidden()
+    assert indexing_view.stats_box.isHidden()
+
+    indexing_view._on_progress(_snapshot())
+
+    assert not indexing_view.progress_box.isHidden()
+    assert not indexing_view.stats_box.isHidden()
+    assert indexing_view.last_run_box.isHidden()
+
+
+@pytest.mark.gui
+def test_liczba_bledow_dostaje_kolor_bledu_i_otwiera_zakladke(
+    indexing_view: IndexingView,
+) -> None:
+    """Bledy sa jedyna liczba wymagajaca reakcji, wiec sa wyroznione i klikalne."""
+    indexing_view._on_progress(_snapshot(failed=3))
+    failed = indexing_view.stats.labels["failed"]
+    assert failed.property("valueRole") == "danger"
+    assert failed.toolTip() == i18n.STAT_FAILED_HINT
+
+    indexing_view._tabs.setCurrentIndex(1)
+    from PySide6.QtCore import QEvent, QPointF, Qt
+    from PySide6.QtGui import QMouseEvent
+
+    event = QMouseEvent(
+        QEvent.Type.MouseButtonRelease,
+        QPointF(1, 1),
+        Qt.MouseButton.LeftButton,
+        Qt.MouseButton.LeftButton,
+        Qt.KeyboardModifier.NoModifier,
+    )
+    indexing_view.eventFilter(failed, event)
+
+    assert indexing_view._tabs.currentIndex() == 0
+
+    indexing_view._on_progress(_snapshot(failed=0))
+    assert failed.property("valueRole") == ""
+
+
+@pytest.mark.gui
+def test_ostatni_przebieg_z_historii_zadan(qtbot: object, indexed_gui_context: AppContext) -> None:
+    """Po ponownym uruchomieniu ekran opisuje ostatni przebieg zamiast zer."""
+    view = IndexingView(indexed_gui_context)
+    qtbot.addWidget(view)  # type: ignore[attr-defined]
+
+    assert not view.last_run_box.isHidden()
+    assert i18n.JOB_KIND_LABELS["rescan"] in view.last_run_label.text()
+    assert "Przetworzone:" in view.last_run_label.text()
+
+
+@pytest.mark.gui
+def test_brak_historii_ukrywa_karte_ostatniego_przebiegu(
+    indexing_view: IndexingView,
+) -> None:
+    assert indexing_view.last_run_box.isHidden()
+
+
+@pytest.mark.gui
 def test_nazwy_zakladek_niosa_liczbe_wierszy(
     qtbot: object, indexed_gui_context: AppContext, corpus_stats: dict[str, int]
 ) -> None:

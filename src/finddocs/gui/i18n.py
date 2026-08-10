@@ -267,6 +267,19 @@ JOB_STATE_LABELS: dict[JobState, str] = {
     JobState.COMPLETED: "zakończone",
 }
 
+# Klucze to surowe wartosci kolumny kind z historii zadan.
+JOB_KIND_LABELS: dict[str, str] = {
+    "rescan": "Skanowanie źródeł",
+    "full_index": "Pełne przeindeksowanie",
+    "rebuild_vectors": "Przebudowa indeksu wektorowego",
+}
+
+INDEXING_LAST_RUN = "Ostatni przebieg"
+INDEXING_LAST_RUN_SUMMARY = (
+    "Przetworzone: {processed}, błędy: {failed}, pominięte: {skipped}, czas: {elapsed}"
+)
+STAT_FAILED_HINT = "Kliknij, żeby otworzyć listę błędów"
+
 RESUME_PROMPT = (
     "Poprzednie indeksowanie zostało przerwane. Czy chcesz je wznowić?\n"
     "Dokumenty już przetworzone nie będą przetwarzane ponownie."
