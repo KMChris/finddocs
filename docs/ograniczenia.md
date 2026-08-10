@@ -74,7 +74,8 @@ i nie zgaduje haseł.
 
 ## OCR
 
-**OCR wymaga osobnej instalacji.** Tesseract nie jest dołączony do instalatora.
+**OCR wymaga osobnej instalacji.** Żaden silnik OCR nie jest instalowany razem
+z podstawowymi zależnościami aplikacji.
 Bez żadnego silnika skany nie mają warstwy tekstowej i trafiają do raportu jako
 niewyszukiwalne.
 

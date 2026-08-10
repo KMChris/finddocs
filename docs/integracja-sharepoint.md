@@ -100,14 +100,14 @@ Po zalogowaniu aplikacja wypisze nazwę witryny i liczbę widocznych elementów.
 ### Z wiersza poleceń
 
 ```bash
-finddocs sources add-sharepoint --id finanse --label "Finanse" \
+python run.py sources add-sharepoint --id finanse --label "Finanse" \
     --site https://contoso.sharepoint.com/sites/Finanse \
     --library "Dokumenty" \
     --tenant 00000000-1111-2222-3333-444444444444 \
     --client-id 55555555-6666-7777-8888-999999999999 \
     --auth-flow interactive
 
-finddocs sources test finanse
+python run.py sources test finanse
 ```
 
 ### Sposoby logowania
@@ -187,12 +187,12 @@ skanowanie.
 
 Przed udostępnieniem aplikacji użytkownikom wykonaj na jednej bibliotece:
 
-1. `finddocs sources add-sharepoint ...` z danymi rejestracji.
-2. `finddocs sources test <id>`: sprawdza logowanie i odczyt witryny.
-3. `finddocs index --source <id>`: pierwsze indeksowanie.
-4. `finddocs report`: sprawdź, czy liczba dokumentów zgadza się z zawartością
+1. `python run.py sources add-sharepoint ...` z danymi rejestracji.
+2. `python run.py sources test <id>`: sprawdza logowanie i odczyt witryny.
+3. `python run.py index --source <id>`: pierwsze indeksowanie.
+4. `python run.py report`: sprawdź, czy liczba dokumentów zgadza się z zawartością
    biblioteki i czy lista niewyszukiwalnych zawiera tylko oczekiwane pozycje.
-5. Zmień jeden dokument w SharePoint, uruchom `finddocs index --source <id>`
+5. Zmień jeden dokument w SharePoint, uruchom `python run.py index --source <id>`
    ponownie i sprawdź, że przetworzony został tylko ten jeden.
 6. Usuń jeden dokument, uruchom skanowanie i sprawdź, że zniknął z indeksu.
 7. Sprawdź w logu, że nie ma w nim tokenów ani treści dokumentów.
@@ -212,5 +212,5 @@ w konkretnej dzierżawie.
 | Połączenie odrzucone przez politykę | `FD-1005` | adres spoza listy dozwolonych, sprawdź ekran **Diagnostyka** |
 | Logowanie za każdym razem | `FD-9001` | magazyn poświadczeń niedostępny, sprawdź w logu `credentials.store_selected` |
 
-Przy każdym zgłoszeniu zacznij od `finddocs doctor` i od ostatnich wpisów
+Przy każdym zgłoszeniu zacznij od `python run.py doctor` i od ostatnich wpisów
 `error` w `logs\finddocs.log`.

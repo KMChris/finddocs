@@ -1,0 +1,11 @@
+# Narzedzia do importu i konwersji modelu embeddingow do formatu ONNX.
+# Potrzebne tylko raz, przy przygotowaniu modelu (polecenie "model import"
+# oraz tools/export_model_onnx.py). Sama aplikacja ich nie uzywa.
+#
+#     .venv\Scripts\python.exe -m pip install -r requirements-export.txt
+#
+# onnxscript jest potrzebny nowym wersjom torch (eksporter dynamo od 2.9).
+torch>=2.2
+transformers>=4.40
+onnx>=1.16
+onnxscript>=0.1

@@ -531,7 +531,7 @@ class SourcesView(QWidget):
         changed = key != embedding.model_key or quantized != embedding.quantized
         if key != embedding.model_key:
             # Przedrostki i dlugosc sekwencji ida za nowym modelem, tak jak
-            # w poleceniu finddocs model use. Bez tego skrot zgodnosci czesci
+            # w poleceniu run.py model use. Bez tego skrot zgodnosci czesci
             # wektorowej liczylby sie z parametrow poprzedniego modelu.
             extra = Path(embedding.model_path) if embedding.model_path else None
             sync_embedding_settings(embedding, key, extra=extra)

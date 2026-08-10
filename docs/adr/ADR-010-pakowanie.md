@@ -1,7 +1,10 @@
 # ADR-010: PyInstaller onedir i Inno Setup
 
-**Stan:** przyjęta
+**Stan:** zastąpiona przez [ADR-011](ADR-011-uruchomienie-ze-zrodel.md)
 **Data:** lipiec 2026
+
+Zapis pozostaje dla historii. Opisane niżej skrypty budowania (`packaging/`)
+nie są już częścią repozytorium.
 
 ## Kontekst
 

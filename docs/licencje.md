@@ -85,28 +85,23 @@ ani zapytan poza komputer uzytkownika w konfiguracji domyslnej.
 
 | Komponent | Wersja | Licencja | Zastosowanie | Pobierany | Zrodlo |
 | --- | --- | --- | --- | --- | --- |
-| mmlw-retrieval-roberta-base | 2023-12-26 | Apache-2.0 | model embeddingow do wyszukiwania semantycznego po polsku | tak, jednorazowo przez uzytkownika albo dolaczony do instalatora | https://huggingface.co/sdadas/mmlw-retrieval-roberta-base |
+| mmlw-retrieval-roberta-base | 2023-12-26 | Apache-2.0 | model embeddingow do wyszukiwania semantycznego po polsku | tak, jednorazowo przez uzytkownika | https://huggingface.co/sdadas/mmlw-retrieval-roberta-base |
 | SQLite (biblioteka wbudowana w Pythona) | 3.42.0 | Public Domain | baza metadanych i indeks pelnotekstowy FTS5 | nie, czesc dystrybucji Pythona | https://www.sqlite.org/ |
 | PDFium | dostarczany przez pypdfium2 | BSD-3-Clause i Apache-2.0 | silnik odczytu PDF uzywany przez pypdfium2 | nie, dolaczony do pakietu pypdfium2 | https://pdfium.googlesource.com/pdfium/ |
 | Tesseract OCR | 5.x (opcjonalnie) | Apache-2.0 | opcjonalny silnik OCR o najlepszej jakosci dla jezyka polskiego | nie, instalowany osobno przez administratora | https://github.com/UB-Mannheim/tesseract/wiki |
-| Inno Setup | 6.x | Inno Setup License (dopuszcza uzycie komercyjne) | budowanie instalatora Windows | nie, narzedzie deweloperskie | https://jrsoftware.org/isinfo.php |
 
 ## Narzedzia deweloperskie
 
-Nie trafiaja do pakietu instalacyjnego.
+Potrzebne tylko do testow i kontroli jakosci, aplikacja ich nie uzywa.
 
 | Komponent | Wersja | Licencja |
 | --- | --- | --- |
-| altgraph | 0.17.5 | MIT License |
 | coverage | 7.15.2 | Apache-2.0 |
 | iniconfig | 2.3.0 | MIT |
 | mypy | 2.3.0 | MIT |
 | mypy_extensions | 1.1.0 | MIT |
-| pefile | 2023.2.7 | MIT |
 | pluggy | 1.6.0 | MIT License |
 | Pygments | 2.20.0 | BSD-2-Clause |
-| pyinstaller | 6.21.0 | GNU General Public License v2 (GPLv2) |
-| pyinstaller-hooks-contrib | 2026.6 | Apache Software License |
 | pytest | 9.1.1 | MIT |
 | pytest-cov | 7.1.0 | MIT License |
 | pytest-qt | 4.5.0 | MIT License |

@@ -28,48 +28,44 @@ HTML, RTF, EML, MSG wraz z załącznikami, PNG, JPEG, TIFF, BMP, GIF, WEBP.
 
 Szczegóły, poziom wsparcia i ograniczenia każdego formatu: [docs/formaty.md](https://github.com/KMChris/finddocs/blob/main/docs/formaty.md).
 
-## Instalacja dla użytkownika
+## Uruchomienie
 
-Uruchom instalator `FindDocs-0.2.3-instalator.exe`. Instalacja nie wymaga
-uprawnień administratora. Po zakończeniu aplikacja jest dostępna w menu Start.
-Nie trzeba uruchamiać żadnego serwera ani wpisywać adresu w przeglądarce.
-
-Pełna instrukcja: [docs/instrukcja-uzytkownika.md](https://github.com/KMChris/finddocs/blob/main/docs/instrukcja-uzytkownika.md).
-
-## Instalacja przez pip
-
-Wymagany Python od 3.11 do 3.14 na Windows 11.
+Aplikacja nie ma instalatora ani pliku wykonywalnego. Uruchamia się ją wprost
+z kodu źródłowego. Wymagany Python od 3.11 do 3.14 na Windows 11.
 
 ```bash
-pip install finddocs
+py -3.11 -m venv .venv
+.venv\Scripts\python -m pip install -r requirements.txt
+.venv\Scripts\python run.py
 ```
 
-Silnik OCR jest opcjonalny i instaluje się jako dodatek:
+Trzecie polecenie otwiera interfejs graficzny. Nie trzeba uruchamiać żadnego
+serwera ani wpisywać adresu w przeglądarce. Ten sam skrypt daje dostęp do
+poleceń administracyjnych:
 
 ```bash
-pip install "finddocs[ocr-rapid]"
+.venv\Scripts\python run.py --help
 ```
 
-Dodatek `all` instaluje komplet dla samodzielnego stanowiska: silnik OCR
-oraz narzędzia importu i konwersji modeli embeddingów:
+Silnik OCR jest opcjonalny i instaluje się osobno:
 
 ```bash
-pip install "finddocs[all]"
+.venv\Scripts\python -m pip install -r requirements-ocr.txt
 ```
 
-Po instalacji polecenie `finddocs-gui` uruchamia interfejs graficzny,
-a `finddocs` daje dostęp do poleceń administracyjnych. Wyszukiwanie dokładne
-działa od razu. Wyszukiwanie semantyczne i hybrydowe wymaga lokalnego modelu
-embeddingów, który instaluje jedno polecenie (za jawną zgodą pobiera model
-z Hugging Face i konwertuje do ONNX):
+Wyszukiwanie dokładne działa od razu. Wyszukiwanie semantyczne i hybrydowe
+wymaga lokalnego modelu embeddingów, który instaluje jedno polecenie (za jawną
+zgodą pobiera model z Hugging Face i konwertuje do ONNX):
 
 ```bash
-finddocs model import --use
+.venv\Scripts\python -m pip install -r requirements-export.txt
+.venv\Scripts\python run.py model import --use
 ```
 
-Polecenie `finddocs model import` przyjmuje też katalog z własnym modelem albo
-dowolne repozytorium Hugging Face. Pełny opis instalacji, konfiguracji i modeli:
-[docs/instalacja-pip.md](https://github.com/KMChris/finddocs/blob/main/docs/instalacja-pip.md).
+Polecenie `model import` przyjmuje też katalog z własnym modelem albo dowolne
+repozytorium Hugging Face. Pełny opis przygotowania środowiska, konfiguracji
+i modeli: [docs/uruchomienie-ze-zrodel.md](https://github.com/KMChris/finddocs/blob/main/docs/uruchomienie-ze-zrodel.md).
+Obsługa aplikacji: [docs/instrukcja-uzytkownika.md](https://github.com/KMChris/finddocs/blob/main/docs/instrukcja-uzytkownika.md).
 
 ## Szybki start bez SharePointa
 
@@ -81,65 +77,39 @@ można wyszukiwać.
 To samo z wiersza poleceń:
 
 ```bash
-finddocs demo --register
-finddocs index
-finddocs search "procedura przelewów 24.07.2015"
+.venv\Scripts\python run.py demo --register
+.venv\Scripts\python run.py index
+.venv\Scripts\python run.py search "procedura przelewów 24.07.2015"
 ```
 
-## Uruchomienie developerskie
+## Praca nad kodem
 
-Wymagany Python od 3.11 do 3.14 na Windows 11.
+Środowisko z narzędziami do testów i kontroli jakości:
 
 ```bash
-py -3.11 -m venv .venv
-.venv\Scripts\python.exe -m pip install -e ".[dev,ocr-rapid]"
+.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 ```
 
-Model embeddingów pobiera się raz z Hugging Face i eksportuje do ONNX:
+Model embeddingów można też przygotować ręcznie, zamiast poleceniem
+`run.py model import`:
 
 ```bash
 git clone https://huggingface.co/sdadas/mmlw-retrieval-roberta-base models/mmlw-retrieval-roberta-base
-.venv\Scripts\python.exe -m pip install torch transformers onnx onnxscript
+.venv\Scripts\python.exe -m pip install -r requirements-export.txt
 .venv\Scripts\python.exe tools/export_model_onnx.py models/mmlw-retrieval-roberta-base --quantize
 ```
 
-Uruchomienie interfejsu:
-
-```bash
-.venv\Scripts\python.exe -m finddocs.gui
-```
-
-Uruchomienie poleceń administracyjnych:
-
-```bash
-.venv\Scripts\python.exe -m finddocs --help
-```
+Pakiet nie jest instalowany w środowisku: `run.py` dodaje katalog `src` do
+ścieżki importów, a testy robią to samo przez `pythonpath` w `pyproject.toml`.
 
 ## Kontrola jakości
 
 ```bash
-.venv\Scripts\python.exe -m ruff check src tests packaging tools
-.venv\Scripts\python.exe -m ruff format --check src tests packaging tools
-.venv\Scripts\python.exe -m mypy src
+.venv\Scripts\python.exe -m ruff check src tests tools run.py
+.venv\Scripts\python.exe -m ruff format --check src tests tools run.py
+.venv\Scripts\python.exe -m mypy src run.py
 .venv\Scripts\python.exe -m pytest -q
 ```
-
-## Budowanie pakietu i instalatora
-
-```bash
-.venv\Scripts\python.exe packaging/build_app.py --with-model
-.venv\Scripts\python.exe packaging/build_installer.py
-```
-
-Pierwsze polecenie tworzy katalog `packaging/output/FindDocs` z plikiem
-wykonywalnym i wykonuje test dymny. Drugie buduje instalator przy pomocy
-Inno Setup 6. Gdy Inno Setup nie jest zainstalowany, skrypt wypisuje instrukcję
-instalacji zamiast kończyć pracę bez komunikatu.
-
-Rozmiary wyniku: 409 MB bez modelu, 534 MB z modelem w wersji INT8,
-191 MB dla samego instalatora. Przełącznik `--full-precision-model` dokłada
-wagi FP32, co powiększa pakiet o około 470 MB i nie jest potrzebne do
-domyślnej konfiguracji.
 
 ## Architektura w skrócie
 
@@ -166,7 +136,7 @@ Szczegóły i diagramy: [docs/architektura.md](https://github.com/KMChris/finddo
 | Dokument | Zawartość |
 | --- | --- |
 | [Instrukcja użytkownika](https://github.com/KMChris/finddocs/blob/main/docs/instrukcja-uzytkownika.md) | obsługa aplikacji |
-| [Instalacja z PyPI](https://github.com/KMChris/finddocs/blob/main/docs/instalacja-pip.md) | pip, konfiguracja, lokalny model embeddingów |
+| [Uruchomienie z kodu źródłowego](https://github.com/KMChris/finddocs/blob/main/docs/uruchomienie-ze-zrodel.md) | środowisko, konfiguracja, lokalny model embeddingów |
 | [Instrukcja administratora](https://github.com/KMChris/finddocs/blob/main/docs/instrukcja-administratora.md) | wdrożenie, konfiguracja, CLI |
 | [Integracja z SharePoint](https://github.com/KMChris/finddocs/blob/main/docs/integracja-sharepoint.md) | Microsoft Graph, Entra ID, uprawnienia |
 | [Architektura](https://github.com/KMChris/finddocs/blob/main/docs/architektura.md) | warstwy, diagramy, decyzje |

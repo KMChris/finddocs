@@ -1,9 +1,9 @@
 """Magazyn modeli embeddingow: import z katalogu lub Hugging Face, walidacja, usuwanie.
 
-Modul realizuje polecenie ``finddocs model import``. Zrodlem moze byc:
+Modul realizuje polecenie ``run.py model import``. Zrodlem moze byc:
 
 1. katalog z gotowym eksportem ONNX (z manifestem aplikacji albo bez niego),
-2. katalog z checkpointem HuggingFace (konwersja wymaga dodatku ``finddocs[export]``),
+2. katalog z checkpointem HuggingFace (konwersja wymaga ``requirements-export.txt``),
 3. identyfikator repozytorium na Hugging Face (pobranie przez polityke sieciowa).
 
 Kazdy zaimportowany model przechodzi walidacje: sesja ONNX Runtime na CPU liczy
@@ -335,7 +335,7 @@ def import_local_model(
     """Importuje model z lokalnego katalogu do magazynu modeli uzytkownika.
 
     Katalog moze zawierac gotowy eksport ONNX albo checkpoint HuggingFace.
-    Checkpoint jest konwertowany na miejscu, co wymaga dodatku ``finddocs[export]``.
+    Checkpoint jest konwertowany na miejscu, co wymaga ``requirements-export.txt``.
     """
     app_paths = (paths or AppPaths.default()).ensure()
     source_dir = source_dir.expanduser().resolve()
@@ -361,7 +361,7 @@ def import_local_model(
                 raise ModelNotAvailableError(
                     "Ten katalog zawiera checkpoint wymagający konwersji do ONNX, "
                     "a w środowisku brakuje pakietów: " + ", ".join(missing) + ". "
-                    'Zainstaluj dodatek: pip install "finddocs[export]".'
+                    "Zainstaluj je poleceniem: pip install -r requirements-export.txt."
                 )
             result = convert_checkpoint(
                 resolved,
@@ -383,7 +383,7 @@ def import_local_model(
                     notes.append(
                         "Pominięto kwantyzację INT8: brak pakietu onnx. Model będzie "
                         "działał w pełnej precyzji, tylko wolniej. Kwantyzację umożliwia "
-                        'dodatek: pip install "finddocs[export]".'
+                        "pakiet onnx z requirements-export.txt."
                     )
             if (
                 "model.int8.onnx" in model_files

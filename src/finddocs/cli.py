@@ -27,6 +27,7 @@ from finddocs.config import (
 from finddocs.connectors.base import SourceConnector
 from finddocs.errors import FindDocsError
 from finddocs.logging_setup import configure_logging, get_logger
+from finddocs.startup import prepare_environment
 from finddocs.types import JobState, SearchFilters, SearchMode, SearchRequest, SourceKind
 from finddocs.version import APP_NAME, APP_VERSION
 
@@ -147,7 +148,7 @@ def cmd_sources_add_sharepoint(args: argparse.Namespace) -> int:
     config = config.with_source(source)
     save_config(config, _paths(args).config_file)
     print(f"Dodano źródło SharePoint: {source.source_id}")
-    print("Uwaga: pierwsze uzycie wymaga zalogowania. Uruchom 'finddocs sources test'.")
+    print("Uwaga: pierwsze uzycie wymaga zalogowania. Uruchom 'run.py sources test'.")
     return EXIT_OK
 
 
@@ -435,7 +436,7 @@ def cmd_maintenance(args: argparse.Namespace) -> int:
         if args.action == "rebuild":
             count = mark_all_for_reindex(index.repository, only_vectors=args.vectors_only)
             print(f"Oznaczono {count} dokumentów do ponownego przetworzenia.")
-            print("Uruchom 'finddocs index', żeby przebudować indeks.")
+            print("Uruchom 'run.py index', żeby przebudować indeks.")
             return EXIT_OK
     finally:
         index.close()
@@ -481,8 +482,8 @@ def cmd_model_list(args: argparse.Namespace) -> int:
         if row["katalog"]:
             print(f"    katalog: {row['katalog']}")
     print()
-    print("Instalacja: finddocs model import [katalog albo repozytorium]")
-    print("Przełączenie: finddocs model use <klucz>")
+    print("Instalacja: run.py model import [katalog albo repozytorium]")
+    print("Przełączenie: run.py model use <klucz>")
     return EXIT_OK
 
 
@@ -495,7 +496,7 @@ def _activate_model(args: argparse.Namespace, key: str) -> int:
     directory = find_model_dir(key, extra)
     if directory is None:
         print(
-            f"Model '{key}' nie jest zainstalowany. Lista: finddocs model list",
+            f"Model '{key}' nie jest zainstalowany. Lista: run.py model list",
             file=sys.stderr,
         )
         return EXIT_ERROR
@@ -507,8 +508,8 @@ def _activate_model(args: argparse.Namespace, key: str) -> int:
     print(f"Aktywny model: {key} ({directory})")
     if changed:
         print("Zmiana modelu wymaga przebudowy części semantycznej indeksu:")
-        print("  finddocs maintenance rebuild --vectors-only")
-        print("  finddocs index")
+        print("  run.py maintenance rebuild --vectors-only")
+        print("  run.py index")
         print("Do tego czasu wyszukiwanie dokładne działa bez zmian.")
     return EXIT_OK
 
@@ -580,7 +581,7 @@ def cmd_model_import(args: argparse.Namespace) -> int:
         print()
         return _activate_model(args, imported.key)
     print()
-    print(f"Model pojawi się na liście w GUI. Aktywacja: finddocs model use {imported.key}")
+    print(f"Model pojawi się na liście w GUI. Aktywacja: run.py model use {imported.key}")
     return EXIT_OK
 
 
@@ -600,7 +601,7 @@ def cmd_model_remove(args: argparse.Namespace) -> int:
     if config.embedding.model_key == args.key:
         print(
             "Uwaga: usunięty model był aktywny. Wyszukiwanie semantyczne nie będzie "
-            "działać do czasu instalacji modelu (finddocs model import)."
+            "działać do czasu instalacji modelu (run.py model import)."
         )
     return EXIT_OK
 
@@ -610,8 +611,9 @@ def cmd_model_remove(args: argparse.Namespace) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="finddocs",
+        prog="run.py",
         description=f"{APP_NAME} {APP_VERSION}: lokalna wyszukiwarka dokumentów",
+        epilog="Bez polecenia albo z poleceniem „gui” uruchamia się interfejs graficzny.",
     )
     parser.add_argument("--version", action="version", version=f"{APP_NAME} {APP_VERSION}")
     parser.add_argument("--data-dir", help="katalog danych aplikacji")
@@ -711,7 +713,8 @@ def build_parser() -> argparse.ArgumentParser:
         help="instaluje model z katalogu albo z Hugging Face",
         description=(
             "Importuje model embeddingów. Źródłem może być katalog z eksportem ONNX, "
-            "katalog z checkpointem HuggingFace (konwersja wymaga dodatku finddocs[export]) "
+            "katalog z checkpointem HuggingFace (konwersja wymaga pakietow "
+            "z requirements-export.txt) "
             "albo identyfikator repozytorium, np. sdadas/mmlw-retrieval-roberta-base. "
             "Bez argumentu pobierany jest model domyślny."
         ),
@@ -741,7 +744,7 @@ def build_parser() -> argparse.ArgumentParser:
     model_import.set_defaults(func=cmd_model_import)
 
     model_use = model_sub.add_parser("use", help="przełącza aktywny model")
-    model_use.add_argument("key", help="klucz modelu z listy finddocs model list")
+    model_use.add_argument("key", help="klucz modelu z listy run.py model list")
     model_use.set_defaults(func=cmd_model_use)
 
     model_remove = model_sub.add_parser("remove", help="usuwa zainstalowany model")
@@ -768,6 +771,7 @@ def _use_utf8_output() -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
+    prepare_environment()
     _use_utf8_output()
     parser = build_parser()
     args = parser.parse_args(argv)

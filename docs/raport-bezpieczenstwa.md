@@ -155,7 +155,7 @@ nie mogą zmienić struktury wyrażenia.
 | brak miejsca na dysku | próg `min_free_disk_bytes`, zadanie kończy się kodem `FD-1002` |
 | przerwanie zadania | punkty kontrolne co N dokumentów, wznowienie |
 | indeks niezgodny z konfiguracją | skróty `index_compat_hash` i `vector_compat_hash` sprawdzane przy starcie |
-| uszkodzenie pliku bazy | `finddocs maintenance check`, kopie zapasowe |
+| uszkodzenie pliku bazy | `python run.py maintenance check`, kopie zapasowe |
 
 ### Kod i zależności
 
@@ -190,9 +190,10 @@ katalogu `src`.
 1. **Indeks nie jest szyfrowany.** Zawiera treść dokumentów. Zalecenie:
    szyfrowanie dysku (BitLocker) na stacjach roboczych.
 2. **Kopie indeksu zawierają to samo.** Przechowuj je tam, gdzie dokumenty.
-3. **Brak podpisu kodu.** Instalator nie jest podpisany, więc SmartScreen
-   pokaże ostrzeżenie. Zalecenie: podpisanie certyfikatem organizacji przed
-   dystrybucją.
+3. **Kod na stanowisku jest zapisywalny.** Aplikacja uruchamia się z plików
+   źródłowych, więc każdy, kto ma prawo zapisu do tego katalogu, może zmienić
+   jej działanie. Zalecenie: katalog z kodem tylko do odczytu dla konta
+   użytkownika i kontrola integralności przy wdrożeniu.
 4. **Uprawnienia w Entra ID.** `Sites.Read.All` obejmuje wszystkie witryny,
    do których użytkownik ma dostęp. Zawężenie wymaga `Sites.Selected`, co nie
    zostało przetestowane w tej wersji.

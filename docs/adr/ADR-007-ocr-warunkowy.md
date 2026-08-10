@@ -10,8 +10,8 @@ niewyszukiwalne. Jednocześnie OCR jest najdroższym elementem indeksowania:
 rozpoznanie strony A4 zajmuje od 1 do 3 sekund, podczas gdy odczyt strony
 z warstwą tekstową to milisekundy.
 
-Nie każdy komputer ma zainstalowany silnik OCR, a instalator nie może wymagać
-uprawnień administratora.
+Nie każdy komputer ma zainstalowany silnik OCR, a przygotowanie stanowiska
+nie może wymagać uprawnień administratora.
 
 ## Decyzja
 
@@ -51,9 +51,9 @@ jest nie do przyjęcia.
 części stacji byłby niedostępny. Warstwa protokołu kosztuje niewiele, a daje
 wybór.
 
-**Dołączenie Tesseract do instalatora.** Tesseract ma własny instalator,
-własne modele językowe i licencję Apache-2.0. Dołączenie go zwiększyłoby
-instalator i skomplikowało aktualizacje modeli językowych.
+**Dystrybucja Tesseract razem z aplikacją.** Tesseract ma własny instalator
+systemowy, własne modele językowe i licencję Apache-2.0. Dokładanie go do
+wdrożenia skomplikowałoby aktualizacje modeli językowych.
 
 ## Konsekwencje
 

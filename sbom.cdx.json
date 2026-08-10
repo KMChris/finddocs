@@ -30,37 +30,6 @@
   "components": [
     {
       "type": "library",
-      "name": "altgraph",
-      "version": "0.17.5",
-      "purl": "pkg:pypi/altgraph@0.17.5",
-      "scope": "optional",
-      "licenses": [
-        {
-          "license": {
-            "name": "MIT License"
-          }
-        }
-      ],
-      "externalReferences": [
-        {
-          "type": "website",
-          "url": "https://altgraph.readthedocs.io"
-        }
-      ],
-      "properties": [
-        {
-          "name": "finddocs:usage",
-          "value": "zaleznosc posrednia"
-        },
-        {
-          "name": "finddocs:scope",
-          "value": "deweloperska"
-        }
-      ],
-      "author": "Ronald Oussoren"
-    },
-    {
-      "type": "library",
       "name": "antlr4-python3-runtime",
       "version": "4.9.3",
       "purl": "pkg:pypi/antlr4-python3-runtime@4.9.3",
@@ -1402,37 +1371,6 @@
     },
     {
       "type": "library",
-      "name": "pefile",
-      "version": "2023.2.7",
-      "purl": "pkg:pypi/pefile@2023.2.7",
-      "scope": "optional",
-      "licenses": [
-        {
-          "license": {
-            "name": "MIT"
-          }
-        }
-      ],
-      "externalReferences": [
-        {
-          "type": "website",
-          "url": "https://github.com/erocarrera/pefile"
-        }
-      ],
-      "properties": [
-        {
-          "name": "finddocs:usage",
-          "value": "zaleznosc posrednia"
-        },
-        {
-          "name": "finddocs:scope",
-          "value": "deweloperska"
-        }
-      ],
-      "author": "Ero Carrera"
-    },
-    {
-      "type": "library",
       "name": "pillow",
       "version": "12.3.0",
       "purl": "pkg:pypi/pillow@12.3.0",
@@ -1630,67 +1568,6 @@
         {
           "type": "website",
           "url": "https://pygments.org"
-        }
-      ],
-      "properties": [
-        {
-          "name": "finddocs:usage",
-          "value": "zaleznosc posrednia"
-        },
-        {
-          "name": "finddocs:scope",
-          "value": "deweloperska"
-        }
-      ]
-    },
-    {
-      "type": "library",
-      "name": "pyinstaller",
-      "version": "6.21.0",
-      "purl": "pkg:pypi/pyinstaller@6.21.0",
-      "scope": "optional",
-      "licenses": [
-        {
-          "license": {
-            "name": "GNU General Public License v2 (GPLv2)"
-          }
-        }
-      ],
-      "externalReferences": [
-        {
-          "type": "website",
-          "url": "https://pyinstaller.org"
-        }
-      ],
-      "properties": [
-        {
-          "name": "finddocs:usage",
-          "value": "budowanie pakietu aplikacji (narzedzie deweloperskie)"
-        },
-        {
-          "name": "finddocs:scope",
-          "value": "deweloperska"
-        }
-      ],
-      "author": "Hartmut Goebel, Giovanni Bajo, David Vierra, David Cortesi, Martin Zibricky"
-    },
-    {
-      "type": "library",
-      "name": "pyinstaller-hooks-contrib",
-      "version": "2026.6",
-      "purl": "pkg:pypi/pyinstaller-hooks-contrib@2026.6",
-      "scope": "optional",
-      "licenses": [
-        {
-          "license": {
-            "name": "Apache Software License"
-          }
-        }
-      ],
-      "externalReferences": [
-        {
-          "type": "website",
-          "url": "https://github.com/pyinstaller/pyinstaller-hooks-contrib"
         }
       ],
       "properties": [
@@ -2668,7 +2545,7 @@
         },
         {
           "name": "finddocs:downloaded",
-          "value": "tak, jednorazowo przez uzytkownika albo dolaczony do instalatora"
+          "value": "tak, jednorazowo przez uzytkownika"
         },
         {
           "name": "finddocs:bundled",
@@ -2765,38 +2642,6 @@
         {
           "name": "finddocs:downloaded",
           "value": "nie, instalowany osobno przez administratora"
-        },
-        {
-          "name": "finddocs:bundled",
-          "value": "false"
-        }
-      ]
-    },
-    {
-      "type": "application",
-      "name": "Inno Setup",
-      "version": "6.x",
-      "licenses": [
-        {
-          "license": {
-            "name": "Inno Setup License (dopuszcza uzycie komercyjne)"
-          }
-        }
-      ],
-      "externalReferences": [
-        {
-          "type": "website",
-          "url": "https://jrsoftware.org/isinfo.php"
-        }
-      ],
-      "properties": [
-        {
-          "name": "finddocs:usage",
-          "value": "budowanie instalatora Windows"
-        },
-        {
-          "name": "finddocs:downloaded",
-          "value": "nie, narzedzie deweloperskie"
         },
         {
           "name": "finddocs:bundled",

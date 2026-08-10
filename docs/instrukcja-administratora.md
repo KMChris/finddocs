@@ -10,50 +10,76 @@ codzienną opisuje [instrukcja użytkownika](instrukcja-uzytkownika.md).
 | System | Windows 11 (x64), Windows 10 22H2 działa, ale nie jest testowany |
 | Procesor | x86-64 z AVX2, cztery rdzenie lub więcej |
 | Pamięć | 4 GB dla trybu dokładnego, 8 GB gdy używany jest model embeddingów |
-| Dysk | ok. 500 MB na aplikację z modelem plus miejsce na indeks |
-| Uprawnienia | zwykły użytkownik, instalacja bez administratora |
+| Dysk | ok. 2 GB na kod, środowisko wirtualne i model, plus miejsce na indeks |
+| Python | 3.11 do 3.14, wydanie 64-bitowe |
+| Uprawnienia | zwykły użytkownik, wszystko mieści się w jego profilu |
 | GPU | niepotrzebne, aplikacja nigdy go nie używa |
 
 Rozmiar indeksu to z grubsza 30 do 60 procent rozmiaru dokumentów tekstowych.
 Skany zajmują mniej, bo indeksowany jest wynik OCR, a nie obraz.
 
-## Instalacja
+## Wdrożenie
 
-### Instalator
+Aplikacja nie ma instalatora ani pliku wykonywalnego. Wdrożenie to skopiowanie
+katalogu z kodem i przygotowanie obok niego środowiska wirtualnego. Pełny opis:
+[uruchomienie z kodu źródłowego](uruchomienie-ze-zrodel.md).
 
-`FindDocs-0.2.3-instalator.exe` instaluje aplikację w profilu użytkownika
-(`%LOCALAPPDATA%\Programs\FindDocs`), tworzy skrót w menu Start i opcjonalnie
-na pulpicie. Nie wymaga uprawnień administratora i nie zmienia ustawień systemu.
-
-Instalacja cicha:
+### Stanowisko pojedyncze
 
 ```bat
-FindDocs-0.2.3-instalator.exe /VERYSILENT /CURRENTUSER /NORESTART /SUPPRESSMSGBOXES
+py -3.11 -m venv .venv
+.venv\Scripts\python -m pip install -r requirements.txt
+.venv\Scripts\python -m pip install -r requirements-ocr.txt
+.venv\Scripts\python run.py
 ```
 
-Przełącznik `/CURRENTUSER` jest istotny: bez niego instalator pyta o zakres
-instalacji i przy braku odpowiedzi czeka w nieskończoność. Instalacja dla całej
-maszyny wymaga `/ALLUSERS` i uprawnień administratora.
+Katalog z kodem może leżeć w profilu użytkownika albo w katalogu tylko
+do odczytu, wspólnym dla stanowiska. W drugim przypadku środowisko wirtualne
+tworzy się osobno, w miejscu zapisywalnym dla użytkownika, a `run.py`
+uruchamia się z pełnej ścieżki.
 
-Pozostałe przełączniki Inno Setup: `/SILENT`, `/LOG="sciezka"`, `/DIR="sciezka"`,
-`/TASKS=desktopicon`.
+### Skrót w menu Start
 
-Sprawdzone na tej wersji: instalacja cicha zajmuje około 541 MB w profilu
-użytkownika, tworzy trzy skróty w menu Start (aplikacja, dokumentacja,
-deinstalator) i wpis `FindDocs_is1` w gałęzi rejestru użytkownika.
+Instalatora nie ma, więc skrót zakłada się ręcznie albo skryptem wdrożeniowym:
 
-### Deinstalacja
+| Pole skrótu | Wartość |
+| --- | --- |
+| Element docelowy | `<katalog>\.venv\Scripts\pythonw.exe "<katalog>\run.py"` |
+| Rozpocznij w | `<katalog>` |
+| Ikona | `<katalog>\src\finddocs\resources\finddocs.ico` |
 
-Panel sterowania, Aplikacje, FindDocs. Deinstalator pyta, czy usunąć również
-katalog danych `%LOCALAPPDATA%\FindDocs`. Odpowiedź przecząca zachowuje indeks
-i konfigurację na wypadek ponownej instalacji.
+`pythonw.exe` nie otwiera okna konsoli. Skrót kopiuje się do
+`%APPDATA%\Microsoft\Windows\Start Menu\Programs`.
 
-### Instalacja offline
+### Wdrożenie masowe
 
-Aplikacja nie pobiera niczego podczas instalacji. Model embeddingów można:
+Pakiet dla Intune albo Configuration Managera wykonuje trzy kroki: kopiuje
+katalog z kodem, tworzy środowisko wirtualne poleceniami z sekcji wyżej
+i zakłada skrót. Wykrywanie wersji: `python run.py --version`.
 
-* dołączyć do pakietu przy budowaniu (`build_app.py --with-model`), albo
+Warunkiem wstępnym jest Python od 3.11 do 3.14 na stanowisku. Gdy go nie ma,
+instaluje go administrator, osobnym pakietem.
+
+### Usunięcie
+
+Skasuj katalog z kodem razem ze środowiskiem `.venv` i skrót w menu Start.
+Katalog danych `%LOCALAPPDATA%\FindDocs` zostaje nietknięty: kasuje się go
+osobno, gdy indeks nie jest już potrzebny.
+
+### Stanowisko bez dostępu do sieci
+
+Aplikacja w trakcie pracy nie pobiera niczego sama. Sieci potrzebuje tylko
+przygotowanie środowiska, więc na stanowisku odciętym od internetu zależności
+instaluje się z lokalnego katalogu z kołami:
+
+```bat
+.venv\Scripts\python -m pip install --no-index --find-links D:\kola -r requirements.txt
+```
+
+Model embeddingów można wtedy:
+
 * skopiować ręcznie do `%LOCALAPPDATA%\FindDocs\models\`, albo
+* umieścić w katalogu `models` obok kodu, albo
 * pobrać z poziomu aplikacji, jeśli włączysz na to zgodę w konfiguracji.
 
 Bez modelu działa wyszukiwanie dokładne. Aplikacja mówi o tym przy starcie
@@ -105,8 +131,8 @@ odczytuje go przy starcie. Poniżej pola, które zwykle się zmienia.
 Zmiana `model_key`, `quantized` albo `max_sequence_length` unieważnia indeks
 wektorowy i wymaga jego przebudowy.
 
-Modele instaluje i przełącza grupa poleceń `finddocs model` (opis niżej).
-`finddocs model use` ustawia `model_key` i synchronizuje pozostałe pola
+Modele instaluje i przełącza grupa poleceń `python run.py model` (opis niżej).
+`python run.py model use` ustawia `model_key` i synchronizuje pozostałe pola
 z manifestem modelu, więc ręczna edycja tej sekcji zwykle nie jest potrzebna.
 
 ### OCR
@@ -241,23 +267,23 @@ nie musi go dotykać. W wersji zainstalowanej plik wykonywalny znajduje się
 w katalogu instalacji.
 
 ```bash
-finddocs --help
-finddocs --data-dir "D:\FindDocs" --json <polecenie>
+python run.py --help
+python run.py --data-dir "D:\FindDocs" --json <polecenie>
 ```
 
 ### Źródła
 
 ```bash
-finddocs sources list
-finddocs sources add-local "D:\Dokumenty" --id archiwum --label "Archiwum"
-finddocs sources add-sharepoint --id finanse --label "Finanse" \
+python run.py sources list
+python run.py sources add-local "D:\Dokumenty" --id archiwum --label "Archiwum"
+python run.py sources add-sharepoint --id finanse --label "Finanse" \
     --site https://contoso.sharepoint.com/sites/Finanse \
     --library "Dokumenty" \
     --tenant <tenant-id> --client-id <client-id> \
     --auth-flow interactive
-finddocs sources test finanse
-finddocs sources remove finanse
-finddocs sources remove finanse --purge
+python run.py sources test finanse
+python run.py sources remove finanse
+python run.py sources remove finanse --purge
 ```
 
 `--purge` usuwa przy okazji dokumenty tego źródła z indeksu. Bez tego
@@ -266,7 +292,7 @@ przełącznika znikną one dopiero przy następnym skanowaniu.
 ### Zbiór demonstracyjny
 
 ```bash
-finddocs demo --register
+python run.py demo --register
 ```
 
 Tworzy fikcyjne dokumenty po polsku i rejestruje je jako źródło `demo`.
@@ -275,31 +301,31 @@ Zbiór nie zawiera prawdziwych danych osobowych ani firmowych.
 ### Modele embeddingów
 
 ```bash
-finddocs model list
-finddocs model import --use
-finddocs model import D:\Modele\moj-model --name moj-model
-finddocs model import intfloat/multilingual-e5-small
-finddocs model use mmlw-retrieval-roberta-base
-finddocs model remove moj-model
+python run.py model list
+python run.py model import --use
+python run.py model import D:\Modele\moj-model --name moj-model
+python run.py model import intfloat/multilingual-e5-small
+python run.py model use mmlw-retrieval-roberta-base
+python run.py model remove moj-model
 ```
 
 `import` bez argumentu pobiera domyślny model MMLW z Hugging Face; pobranie
 wymaga zgody w konsoli (w skryptach `--yes`) i przechodzi przez politykę
 sieciową w kategorii `model_download`. Argumentem może być katalog z gotowym
-eksportem ONNX, katalog z checkpointem HuggingFace (konwersja wymaga dodatku
-`finddocs[export]`) albo repozytorium `organizacja/nazwa`. Każdy model jest
+eksportem ONNX, katalog z checkpointem HuggingFace (konwersja wymaga pakietów
+z `requirements-export.txt`) albo repozytorium `organizacja/nazwa`. Każdy model jest
 walidowany próbnym przebiegiem przed instalacją i od razu widoczny na liście
 modeli w GUI. Zmiana aktywnego modelu wymaga przebudowy części wektorowej
-(`finddocs maintenance rebuild --vectors-only`, potem `finddocs index`).
-Szczegóły i opcje: [instalacja z PyPI](instalacja-pip.md).
+(`python run.py maintenance rebuild --vectors-only`, potem `python run.py index`).
+Szczegóły i opcje: [uruchomienie z kodu źródłowego](uruchomienie-ze-zrodel.md).
 
 ### Indeksowanie
 
 ```bash
-finddocs index
-finddocs index --source archiwum
-finddocs index --full
-finddocs index --no-deletions
+python run.py index
+python run.py index --source archiwum
+python run.py index --full
+python run.py index --no-deletions
 ```
 
 `--full` przetwarza wszystko od nowa, także dokumenty bez zmian.
@@ -309,19 +335,19 @@ finddocs index --no-deletions
 ### Wyszukiwanie
 
 ```bash
-finddocs search "procedura przelewów 24.07.2015"
-finddocs search "00 1234 5678 9012 3456 7890 1234" --mode exact --limit 100
-finddocs search "kredyt na mieszkanie" --mode semantic
-finddocs search "umowa" --ext .pdf --source archiwum
+python run.py search "procedura przelewów 24.07.2015"
+python run.py search "00 1234 5678 9012 3456 7890 1234" --mode exact --limit 100
+python run.py search "kredyt na mieszkanie" --mode semantic
+python run.py search "umowa" --ext .pdf --source archiwum
 finddocs --json search "faktura" > wyniki.json
 ```
 
 ### Raport pokrycia
 
 ```bash
-finddocs report
-finddocs report --csv-out raport.csv --json-out raport.json
-finddocs report --fast
+python run.py report
+python run.py report --csv-out raport.csv --json-out raport.json
+python run.py report --fast
 ```
 
 `--fast` pomija ładowanie modelu, więc raport powstaje szybciej.
@@ -329,7 +355,7 @@ finddocs report --fast
 ### Diagnostyka
 
 ```bash
-finddocs doctor
+python run.py doctor
 ```
 
 Wypisuje wersje bibliotek, dostępność FTS5, listę parserów wraz z powodem
@@ -339,20 +365,20 @@ sieciową. To pierwsze polecenie przy każdym zgłoszeniu problemu.
 ### Konserwacja
 
 ```bash
-finddocs maintenance check
-finddocs maintenance backup
-finddocs maintenance list-backups
-finddocs maintenance restore --name kopia-2026-07-31
-finddocs maintenance compact
-finddocs maintenance rebuild
-finddocs maintenance rebuild --vectors-only
+python run.py maintenance check
+python run.py maintenance backup
+python run.py maintenance list-backups
+python run.py maintenance restore --name kopia-2026-07-31
+python run.py maintenance compact
+python run.py maintenance rebuild
+python run.py maintenance rebuild --vectors-only
 ```
 
 Opis każdej operacji: [odbudowa indeksu](odbudowa-indeksu.md).
 
 ## Utrzymanie
 
-**Codziennie albo co tydzień.** Zaplanuj `finddocs index` w Harmonogramie zadań
+**Codziennie albo co tydzień.** Zaplanuj `python run.py index` w Harmonogramie zadań
 Windows, na koncie użytkownika, w kontekście jego sesji (token SharePoint jest
 związany z użytkownikiem). Zadanie działa bez okien.
 
@@ -360,11 +386,11 @@ związany z użytkownikiem). Zadanie działa bez okien.
 schtasks /Create /TN "FindDocs indeksowanie" /TR "\"%LOCALAPPDATA%\Programs\FindDocs\finddocs.exe\" index" /SC DAILY /ST 06:30
 ```
 
-**Co miesiąc.** `finddocs maintenance compact` porządkuje indeks wektorowy
+**Co miesiąc.** `python run.py maintenance compact` porządkuje indeks wektorowy
 po usunięciach i wykonuje `VACUUM` bazy.
 
 **Przed każdą zmianą konfiguracji wpływającej na indeks.**
-`finddocs maintenance backup`.
+`python run.py maintenance backup`.
 
 **Monitorowanie.** Plik `logs\finddocs.log` w formacie JSON, po jednym zdarzeniu
 w wierszu. Zdarzenia o poziomie `error` i `warning` warto zbierać centralnie.
@@ -372,9 +398,9 @@ Log nie zawiera treści dokumentów ani zapytań.
 
 ## Aktualizacja
 
-Patrz [procedura aktualizacji](aktualizacja.md). Zasada ogólna: instalator
-nadpisuje pliki programu i nie rusza katalogu danych. Migracje schematu
-wykonują się przy pierwszym uruchomieniu nowej wersji.
+Patrz [procedura aktualizacji](aktualizacja.md). Zasada ogólna: aktualizacja
+podmienia kod i nie rusza katalogu danych. Migracje schematu wykonują się
+przy pierwszym uruchomieniu nowej wersji.
 
 ## Rozwiązywanie problemów
 

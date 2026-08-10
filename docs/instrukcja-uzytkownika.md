@@ -19,8 +19,11 @@ i wyniki nie są nigdzie wysyłane.
 
 ## Pierwsze uruchomienie
 
-Po instalacji uruchom FindDocs z menu Start. Aplikacja otworzy się w oknie,
-nie w przeglądarce. Nie trzeba niczego startować ręcznie.
+Uruchom FindDocs skrótem z menu Start, który przygotował administrator.
+Aplikacja otworzy się w oknie, nie w przeglądarce. Nie trzeba niczego startować
+ręcznie. Gdy skrótu nie ma, aplikację uruchamia polecenie
+`.venv\Scripts\python run.py` w katalogu z kodem; opisuje to
+[uruchomienie z kodu źródłowego](uruchomienie-ze-zrodel.md).
 
 Przy pierwszym uruchomieniu indeks jest pusty. Kolejność pracy jest zawsze taka sama:
 
@@ -221,8 +224,9 @@ wyszukiwanie dokładne.
 Przycisk **Ustawienia...** obok listy otwiera okno, w którym można:
 
 * **zaimportować własny model z dysku**: wskaż katalog z gotowym eksportem ONNX
-  albo z checkpointem Hugging Face (konwersja wymaga dodatku `finddocs[export]`,
-  opisanego w [instalacji z PyPI](instalacja-pip.md));
+  albo z checkpointem Hugging Face (konwersja wymaga pakietów z pliku
+  `requirements-export.txt`, opisanych w
+  [uruchomieniu z kodu źródłowego](uruchomienie-ze-zrodel.md));
 * **pobrać model z Hugging Face**: podaj identyfikator repozytorium, na przykład
   `sdadas/mmlw-retrieval-roberta-base`. Aplikacja poprosi o zgodę na jednorazowe
   połączenie z serwerami Hugging Face; poza tym nie nawiązuje żadnych połączeń;

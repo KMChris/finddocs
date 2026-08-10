@@ -17,4 +17,5 @@ Format jest krótki celowo: zapis ma się dać przeczytać w dwie minuty.
 | [ADR-007](ADR-007-ocr-warunkowy.md) | OCR warunkowy z wymiennymi silnikami | przyjęta |
 | [ADR-008](ADR-008-pyside6.md) | PySide6 jako biblioteka interfejsu | przyjęta |
 | [ADR-009](ADR-009-polityka-sieciowa.md) | Domyślny brak ruchu wychodzącego | przyjęta |
-| [ADR-010](ADR-010-pakowanie.md) | PyInstaller onedir i Inno Setup | przyjęta |
+| [ADR-010](ADR-010-pakowanie.md) | PyInstaller onedir i Inno Setup | zastąpiona przez ADR-011 |
+| [ADR-011](ADR-011-uruchomienie-ze-zrodel.md) | Uruchomienie wyłącznie z kodu źródłowego | przyjęta |

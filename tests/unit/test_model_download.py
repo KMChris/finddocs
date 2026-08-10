@@ -118,7 +118,7 @@ def test_select_wagi_wymagaja_torch() -> None:
     assert plan.strategy == "weights"
     assert "model.safetensors" in plan.paths
 
-    with pytest.raises(ModelNotAvailableError, match="finddocs\\[export\\]"):
+    with pytest.raises(ModelNotAvailableError, match=r"requirements-export\.txt"):
         select_download_files(
             info, torch_available=False, can_quantize_locally=False, quantize=True
         )

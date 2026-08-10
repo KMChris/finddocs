@@ -229,9 +229,9 @@ def create_local_provider(
     if directory is None:
         descriptor = KNOWN_MODELS.get(model_key)
         hint = (
-            f" Model można zainstalować poleceniem: finddocs model import {descriptor.repo}"
+            f" Model można zainstalować poleceniem: run.py model import {descriptor.repo}"
             if descriptor
-            else " Model można zainstalować poleceniem: finddocs model import"
+            else " Model można zainstalować poleceniem: run.py model import"
         )
         raise ModelNotAvailableError(
             f"Nie znaleziono lokalnego modelu '{model_key}'.{hint}",

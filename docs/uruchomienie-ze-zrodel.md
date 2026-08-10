@@ -1,55 +1,79 @@
-# Instalacja z PyPI
+# Uruchomienie z kodu źródłowego
 
-FindDocs jest publikowany na PyPI jako pakiet [`finddocs`](https://pypi.org/project/finddocs/).
-Ten rozdział opisuje instalację przez pip, pierwszą konfigurację oraz podłączenie
-lokalnie pobranego modelu embeddingów. Użytkownikowi końcowemu polecamy gotowy
-instalator opisany w [instrukcji użytkownika](instrukcja-uzytkownika.md);
-instalacja przez pip jest przeznaczona dla administratorów i osób technicznych.
+FindDocs nie ma instalatora ani pliku wykonywalnego. Aplikację uruchamia się
+wprost z kodu źródłowego, interpreterem Pythona ze środowiska wirtualnego
+przygotowanego obok kodu. Ten rozdział opisuje przygotowanie środowiska,
+pierwsze uruchomienie, konfigurację oraz podłączenie modelu embeddingów.
 
 ## Wymagania
 
 * Windows 11 oraz Python od 3.11 do 3.14 w wydaniu 64-bitowym.
 * Aktualny pip.
+* Katalog z kodem: kopia repozytorium (`git clone` albo rozpakowane archiwum).
 
-## Instalacja
+Uprawnienia administratora nie są potrzebne. Wszystko, łącznie ze środowiskiem
+wirtualnym, mieści się w profilu użytkownika.
 
-Zalecane jest osobne środowisko wirtualne, żeby wersje bibliotek FindDocs
-nie mieszały się z innymi programami:
+## Przygotowanie środowiska
+
+W katalogu z kodem:
 
 ```bat
-py -m venv %USERPROFILE%\finddocs-env
-%USERPROFILE%\finddocs-env\Scripts\python -m pip install "finddocs[ocr-rapid]"
+py -3.11 -m venv .venv
+.venv\Scripts\python -m pip install -r requirements.txt
+.venv\Scripts\python -m pip install -r requirements-ocr.txt
 ```
 
-Sam pakiet bez OCR instaluje się poleceniem `pip install finddocs`. Dodatki:
+Zależności dzielą się na cztery pliki:
 
-| Dodatek | Zawartość |
+| Plik | Zawartość |
 | --- | --- |
-| `ocr-rapid` | silnik RapidOCR na ONNX Runtime, z modelami wbudowanymi w pakiet, bez instalatora systemowego |
-| `ocr-easy` | silnik EasyOCR, cięższy i wymagający własnych modeli |
-| `export` | torch, transformers, onnx i onnxscript: konwersja checkpointów Hugging Face do ONNX oraz kwantyzacja INT8 |
-| `all` | komplet dla samodzielnego stanowiska, równoważny `finddocs[ocr-rapid,export]` |
+| `requirements.txt` | wszystko, czego wymaga sama aplikacja |
+| `requirements-ocr.txt` | silnik RapidOCR na ONNX Runtime, bez instalatora systemowego |
+| `requirements-export.txt` | torch, transformers, onnx i onnxscript: konwersja modeli Hugging Face do ONNX |
+| `requirements-dev.txt` | testy, kontrola typów i linting |
 
-Dodatek `all` celowo nie zawiera `ocr-easy`: przy ustawieniu `ocr.engine`
-na `auto` EasyOCR ma pierwszeństwo przed RapidOCR, więc jego doinstalowanie
-zmieniłoby używany silnik. Kto chce EasyOCR, instaluje `finddocs[all,ocr-easy]`.
-Wszystkie dodatki na Pythonach od 3.11 do 3.14 instalują się z gotowych kół,
-bez kompilacji ze źródeł.
+Bez `requirements-ocr.txt` działa wszystko poza odczytem skanów. EasyOCR jest
+alternatywnym silnikiem i instaluje się go osobno (`pip install "easyocr>=1.7.2"`),
+bo przy ustawieniu `ocr.engine` na `auto` ma pierwszeństwo przed RapidOCR.
+Tesseract, jeżeli jest preferowany, instaluje się według rozdziału [OCR](ocr.md).
 
-Tesseract, jeżeli jest preferowany, instaluje się osobno według rozdziału [OCR](ocr.md).
+Wszystkie zależności na Pythonach od 3.11 do 3.14 instalują się z gotowych kół,
+bez kompilacji ze źródeł. Dokładne wersje całego drzewa zależności, razem
+z zależnościami pośrednimi, zapisuje `requirements-lock.txt`.
 
-Po instalacji w katalogu `Scripts` środowiska dostępne są dwa polecenia:
+## Uruchamianie
 
-* `finddocs-gui` uruchamia aplikację okienkową,
-* `finddocs` udostępnia polecenia administracyjne (`finddocs --help`).
+Wszystko uruchamia skrypt `run.py`, wykonany interpreterem ze środowiska:
+
+```bat
+.venv\Scripts\python run.py
+```
+
+Bez argumentów startuje interfejs graficzny. Pierwszy argument wybiera tryb
+pracy:
+
+| Polecenie | Działanie |
+| --- | --- |
+| `run.py` | interfejs graficzny |
+| `run.py gui --data-dir D:\Dane` | interfejs graficzny z opcjami |
+| `run.py --help` | lista poleceń administracyjnych |
+| `run.py index` | polecenia administracyjne |
+
+Skrót w menu Start albo na pulpicie tworzy się ręcznie: cel to
+`<katalog>\.venv\Scripts\pythonw.exe`, argument to `<katalog>\run.py`,
+katalog roboczy to katalog z kodem. Wersja `pythonw.exe` nie otwiera okna
+konsoli. Ikona jest w `src\finddocs\resources\finddocs.ico`.
+
+W dalszych przykładach `python` oznacza interpreter ze środowiska wirtualnego,
+czyli `.venv\Scripts\python`.
 
 ## Pierwsze uruchomienie
 
-Aplikację uruchamia polecenie `finddocs-gui`. Dane, indeks i konfiguracja trafiają
-do `%LOCALAPPDATA%\FindDocs`, a plik konfiguracyjny to
-`%LOCALAPPDATA%\FindDocs\config\settings.json`. Inne położenie katalogu danych
-ustawia się zmienną środowiskową `FINDDOCS_HOME` (działa dla GUI i CLI) albo
-parametrem `--data-dir` w CLI.
+Dane, indeks i konfiguracja trafiają do `%LOCALAPPDATA%\FindDocs`, a plik
+konfiguracyjny to `%LOCALAPPDATA%\FindDocs\config\settings.json`. Inne
+położenie katalogu danych ustawia się zmienną środowiskową `FINDDOCS_HOME`
+(działa dla GUI i CLI) albo parametrem `--data-dir`.
 
 Najprostsza ścieżka w GUI: na ekranie **Źródła i konfiguracja** dodaj katalog
 lokalny (albo wygeneruj zbiór demonstracyjny), przejdź na ekran **Indeksowanie**,
@@ -58,10 +82,10 @@ naciśnij **Skanuj źródła**, po czym wyszukuj na ekranie **Wyszukiwanie**.
 To samo z wiersza poleceń:
 
 ```bat
-finddocs init
-finddocs sources add-local C:\Dokumenty --label "Dokumenty działu"
-finddocs index
-finddocs search "procedura przelewów"
+python run.py init
+python run.py sources add-local C:\Dokumenty --label "Dokumenty działu"
+python run.py index
+python run.py search "procedura przelewów"
 ```
 
 ## Konfiguracja
@@ -70,7 +94,7 @@ Plik `settings.json` edytuje się przy zamkniętej aplikacji. Najczęściej uży
 sekcje:
 
 * `sources`: lista źródeł dokumentów; wygodniej zarządzać nią przez GUI albo
-  `finddocs sources`,
+  `run.py sources`,
 * `ocr.engine`: `auto`, `tesseract`, `rapidocr`, `easyocr` albo `none`,
 * `ocr.languages`: języki rozpoznawania, domyślnie `["pol"]`,
 * `embedding`: ustawienia modelu embeddingów, opisane niżej,
@@ -79,13 +103,13 @@ sekcje:
 
 ## Wyszukiwanie semantyczne: instalacja modelu
 
-Po samej instalacji z pip działa wyszukiwanie dokładne. Tryby semantyczny
-i hybrydowy wymagają lokalnego modelu embeddingów w formacie ONNX. Model
-instaluje się jednym poleceniem CLI, bez klonowania repozytorium:
+Zaraz po przygotowaniu środowiska działa wyszukiwanie dokładne. Tryby
+semantyczny i hybrydowy wymagają lokalnego modelu embeddingów w formacie ONNX.
+Model instaluje jedno polecenie:
 
 ```bat
-pip install "finddocs[export]"
-finddocs model import --use
+.venv\Scripts\python -m pip install -r requirements-export.txt
+python run.py model import --use
 ```
 
 Polecenie pobiera domyślny polski model `sdadas/mmlw-retrieval-roberta-base`
@@ -98,19 +122,19 @@ Dwie uwagi:
 * Pobranie wymaga jednorazowego połączenia z `huggingface.co` (oraz serwerami
   plików `*.hf.co`). CLI pyta o zgodę przed nawiązaniem połączenia; w skryptach
   zgodę wyraża opcja `--yes`. Żadne inne połączenia nie są nawiązywane.
-* Dodatek `finddocs[export]` (torch, transformers, onnx, onnxscript) jest
-  potrzebny tylko do konwersji checkpointów. Po imporcie można go usunąć:
+* Zawartość `requirements-export.txt` (torch, transformers, onnx, onnxscript)
+  jest potrzebna tylko do konwersji checkpointów. Po imporcie można ją usunąć:
   `pip uninstall -y torch transformers onnx onnxscript`. Modele publikowane
   od razu w formacie ONNX (na przykład `intfloat/multilingual-e5-small`)
-  instalują się bez tego dodatku.
+  instalują się bez tych pakietów.
 
 ### Import własnego modelu
 
 Źródłem może być katalog na dysku albo repozytorium Hugging Face:
 
 ```bat
-finddocs model import D:\Modele\moj-model
-finddocs model import intfloat/multilingual-e5-small
+python run.py model import D:\Modele\moj-model
+python run.py model import intfloat/multilingual-e5-small
 ```
 
 Katalog może zawierać checkpoint HuggingFace (config.json z wagami; nastąpi
@@ -126,7 +150,7 @@ zapytania i treści są puste; jeśli model ich wymaga (na przykład rodzina E5)
 podaje się je przy imporcie:
 
 ```bat
-finddocs model import organizacja/model --query-prefix "query: " --passage-prefix "passage: "
+python run.py model import organizacja/model --query-prefix "query: " --passage-prefix "passage: "
 ```
 
 Pozostałe opcje: `--name` (własna nazwa), `--pooling cls|mean` (wymuszenie
@@ -136,13 +160,13 @@ precyzję obok INT8), `--force` (nadpisanie istniejącego modelu).
 ### Zarządzanie modelami
 
 ```bat
-finddocs model list
-finddocs model use <klucz>
-finddocs model remove <klucz>
+python run.py model list
+python run.py model use <klucz>
+python run.py model remove <klucz>
 ```
 
 Każdy zaimportowany model pojawia się automatycznie na liście modeli w GUI
-na ekranie **Źródła i konfiguracja**. `finddocs model use` przełącza aktywny
+na ekranie **Źródła i konfiguracja**. `run.py model use` przełącza aktywny
 model i synchronizuje ustawienia (przedrostki, długość sekwencji) z jego
 manifestem.
 
@@ -161,7 +185,7 @@ Aplikacja szuka modelu w następującej kolejności:
    (sprawdzany jest też jego podkatalog `onnx`),
 2. `%LOCALAPPDATA%\FindDocs\models\<klucz>\onnx`
    (albo ten sam katalog bez podkatalogu `onnx`),
-3. katalog `models` obok kodu, używany przy uruchamianiu z repozytorium.
+3. katalog `models` obok kodu, czyli w katalogu z repozytorium.
 
 ```json
 "embedding": {
@@ -174,14 +198,14 @@ Aplikacja szuka modelu w następującej kolejności:
 Ustawienie `quantized: true` (domyślne) wybiera wariant INT8, mniejszy
 i szybszy na CPU. Wartość `false` wymusza `model.onnx` w pełnej precyzji.
 Katalog modelu musi zawierać `manifest.json`; katalogi bez manifestu
-importuje się poleceniem `finddocs model import`, które go utworzy.
+importuje się poleceniem `run.py model import`, które go utworzy.
 
 ### Sprawdzenie i uzupełnienie indeksu
 
 Konfigurację weryfikuje polecenie:
 
 ```bat
-finddocs doctor
+python run.py doctor
 ```
 
 Pola `dostawca_embeddingow` i `model_embeddingow` pokazują aktywne ustawienia.
@@ -192,17 +216,24 @@ Jeżeli indeks powstał przed dodaniem modelu, dokumenty nie mają jeszcze
 wektorów. Uzupełnia je przebudowa części wektorowej:
 
 ```bat
-finddocs maintenance rebuild --vectors-only
+python run.py maintenance rebuild --vectors-only
 ```
 
 Szczegóły przebudowy opisuje [rozdział o odbudowie indeksu](odbudowa-indeksu.md).
 
 ## Aktualizacja i usunięcie
 
+Aktualizacja to pobranie nowego kodu i doinstalowanie zależności:
+
 ```bat
-pip install --upgrade finddocs
+git pull
+.venv\Scripts\python -m pip install -r requirements.txt
 ```
 
-Katalog `%LOCALAPPDATA%\FindDocs` nie jest ruszany przy aktualizacji ani przy
-`pip uninstall finddocs`. Indeks zawiera treść dokumentów, więc przy usuwaniu
-aplikacji z komputera współdzielonego usuń też ten katalog.
+Pełną procedurę razem ze sprawdzeniem zgodności indeksu opisuje
+[rozdział o aktualizacji](aktualizacja.md).
+
+Usunięcie aplikacji to skasowanie katalogu z kodem razem ze środowiskiem
+`.venv`. Katalog `%LOCALAPPDATA%\FindDocs` zostaje nietknięty, trzeba go usunąć
+osobno. Indeks zawiera treść dokumentów, więc na komputerze współdzielonym
+jest to krok obowiązkowy.

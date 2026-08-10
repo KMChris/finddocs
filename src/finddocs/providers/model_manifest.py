@@ -182,7 +182,7 @@ def candidate_model_dirs(model_key: str, extra: Path | None = None) -> list[Path
     user_models = AppPaths.default().models_dir
     paths.extend([user_models / model_key / ONNX_SUBDIR, user_models / model_key])
 
-    # katalog obok kodu, uzywany przy uruchomieniu z repozytorium i z PyInstallera
+    # katalog "models" obok kodu, czyli w katalogu repozytorium
     package_root = Path(__file__).resolve().parents[3]
     paths.extend(
         [
@@ -190,8 +190,6 @@ def candidate_model_dirs(model_key: str, extra: Path | None = None) -> list[Path
             package_root / "models" / model_key,
         ]
     )
-    frozen_root = Path(__file__).resolve().parents[1] / "resources" / "models"
-    paths.extend([frozen_root / model_key / ONNX_SUBDIR, frozen_root / model_key])
 
     seen: set[Path] = set()
     unique: list[Path] = []
@@ -270,18 +268,16 @@ def model_base_dirs() -> list[Path]:
     from finddocs.app_paths import AppPaths
 
     package_root = Path(__file__).resolve().parents[3]
-    frozen_root = Path(__file__).resolve().parents[1] / "resources" / "models"
     return [
         AppPaths.default().models_dir,
         package_root / "models",
-        frozen_root,
     ]
 
 
 def installed_models() -> list[tuple[str, Path, LocalModelManifest]]:
     """Wszystkie zainstalowane modele: klucz, katalog i manifest.
 
-    Przeszukuje katalog modeli uzytkownika oraz katalogi obok kodu. Katalogi
+    Przeszukuje katalog modeli uzytkownika oraz katalog obok kodu. Katalogi
     z uszkodzonym manifestem sa pomijane. Przy powtorzonym kluczu wygrywa
     pierwsza lokalizacja, tak samo jak w :func:`candidate_model_dirs`.
     """
@@ -311,7 +307,7 @@ def describe_models() -> list[dict[str, Any]]:
 
     Lista zawiera modele wbudowane w rejestr oraz wszystkie modele
     zainstalowane lokalnie, takze te zaimportowane poleceniem
-    ``finddocs model import``. Dzieki temu wlasny model pojawia sie
+    ``run.py model import``. Dzieki temu wlasny model pojawia sie
     w interfejsie bez zadnej dodatkowej konfiguracji.
     """
     result: list[dict[str, Any]] = []

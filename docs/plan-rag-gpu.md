@@ -47,9 +47,9 @@ instalacji Windows i działa na kartach różnych producentów.
    numerycznie na ostatnich miejscach po przecinku. Trzeba zmierzyć, czy różnica
    wpływa na ranking, i jeśli tak, potraktować zmianę providera jak zmianę
    modelu, czyli podnieść skrót zgodności i wymusić przebudowę.
-5. **Rozmiar instalatora.** Pakiet `onnxruntime-directml` jest większy niż
-   wersja CPU. Prawdopodobnie potrzebny byłby osobny wariant instalatora zamiast
-   dokładania wszystkiego do jednego.
+5. **Rozmiar środowiska.** Pakiet `onnxruntime-directml` jest większy niż
+   wersja CPU. Prawdopodobnie potrzebny byłby osobny plik z zależnościami
+   zamiast dokładania wszystkiego do podstawowego.
 
 ### Nakład
 
@@ -127,7 +127,7 @@ wyszukiwania. Kolejność prac:
 
 1. wariant GPU dostawcy embeddingów (etap 1);
 2. lokalny model językowy jako osobna zależność opcjonalna, nie w podstawowym
-   instalatorze;
+   pliku z zależnościami;
 3. warstwa układania kontekstu z twardym budżetem tokenów;
 4. odsyłacz do dokumentu przy każdym fragmencie użytym w odpowiedzi;
 5. tryb dostępny obok wyników wyszukiwania, wyłączony domyślnie;

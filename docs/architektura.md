@@ -238,7 +238,7 @@ Uzasadnienia w formie decyzji architektonicznych: [katalog ADR](adr/).
 | Model | `sdadas/mmlw-retrieval-roberta-base` | patrz [raport PoC](raport-poc.md) |
 | PDF | pypdfium2 (BSD, Apache) | PyMuPDF (AGPL) |
 | MSG | własny czytnik OLE | extract-msg (GPL-3.0) |
-| Pakowanie | PyInstaller + Inno Setup | MSIX (podpis), WiX (złożoność) |
+| Dystrybucja | uruchomienie z kodu źródłowego | PyInstaller (proces budowania), pakiet z PyPI (dostęp do sieci) |
 
 ## Rozszerzanie
 

@@ -1,4 +1,4 @@
-"""Testy polecen CLI finddocs model na tymczasowym katalogu danych."""
+"""Testy polecen CLI run.py model na tymczasowym katalogu danych."""
 
 from __future__ import annotations
 

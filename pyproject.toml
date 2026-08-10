@@ -1,115 +1,12 @@
-[build-system]
-requires = ["setuptools>=77"]
-build-backend = "setuptools.build_meta"
-
-[project]
-name = "finddocs"
-version = "0.2.3"
-description = "Lokalna wyszukiwarka dokumentów korporacyjnych z obsługą SharePoint"
-readme = "README.md"
-requires-python = ">=3.11"
-license = "MIT"
-license-files = ["LICENSE"]
-authors = [{ name = "Krzysztof Mizgała", email = "krzysztof@mizgala.pl" }]
-keywords = ["search", "sharepoint", "ocr", "retrieval", "polish"]
-classifiers = [
-    "Development Status :: 4 - Beta",
-    "Environment :: Win32 (MS Windows)",
-    "Intended Audience :: End Users/Desktop",
-    "Natural Language :: Polish",
-    "Operating System :: Microsoft :: Windows :: Windows 11",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
-    "Programming Language :: Python :: 3.14",
-    "Topic :: Text Processing :: Indexing",
-]
-
-# Jeden zestaw wersji dla Pythona 3.11-3.14: przypiete sa najnowsze wydania,
-# ktore publikuja kola dla calego zakresu (3.14 wymusil podbicie PySide6,
-# onnxruntime, faiss-cpu i pywin32).
-dependencies = [
-    "PySide6==6.11.1",
-    "pypdfium2==5.12.1",
-    "python-docx==1.2.0",
-    "openpyxl==3.1.5",
-    "xlrd==2.0.2",
-    "olefile==0.47",
-    "pillow==12.3.0",
-    "charset-normalizer==3.4.9",
-    "numpy>=1.26,<3",
-    "onnxruntime==1.28.0",
-    # Nie podnosic na 0.23.x, dopoki transformers ogranicza tokenizers<=0.23.0:
-    # nowszy pin czyni finddocs[export] nierozwiazywalnym dla pip.
-    "tokenizers==0.22.2",
-    "faiss-cpu==1.15.0",
-    "httpx==0.28.1",
-    "msal==1.37.0",
-    "keyring==25.7.0",
-    "pywin32==312; sys_platform == 'win32'",
-    "structlog==26.1.0",
-]
-
-[project.optional-dependencies]
-# Nastepca pakietu rapidocr-onnxruntime (tamten konczy sie na 1.4.4 i wymaga
-# Pythona < 3.13). Adapter w ocr/engines obsluguje takze stary pakiet, jesli
-# ktos ma go zainstalowanego z wczesniejszych wydan.
-ocr-rapid = ["rapidocr==3.9.2"]
-ocr-easy = ["easyocr>=1.7.2"]
-dev = [
-    "pytest==9.1.1",
-    "pytest-qt==4.5.0",
-    "pytest-cov==7.1.0",
-    "mypy==2.3.0",
-    "ruff==0.16.1",
-    "pyinstaller==6.21.0",
-    "types-openpyxl",
-    "types-pywin32",
-]
-# onnxscript jest potrzebny nowym wersjom torch (eksporter dynamo od 2.9).
-export = ["torch>=2.2", "transformers>=4.40", "onnx>=1.16", "onnxscript>=0.1"]
-# Komplet dla samodzielnego stanowiska: zalecany silnik OCR oraz narzedzia
-# importu i konwersji modeli. easyocr celowo zostaje osobno: tryb auto wybiera
-# go przed rapidocr, wiec dolozenie go tutaj podmieniloby silnik OCR kazdemu,
-# kto zainstalowal [all]. Kto go chce, instaluje finddocs[all,ocr-easy].
-all = ["finddocs[ocr-rapid,export]"]
-
-[project.scripts]
-finddocs = "finddocs.cli:main"
-
-[project.gui-scripts]
-finddocs-gui = "finddocs.gui.app:main"
-
-[project.urls]
-Homepage = "https://github.com/KMChris/finddocs"
-Repository = "https://github.com/KMChris/finddocs"
-Issues = "https://github.com/KMChris/finddocs/issues"
-Documentation = "https://github.com/KMChris/finddocs/tree/main/docs"
-
-[tool.setuptools]
-package-dir = { "" = "src" }
-include-package-data = true
-
-[tool.setuptools.packages.find]
-where = ["src"]
-
-[tool.setuptools.package-data]
-finddocs = ["resources/*", "resources/**/*", "py.typed"]
+# FindDocs uruchamia sie z kodu zrodlowego, nie buduje sie z niego pakietu.
+# Zaleznosci sa w plikach requirements*.txt, a ten plik trzyma wylacznie
+# konfiguracje narzedzi deweloperskich.
 
 [tool.ruff]
 line-length = 100
 target-version = "py311"
 src = ["src", "tests"]
-# packaging/output i packaging/build zawieraja wynik PyInstallera,
-# czyli setki plikow bibliotek zewnetrznych. Nie sa naszym kodem.
-extend-exclude = [
-    ".venv",
-    "build",
-    "dist",
-    "models",
-    "packaging/build",
-    "packaging/output",
-]
+extend-exclude = [".venv", "models"]
 
 [tool.ruff.lint]
 select = [
@@ -205,6 +102,8 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 minversion = "8.0"
 testpaths = ["tests"]
+# Pakiet nie jest instalowany, testy importuja go prosto z katalogu src.
+pythonpath = ["src"]
 addopts = "-ra --strict-markers"
 markers = [
     "slow: testy wymagajace modelu embeddingow lub OCR",

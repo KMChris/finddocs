@@ -1,0 +1,34 @@
+# Zaleznosci potrzebne do uruchomienia FindDocs z kodu zrodlowego.
+#
+#     .venv\Scripts\python.exe -m pip install -r requirements.txt
+#
+# Jeden zestaw wersji dla Pythona 3.11-3.14: przypiete sa najnowsze wydania,
+# ktore publikuja kola dla calego zakresu (3.14 wymusil podbicie PySide6,
+# onnxruntime, faiss-cpu i pywin32).
+
+# interfejs graficzny
+PySide6==6.11.1
+
+# odczyt dokumentow
+pypdfium2==5.12.1
+python-docx==1.2.0
+openpyxl==3.1.5
+xlrd==2.0.2
+olefile==0.47
+pillow==12.3.0
+charset-normalizer==3.4.9
+
+# wyszukiwanie semantyczne: embeddingi na CPU i indeks wektorowy
+numpy>=1.26,<3
+onnxruntime==1.28.0
+tokenizers==0.22.2
+faiss-cpu==1.15.0
+
+# SharePoint: Microsoft Graph, logowanie i magazyn poswiadczen
+httpx==0.28.1
+msal==1.37.0
+keyring==25.7.0
+pywin32==312; sys_platform == 'win32'
+
+# logi
+structlog==26.1.0

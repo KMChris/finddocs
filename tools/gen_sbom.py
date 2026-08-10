@@ -23,8 +23,9 @@ from pathlib import Path
 from typing import Any
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-APP_NAME = "FindDocs"
-APP_VERSION = "0.2.3"
+sys.path.insert(0, str(PROJECT_ROOT / "src"))
+
+from finddocs.version import APP_NAME, APP_VERSION  # noqa: E402
 
 #: Zastosowanie pakietu w aplikacji. Klucz to znormalizowana nazwa pakietu.
 USAGE: dict[str, str] = {
@@ -51,7 +52,6 @@ USAGE: dict[str, str] = {
     "rapidocr": "silnik OCR (opcjonalny)",
     "rapidocr-onnxruntime": "silnik OCR (opcjonalny, starsze wydania)",
     "easyocr": "silnik OCR (opcjonalny)",
-    "pyinstaller": "budowanie pakietu aplikacji (narzedzie deweloperskie)",
     "pytest": "testy (narzedzie deweloperskie)",
     "mypy": "kontrola typow (narzedzie deweloperskie)",
     "ruff": "linting i formatowanie (narzedzie deweloperskie)",
@@ -59,8 +59,6 @@ USAGE: dict[str, str] = {
 
 #: Pakiety uzywane wylacznie podczas budowania i testow.
 DEV_ONLY = {
-    "pyinstaller",
-    "pyinstaller-hooks-contrib",
     "pytest",
     "pytest-qt",
     "pytest-cov",
@@ -71,8 +69,6 @@ DEV_ONLY = {
     "coverage",
     "iniconfig",
     "pluggy",
-    "altgraph",
-    "pefile",
     "types-openpyxl",
     "types-pywin32",
 }
@@ -101,7 +97,7 @@ EXTERNAL: list[ExternalComponent] = [
         license_name="Apache-2.0",
         source="https://huggingface.co/sdadas/mmlw-retrieval-roberta-base",
         usage="model embeddingow do wyszukiwania semantycznego po polsku",
-        downloaded="tak, jednorazowo przez uzytkownika albo dolaczony do instalatora",
+        downloaded="tak, jednorazowo przez uzytkownika",
         notes="Eksportowany do ONNX skryptem tools/export_model_onnx.py, wariant INT8.",
     ),
     ExternalComponent(
@@ -134,15 +130,6 @@ EXTERNAL: list[ExternalComponent] = [
         usage="opcjonalny silnik OCR o najlepszej jakosci dla jezyka polskiego",
         downloaded="nie, instalowany osobno przez administratora",
         notes="Model jezyka polskiego 'pol' na licencji Apache-2.0.",
-    ),
-    ExternalComponent(
-        name="Inno Setup",
-        version="6.x",
-        kind="application",
-        license_name="Inno Setup License (dopuszcza uzycie komercyjne)",
-        source="https://jrsoftware.org/isinfo.php",
-        usage="budowanie instalatora Windows",
-        downloaded="nie, narzedzie deweloperskie",
     ),
 ]
 
@@ -321,7 +308,7 @@ def build_markdown(components: list[Component]) -> str:
         "",
         "## Narzedzia deweloperskie",
         "",
-        "Nie trafiaja do pakietu instalacyjnego.",
+        "Potrzebne tylko do testow i kontroli jakosci, aplikacja ich nie uzywa.",
         "",
         "| Komponent | Wersja | Licencja |",
         "| --- | --- | --- |",

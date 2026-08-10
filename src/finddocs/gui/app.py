@@ -15,6 +15,7 @@ from pathlib import Path
 from finddocs.app_paths import AppPaths
 from finddocs.errors import FindDocsError
 from finddocs.logging_setup import configure_logging, get_logger
+from finddocs.startup import prepare_environment
 from finddocs.version import APP_NAME, APP_VERSION
 
 log = get_logger(__name__)
@@ -55,7 +56,7 @@ def _show_startup_error(message: str, log_path: Path) -> None:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="finddocs-gui", description=f"{APP_NAME} {APP_VERSION}")
+    parser = argparse.ArgumentParser(prog="run.py gui", description=f"{APP_NAME} {APP_VERSION}")
     parser.add_argument("--data-dir", help="katalog danych aplikacji")
     parser.add_argument("--query", help="wpisz zapytanie zaraz po starcie")
     parser.add_argument(
@@ -67,6 +68,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    prepare_environment()
     args = build_parser().parse_args(argv if argv is not None else sys.argv[1:])
     paths = (AppPaths.at(args.data_dir) if args.data_dir else AppPaths.default()).ensure()
     configure_logging(log_file=paths.log_file, level="INFO", console=False)

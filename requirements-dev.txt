@@ -1,0 +1,12 @@
+# Testy, kontrola typow i linting.
+#
+#     .venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+-r requirements.txt
+
+pytest==9.1.1
+pytest-qt==4.5.0
+pytest-cov==7.1.0
+mypy==2.3.0
+ruff==0.16.1
+types-openpyxl
+types-pywin32
