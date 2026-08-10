@@ -449,6 +449,19 @@ class Repository:
             [(i,) for i in ids],
         )
 
+    def chunk_context(self, doc_id: int, ordinal: int, radius: int = 1) -> list[sqlite3.Row]:
+        """Fragmenty dokumentu wokol podanego, w kolejnosci tresci.
+
+        Podglad kontekstu trafienia w interfejsie dokleja sasiednie fragmenty
+        z indeksu, bez otwierania pliku zrodlowego.
+        """
+        return self.db.query_all(
+            "SELECT ordinal, text FROM chunks"
+            " WHERE doc_id = ? AND ordinal BETWEEN ? AND ?"
+            " ORDER BY ordinal",
+            (doc_id, ordinal - radius, ordinal + radius),
+        )
+
     def chunk_texts(self, chunk_ids: Iterable[int]) -> dict[int, sqlite3.Row]:
         ids = list(chunk_ids)
         if not ids:

@@ -678,6 +678,55 @@ def test_akcje_karty_odslaniaja_sie_przy_fokusie(qtbot: object, gui_palette: Pal
 
 
 @pytest.mark.gui
+def test_karta_dokleja_kontekst_wokol_trafienia(qtbot: object, gui_palette: Palette) -> None:
+    """Sasiedzi sa wyciszeni, trafienie zachowuje wyroznienie, przycisk znika."""
+    card = ResultCard(_sample_hit(), gui_palette)
+    qtbot.addWidget(card)  # type: ignore[attr-defined]
+    assert card.context_button is not None
+    before = _snippets(card)[0].text()
+
+    card.show_context("Poprzedni fragment dokumentu.", "Nastepny fragment dokumentu.")
+
+    after = _snippets(card)[0].text()
+    assert "Poprzedni fragment dokumentu." in after
+    assert "Nastepny fragment dokumentu." in after
+    assert before in after
+    assert card.context_button.isHidden()
+
+
+@pytest.mark.gui
+def test_chunk_context_zwraca_fragmenty_dokumentu(indexed_gui_context: AppContext) -> None:
+    repository = indexed_gui_context.require_index().repository
+    row = repository.db.query_one("SELECT doc_id FROM documents WHERE chunk_count > 0")
+    assert row is not None
+
+    rows = repository.chunk_context(int(row["doc_id"]), 0, radius=1)
+
+    assert rows
+    assert [int(r["ordinal"]) for r in rows] == sorted(int(r["ordinal"]) for r in rows)
+    assert all(str(r["text"]) for r in rows)
+
+
+@pytest.mark.gui
+def test_przycisk_kontekstu_znika_po_doczytaniu(
+    qtbot: object,
+    make_search_view: Callable[..., SearchView],
+    result_cards: Callable[[QWidget], list[ResultCard]],
+    drain_tasks: Callable[[], None],
+) -> None:
+    view = make_search_view()
+    view.query_edit.setText(QUERY)
+    view.run_search()
+    qtbot.waitUntil(lambda: bool(result_cards(view)), timeout=TIMEOUT_MS)  # type: ignore[attr-defined]
+
+    card = result_cards(view)[0]
+    assert card.context_button is not None
+    card.context_button.click()
+
+    qtbot.waitUntil(lambda: card.context_button.isHidden(), timeout=TIMEOUT_MS)  # type: ignore[attr-defined]
+
+
+@pytest.mark.gui
 def test_prefiks_fragmentu_jest_plakietka_bez_nawiasow(qtbot: object, gui_palette: Palette) -> None:
     card = ResultCard(_sample_hit(), gui_palette)
     qtbot.addWidget(card)  # type: ignore[attr-defined]

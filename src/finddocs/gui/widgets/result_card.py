@@ -68,6 +68,9 @@ FILE_GLYPH_SIZE = 18
 #: najechaniu i fokusie, a w spoczynku karta jest sama trescia.
 ACTIONS_HIDDEN_OPACITY = 0.0
 
+#: Ile znakow sasiedniego fragmentu dokleja podglad kontekstu z kazdej strony.
+CONTEXT_NEIGHBOR_CHARS = 350
+
 
 def snippet_to_html(text: str, palette: Palette) -> str:
     """Zamienia znaczniki trafien na bezpieczny HTML z wyroznieniem."""
@@ -180,6 +183,9 @@ class ResultCard(QFrame):
     open_document = Signal(object)
     open_location = Signal(object)
     copy_link = Signal(object)
+    #: Prosba o sasiednie fragmenty z indeksu. Odczyt robi widok wyszukiwania,
+    #: bo karta nie ma dostepu do repozytorium i nie moze blokowac watku GUI.
+    context_requested = Signal(object)
 
     def __init__(
         self,
@@ -216,7 +222,10 @@ class ResultCard(QFrame):
 
         layout.addLayout(self._build_badges(hit, show_score))
 
+        self._palette = palette
         self._hidden_snippets: list[QLabel] = []
+        self._first_snippet: QLabel | None = None
+        self._first_snippet_html = ""
         for position, chunk in enumerate(hit.chunks):
             snippet = QLabel()
             snippet.setObjectName("Snippet")
@@ -225,15 +234,20 @@ class ResultCard(QFrame):
             text = chunk.highlighted
             if getattr(chunk, "sheet", None) is None:
                 text = flatten_snippet(text)
-            snippet.setText(self._chunk_prefix(chunk, palette) + snippet_to_html(text, palette))
+            content = self._chunk_prefix(chunk, palette) + snippet_to_html(text, palette)
+            snippet.setText(content)
             snippet.setWordWrap(True)
             snippet.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+            if position == 0:
+                self._first_snippet = snippet
+                self._first_snippet_html = content
             if position >= VISIBLE_CHUNKS:
                 snippet.setVisible(False)
                 self._hidden_snippets.append(snippet)
             layout.addWidget(snippet)
 
         self.expand_button: QPushButton | None = None
+        self.context_button: QPushButton | None = None
         self.more_hint: QLabel | None = None
         extra = hit.total_matching_chunks - len(hit.chunks)
         if extra > 0:
@@ -243,13 +257,26 @@ class ResultCard(QFrame):
             # wiec podpis pod spodem bylby druga wersja tej samej liczby.
             more.setVisible(not self._hidden_snippets)
             self.more_hint = more
+
+        footer = QHBoxLayout()
+        footer.setSpacing(SPACE_MD)
+        if hit.chunks:
+            context = QPushButton(i18n.RESULT_CONTEXT)
+            context.setObjectName("Link")
+            context.setToolTip(i18n.RESULT_CONTEXT_HINT)
+            context.clicked.connect(self._request_context)
+            self.context_button = context
+            footer.addWidget(context)
         if self._hidden_snippets:
             button = QPushButton(i18n.RESULT_SHOW_MORE.format(count=len(self._hidden_snippets)))
             button.setObjectName("Link")
             button.setToolTip(i18n.RESULT_SHOW_MORE_HINT)
             button.clicked.connect(self._show_hidden_snippets)
             self.expand_button = button
-            layout.addWidget(button, 0, Qt.AlignmentFlag.AlignLeft)
+            footer.addWidget(button)
+        footer.addStretch(1)
+        if footer.count() > 1:
+            layout.addLayout(footer)
         if self.more_hint is not None:
             layout.addWidget(self.more_hint)
 
@@ -436,6 +463,37 @@ class ResultCard(QFrame):
             self.expand_button.setVisible(False)
         if self.more_hint is not None:
             self.more_hint.setVisible(True)
+
+    def _request_context(self) -> None:
+        if self.context_button is not None:
+            self.context_button.setEnabled(False)
+        self.context_requested.emit(self.hit)
+
+    def show_context(self, previous: str, following: str) -> None:
+        """Dokleja sasiednie fragmenty wokol pierwszego trafienia.
+
+        Sasiedzi sa wyciszeni kolorem, a trafienie zachowuje wyroznienie.
+        Podglad odpowiada na pytanie ,,o czym jest to miejsce dokumentu''
+        bez otwierania pliku.
+        """
+        if self._first_snippet is None:
+            return
+        muted = self._palette.text_muted
+        parts: list[str] = []
+        if previous:
+            trimmed = flatten_snippet(previous)
+            if len(trimmed) > CONTEXT_NEIGHBOR_CHARS:
+                trimmed = "..." + trimmed[-CONTEXT_NEIGHBOR_CHARS:]
+            parts.append(f'<span style="color:{muted}">{html.escape(trimmed)}</span>')
+        parts.append(self._first_snippet_html)
+        if following:
+            trimmed = flatten_snippet(following)
+            if len(trimmed) > CONTEXT_NEIGHBOR_CHARS:
+                trimmed = trimmed[:CONTEXT_NEIGHBOR_CHARS] + "..."
+            parts.append(f'<span style="color:{muted}">{html.escape(trimmed)}</span>')
+        self._first_snippet.setText("<br>".join(parts))
+        if self.context_button is not None:
+            self.context_button.setVisible(False)
 
     # --- obsluga klawiatury i myszki --------------------------------------
 

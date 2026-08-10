@@ -52,7 +52,7 @@ from finddocs.gui.widgets.motion import apply_soft_shadow, expand_vertically
 from finddocs.gui.widgets.page import Banner, PageHeader, page_layout
 from finddocs.gui.widgets.result_card import EmptyState, ResultCard
 from finddocs.gui.widgets.segmented import SegmentedControl
-from finddocs.gui.workers import CancellationFlag, SearchTask, thread_pool
+from finddocs.gui.workers import CallableTask, CancellationFlag, SearchTask, thread_pool
 from finddocs.logging_setup import get_logger
 from finddocs.search.highlight import strip_highlight
 from finddocs.search.service import HYBRID_NOTE, SEMANTIC_NOTE
@@ -798,6 +798,7 @@ class SearchView(QWidget):
             card.open_document.connect(self._open_document)
             card.open_location.connect(self._open_location)
             card.copy_link.connect(self._copy_link)
+            card.context_requested.connect(self._load_context)
             apply_soft_shadow(card, self.palette_colors)
             self._results_layout.insertWidget(self._results_layout.count() - 1, card)
         self._scroll.verticalScrollBar().setValue(0)
@@ -863,6 +864,36 @@ class SearchView(QWidget):
             parent_url=hit.parent_url, local_path=hit.local_path
         )
         self.status_message.emit("" if ok else message)
+
+    def _load_context(self, hit: object) -> None:
+        """Doczytuje sasiednie fragmenty z indeksu i dokleja je na karcie."""
+        if not isinstance(hit, DocumentHit) or not hit.chunks:
+            return
+        card = self.sender()
+        if not isinstance(card, ResultCard):
+            return
+        chunk = hit.chunks[0]
+
+        def work() -> list[tuple[int, str]]:
+            repository = self.context.require_index().repository
+            rows = repository.chunk_context(hit.doc_id, chunk.ordinal, radius=1)
+            return [(int(row["ordinal"]), str(row["text"])) for row in rows]
+
+        def done(result: object, target: ResultCard = card) -> None:
+            if not isinstance(result, list):
+                return
+            previous = " ".join(text for ordinal, text in result if ordinal < chunk.ordinal)
+            following = " ".join(text for ordinal, text in result if ordinal > chunk.ordinal)
+            try:
+                target.show_context(previous, following)
+            except RuntimeError:
+                # Karta mogla zniknac (nowe wyszukiwanie) zanim odczyt sie skonczyl.
+                return
+
+        task = CallableTask(work, label="kontekst trafienia")
+        task.signals.finished.connect(done)
+        task.signals.failed.connect(lambda _code, message: self.status_message.emit(str(message)))
+        thread_pool().start(task)
 
     def _copy_link(self, hit: object) -> None:
         if not isinstance(hit, DocumentHit):
