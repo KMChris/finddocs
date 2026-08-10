@@ -474,6 +474,13 @@ class SearchRequest:
     candidate_multiplier: int = 8
     """Ile razy więcej kandydatów pobrać przed agregacja i scaleniem."""
 
+    order_by: str = "relevance"
+    """Porzadek wyników trybu dokładnego: ``relevance`` albo ``modified_desc``.
+
+    Tryby z udziałem wektorów zwracają ranking podobieństwa, więc tam porządek
+    inny niż trafność nie ma zastosowania i pole jest pomijane.
+    """
+
 
 @dataclass(slots=True)
 class SearchResponse:

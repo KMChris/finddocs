@@ -14,12 +14,13 @@ from __future__ import annotations
 
 import datetime as _dt
 
-from PySide6.QtCore import QDate, QSize, Qt, Signal
+from PySide6.QtCore import QDate, QSize, QStringListModel, Qt, Signal
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
     QComboBox,
+    QCompleter,
     QDateEdit,
     QFrame,
     QGridLayout,
@@ -78,6 +79,11 @@ FILTER_COLUMNS = 4
 #: przy kazdym wyszukiwaniu ostrzezenie uczy pomijania banera i zaslania uwagi,
 #: ktore naprawde dotycza biezacego zapytania.
 EDUCATION_NOTES: frozenset[str] = frozenset({HYBRID_NOTE, SEMANTIC_NOTE})
+
+#: Ile ostatnich zapytan podpowiada pole zapytania. Historia zyje wylacznie
+#: w pamieci procesu: zapisanie jej na dysku byloby rejestrem zapytan, a tego
+#: aplikacja unika (zapisywanie zapytan w logu jest osobna, jawna zgoda).
+QUERY_HISTORY_LIMIT = 20
 
 
 class SearchView(QWidget):
@@ -147,6 +153,13 @@ class SearchView(QWidget):
         self.query_edit.setPlaceholderText(i18n.SEARCH_PLACEHOLDER)
         self.query_edit.setClearButtonEnabled(True)
         self.query_edit.returnPressed.connect(self.run_search)
+        # Podpowiedzi ostatnich zapytan tej sesji. Patrz QUERY_HISTORY_LIMIT.
+        self._history: list[str] = []
+        self._history_model = QStringListModel(self)
+        completer = QCompleter(self._history_model, self)
+        completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+        completer.setFilterMode(Qt.MatchFlag.MatchContains)
+        self.query_edit.setCompleter(completer)
         row.addWidget(self.query_edit, stretch=1)
 
         # Jeden kwadratowy przycisk: lupa uruchamia wyszukiwanie, a w trakcie
@@ -181,6 +194,16 @@ class SearchView(QWidget):
         self.mode_group = self.mode_switch.group
         row.addWidget(self.mode_switch)
         row.addStretch(1)
+
+        # Porzadek wynikow. Tryby wektorowe zwracaja ranking podobienstwa,
+        # wiec sortowanie po dacie dziala tylko w trybie Dokladne.
+        self.sort_combo = QComboBox()
+        self.sort_combo.addItem(i18n.SORT_RELEVANCE, "relevance")
+        self.sort_combo.addItem(i18n.SORT_NEWEST, "modified_desc")
+        self.sort_combo.setToolTip(i18n.SORT_HINT)
+        self.sort_combo.setEnabled(self.current_mode() is SearchMode.EXACT)
+        self.sort_combo.currentIndexChanged.connect(self._on_sort_changed)
+        row.addWidget(self.sort_combo)
 
         self.filters_toggle = QPushButton(i18n.SEARCH_FILTERS)
         self.filters_toggle.setIcon(theme_icon("filter", self.palette_colors))
@@ -418,6 +441,25 @@ class SearchView(QWidget):
 
     def _update_mode_hint(self) -> None:
         self.mode_hint.setText(i18n.MODE_HINTS[self.current_mode()])
+        self.sort_combo.setEnabled(self.current_mode() is SearchMode.EXACT)
+
+    def current_order(self) -> str:
+        """Porzadek wynikow. Poza trybem dokladnym zawsze trafnosc."""
+        if self.current_mode() is not SearchMode.EXACT:
+            return "relevance"
+        return str(self.sort_combo.currentData() or "relevance")
+
+    def _on_sort_changed(self, _index: int) -> None:
+        if self._response is not None and self.query_edit.text().strip():
+            self.run_search()
+
+    def _remember_query(self, query: str) -> None:
+        """Dopisuje zapytanie do podrecznej historii podpowiedzi."""
+        if not query:
+            return
+        self._history = [query] + [q for q in self._history if q != query]
+        del self._history[QUERY_HISTORY_LIMIT:]
+        self._history_model.setStringList(self._history)
 
     # --- wyszukiwanie -----------------------------------------------------
 
@@ -466,6 +508,7 @@ class SearchView(QWidget):
             offset=self._page * self._page_size,
             limit=self._page_size,
             max_chunks_per_document=self.context.config.search.max_chunks_per_document,
+            order_by=self.current_order(),
         )
 
         def work(req: SearchRequest, token: CancellationFlag) -> SearchResponse:
@@ -509,10 +552,8 @@ class SearchView(QWidget):
             return
         self._set_busy(False)
         self._response = response
+        self._remember_query(response.query_analysis.raw_query)
         self._render(response)
-        self.status_message.emit(
-            f"{self._count_text(response)}, {i18n.RESULTS_TOOK.format(ms=response.took_ms)}"
-        )
 
     def _on_failed(self, code: str, message: str) -> None:
         self._set_busy(False)
@@ -524,13 +565,15 @@ class SearchView(QWidget):
         self.status_message.emit("Wyszukiwanie przerwane.")
 
     def _set_busy(self, busy: bool) -> None:
+        """Przelacza przycisk lupy w Przerwij. Pole zapytania zostaje aktywne:
+        Enter w trakcie pracy przerywa biezace wyszukiwanie i zleca nowe,
+        a blokada pola zabierala fokus w polowie pisania."""
         self._busy = busy
         icon = accent_icon("stop" if busy else "search", self.palette_colors)
         label = i18n.SEARCH_CANCEL if busy else i18n.SEARCH_BUTTON
         self.search_button.setIcon(icon)
         self.search_button.setToolTip(label)
         self.search_button.setAccessibleName(label)
-        self.query_edit.setEnabled(not busy)
 
     def _count_text(self, response: SearchResponse) -> str:
         template = (
@@ -540,7 +583,11 @@ class SearchView(QWidget):
 
     def _render(self, response: SearchResponse) -> None:
         self._clear_results()
-        self.header.set_meta(self._count_text(response))
+        # Liczba wynikow i czas w jednym miejscu, w wierszu tytulu. Wczesniej
+        # pasek stanu powtarzal te sama liczbe drugi raz.
+        self.header.set_meta(
+            f"{self._count_text(response)}, {i18n.RESULTS_TOOK.format(ms=response.took_ms)}"
+        )
         # Do banera ida tylko uwagi zalezne od zapytania. Sa ostrzezeniem
         # o niekompletnosci biezacej listy, wiec musza byc widoczne.
         dynamic_notes = [note for note in response.notes if note not in EDUCATION_NOTES]
@@ -636,9 +683,14 @@ class SearchView(QWidget):
 
     def keyPressEvent(self, event: object) -> None:
         key = getattr(event, "key", lambda: None)()
-        if key == Qt.Key.Key_Escape and self._busy:
-            self.cancel_search()
-            return
+        if key == Qt.Key.Key_Escape:
+            if self._busy:
+                self.cancel_search()
+                return
+            if self.query_edit.text():
+                self.query_edit.clear()
+                self.query_edit.setFocus()
+                return
         super().keyPressEvent(event)  # type: ignore[arg-type]
 
 

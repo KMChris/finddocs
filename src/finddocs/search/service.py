@@ -139,7 +139,11 @@ class SearchService:
         total = self.index.fts.count_documents(query, filters)
         _raise_if_cancelled(cancel)
         matches = self.index.fts.search_documents(
-            query, filters, limit=request.limit, offset=request.offset
+            query,
+            filters,
+            limit=request.limit,
+            offset=request.offset,
+            order_by=request.order_by,
         )
         doc_ids = [m.doc_id for m in matches]
         chunk_map = self.index.fts.top_chunks_for_documents(

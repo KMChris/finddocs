@@ -281,15 +281,20 @@ class MainWindow(QMainWindow):
             f"Fragmenty: {status.get('fragmenty', 0)}",
         ]
         if status.get("semantyka_dostepna"):
-            role, semantic = "ok", f"Model: {status.get('model')}"
+            # Surowa nazwa modelu to identyfikator techniczny: w pasku stanu
+            # wystarczy informacja, ze semantyka dziala, model jest w podpowiedzi.
+            role, semantic = "ok", i18n.STATUS_SEMANTIC_ACTIVE
+            tooltip = f"{i18n.STATUS_SEMANTIC_ACTIVE} (model: {status.get('model')})"
         elif not self.context.config.embedding.semantic_enabled:
             role, semantic = "off", i18n.STATUS_SEMANTIC_DISABLED
+            tooltip = semantic
         else:
             role, semantic = "warn", i18n.STATUS_SEMANTIC_UNAVAILABLE
+            tooltip = semantic
         parts.append(semantic)
         parts.append(i18n.format_bytes(int(status.get("rozmiar_bajty", 0))))
         self.semantic_dot.set_role(role)
-        self.semantic_dot.setToolTip(semantic)
+        self.semantic_dot.setToolTip(tooltip)
         self.index_label.setText(i18n.STATUS_SEPARATOR.join(parts))
 
     def run_startup_checks(self) -> None:

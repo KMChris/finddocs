@@ -116,11 +116,13 @@ def test_query_returns_result_cards(
 
     qtbot.waitUntil(lambda: bool(result_cards(view)), timeout=TIMEOUT_MS)  # type: ignore[attr-defined]
     assert len(result_cards(view)) == corpus_stats["przelewow"]
-    # Liczba wynikow jest w wierszu tytulu, wiec nie zabiera osobnego wiersza.
+    # Liczba wynikow i czas zapytania sa w wierszu tytulu, wiec nie zabieraja
+    # osobnego wiersza ani nie powtarzaja sie w pasku stanu.
     expected = i18n.RESULTS_COUNT_EXACT.format(
         count=i18n.documents_count(corpus_stats["przelewow"])
     )
-    assert view.header.meta_label.text() == expected
+    assert view.header.meta_label.text().startswith(expected)
+    assert "ms" in view.header.meta_label.text()
     assert not view.is_searching()
     assert view.query_edit.isEnabled()
     assert view.search_button.toolTip() == i18n.SEARCH_BUTTON
@@ -695,20 +697,115 @@ def test_plakietki_niosa_krotki_napis_i_pelne_zdanie_w_podpowiedzi(
 def test_search_button_toggles_between_szukaj_and_przerwij(
     make_search_view: Callable[..., SearchView],
 ) -> None:
-    """W trakcie wyszukiwania przycisk lupy zamienia sie w Przerwij."""
+    """W trakcie wyszukiwania przycisk lupy zamienia sie w Przerwij.
+
+    Pole zapytania zostaje aktywne: blokada zabierala fokus w polowie pisania,
+    a Enter w trakcie pracy i tak przerywa biezace wyszukiwanie i zleca nowe.
+    """
     view = make_search_view()
     assert view.search_button.toolTip() == i18n.SEARCH_BUTTON
 
     view._set_busy(True)
     assert view.is_searching()
     assert view.search_button.toolTip() == i18n.SEARCH_CANCEL
-    assert not view.query_edit.isEnabled()
+    assert view.query_edit.isEnabled()
     assert view.search_button.isEnabled()
 
     view.cancel_search()
     assert not view.is_searching()
     assert view.search_button.toolTip() == i18n.SEARCH_BUTTON
     assert view.query_edit.isEnabled()
+
+
+@pytest.mark.gui
+def test_sortowanie_dostepne_tylko_w_trybie_dokladnym(
+    make_search_view: Callable[..., SearchView],
+) -> None:
+    """Tryby wektorowe zwracaja ranking, wiec sortowanie po dacie tam nie dziala."""
+    view = make_search_view()
+    assert not view.sort_combo.isEnabled()
+
+    _mode_button(view, SearchMode.EXACT).click()
+    assert view.sort_combo.isEnabled()
+
+    view.sort_combo.setCurrentIndex(view.sort_combo.findData("modified_desc"))
+    assert view.current_order() == "modified_desc"
+
+    _mode_button(view, SearchMode.HYBRID).click()
+    assert not view.sort_combo.isEnabled()
+    assert view.current_order() == "relevance"
+
+
+@pytest.mark.gui
+def test_sortowanie_po_dacie_ustawia_najnowsze_na_gorze(
+    qtbot: object,
+    gui_context_with_source: AppContext,
+    gui_corpus: object,
+    gui_palette: Palette,
+    result_cards: Callable[[QWidget], list[ResultCard]],
+) -> None:
+    """Porzadek po dacie modyfikacji obejmuje caly zbior trafien."""
+    import os
+    import time as _time
+    from pathlib import Path
+
+    from finddocs.jobs.indexing_job import IndexingJob, JobOptions
+    from finddocs.types import JobKind, JobState
+
+    files = sorted(Path(str(gui_corpus)).glob("procedura-0*.txt"))
+    now = _time.time()
+    for offset, path in enumerate(files):
+        stamp = now - 86400 * (len(files) - offset)
+        os.utime(path, (stamp, stamp))
+    job = IndexingJob(
+        gui_context_with_source.config,
+        gui_context_with_source.require_index(),
+        options=JobOptions(kind=JobKind.RESCAN),
+        paths=gui_context_with_source.paths,
+    )
+    assert job.run().state is JobState.COMPLETED
+
+    view = SearchView(gui_context_with_source, gui_palette)
+    qtbot.addWidget(view)  # type: ignore[attr-defined]
+    _mode_button(view, SearchMode.EXACT).click()
+    view.sort_combo.setCurrentIndex(view.sort_combo.findData("modified_desc"))
+    view.query_edit.setText(QUERY)
+
+    view.run_search()
+
+    qtbot.waitUntil(lambda: bool(result_cards(view)), timeout=TIMEOUT_MS)  # type: ignore[attr-defined]
+    dates = [card.hit.modified_at for card in result_cards(view)]
+    assert all(date is not None for date in dates)
+    assert dates == sorted(dates, reverse=True)  # type: ignore[type-var]
+
+
+@pytest.mark.gui
+def test_historia_zapytan_zasila_podpowiedzi(
+    qtbot: object,
+    make_search_view: Callable[..., SearchView],
+    result_cards: Callable[[QWidget], list[ResultCard]],
+) -> None:
+    """Udane wyszukiwanie zapisuje zapytanie w podpowiedziach tej sesji."""
+    view = make_search_view()
+    view.query_edit.setText(QUERY)
+    view.run_search()
+    qtbot.waitUntil(lambda: bool(result_cards(view)), timeout=TIMEOUT_MS)  # type: ignore[attr-defined]
+
+    assert QUERY in view._history
+    assert view.query_edit.completer() is not None
+    assert QUERY in view._history_model.stringList()
+
+
+@pytest.mark.gui
+def test_escape_czysci_pole_zapytania(make_search_view: Callable[..., SearchView]) -> None:
+    view = make_search_view()
+    view.query_edit.setText("cokolwiek")
+
+    view.keyPressEvent(
+        QKeyEvent(QEvent.Type.KeyPress, Qt.Key.Key_Escape, Qt.KeyboardModifier.NoModifier)
+    )
+
+    assert view.query_edit.text() == ""
 
 
 @pytest.mark.gui

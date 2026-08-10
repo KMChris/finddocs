@@ -298,11 +298,20 @@ class FtsIndex:
         *,
         limit: int,
         offset: int = 0,
+        order_by: str = "relevance",
     ) -> list[DocumentMatch]:
-        """Strona wynikow na poziomie dokumentu, posortowana wedlug bm25."""
+        """Strona wynikow na poziomie dokumentu.
+
+        Domyslny porzadek to bm25. ``order_by="modified_desc"`` sortuje pelny
+        zbior trafien po dacie modyfikacji dokumentu, od najnowszych; ranking
+        w kolumnie score zostaje bez zmian.
+        """
         if query.is_empty() or limit <= 0:
             return []
         condition = build_filter_sql(filters)
+        order_sql = "score ASC, doc_id ASC"
+        if order_by == "modified_desc":
+            order_sql = "d2.modified_at IS NULL, d2.modified_at DESC, score ASC, doc_id ASC"
         # SQLite nie pozwala uzyc bm25 w zapytaniu z GROUP BY. Ranking liczymy wiec
         # w wyrazeniu CTE oznaczonym jako MATERIALIZED, zeby planer go nie splaszczyl,
         # a agregacje na poziomie dokumentu robimy warstwe wyzej.
@@ -313,10 +322,11 @@ class FtsIndex:
             "  JOIN chunks c ON c.chunk_id = chunks_fts.rowid"
             "  JOIN documents d ON d.doc_id = c.doc_id"
             "  WHERE chunks_fts MATCH ? AND " + condition.sql + ")"
-            " SELECT doc_id, MIN(score) AS score, COUNT(*) AS matching_chunks"
-            " FROM matched GROUP BY doc_id"
-            " ORDER BY score ASC, doc_id ASC"
-            " LIMIT ? OFFSET ?"
+            " SELECT m.doc_id AS doc_id, MIN(m.score) AS score,"
+            "   COUNT(*) AS matching_chunks"
+            " FROM matched m JOIN documents d2 ON d2.doc_id = m.doc_id"
+            " GROUP BY m.doc_id"
+            " ORDER BY " + order_sql + " LIMIT ? OFFSET ?"
         )
         params: list[Any] = [
             BM25_WEIGHT_FOLDED,

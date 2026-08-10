@@ -123,6 +123,10 @@ FILTER_DATE_TO = "Data do"
 FILTER_OCR = "Tylko dokumenty z OCR"
 FILTER_ANY = "wszystkie"
 
+SORT_RELEVANCE = "Trafność"
+SORT_NEWEST = "Najnowsze"
+SORT_HINT = "Porządek wyników. Sortowanie po dacie działa w trybie Dokładne."
+
 PAGINATION_PREVIOUS = "Poprzednia"
 PAGINATION_NEXT = "Następna"
 PAGINATION_PREVIOUS_HINT = "Poprzednia strona wyników (Alt+Left)"
@@ -388,6 +392,7 @@ STATUS_LABELS: dict[DocumentStatus, str] = {
 #: Pasek stanu okna glownego.
 STATUS_SEPARATOR = "   |   "
 STATUS_INDEX_UNAVAILABLE = "Indeks niedostępny"
+STATUS_SEMANTIC_ACTIVE = "Semantyka: aktywna"
 STATUS_SEMANTIC_DISABLED = "Tryb semantyczny wyłączony"
 STATUS_SEMANTIC_UNAVAILABLE = "Tryb semantyczny niedostępny"
 
