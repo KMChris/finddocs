@@ -15,7 +15,8 @@ i wyniki nie są nigdzie wysyłane.
 7. [Źródła dokumentów](#źródła-dokumentów)
 8. [Indeksowanie](#indeksowanie)
 9. [Raport pokrycia](#raport-pokrycia)
-10. [Częste pytania](#częste-pytania)
+10. [Ustawienia](#ustawienia)
+11. [Częste pytania](#częste-pytania)
 
 ## Pierwsze uruchomienie
 
@@ -28,8 +29,9 @@ Przy pierwszym uruchomieniu indeks jest pusty. Kolejność pracy jest zawsze tak
 2. **Indeksowanie**: naciśnij **Skanuj źródła** i poczekaj.
 3. **Wyszukiwanie**: wpisz zapytanie.
 
-Dopóki nie ma żadnego źródła, ekran **Źródła i konfiguracja** pokazuje nad pustą
-listą wskazówkę, od czego zacząć.
+Dopóki nie ma żadnego źródła, ekran wyszukiwania pokazuje powitanie z dwoma
+przyciskami: **Dodaj katalog** i **Utwórz zbiór demonstracyjny**. Pierwsze kroki
+robisz wprost z tego miejsca, bez szukania właściwego ekranu.
 
 Jeśli chcesz najpierw zobaczyć, jak to działa, na tym samym ekranie
 naciśnij **Utwórz zbiór demonstracyjny**. Powstanie kilkadziesiąt fikcyjnych
@@ -49,16 +51,24 @@ albo poprosić administratora, patrz
 Ekran czyta się od góry:
 
 * pole zapytania z przyciskiem lupy;
-* wybór trybu i przycisk **Filtry**, który rozwija panel filtrów;
+* wybór trybu, lista **Sortowanie** i przycisk **Filtry**;
 * listę wyników.
 
-Liczba znalezionych dokumentów jest po prawej stronie tytułu ekranu. Jeżeli
-wyszukiwarka ma zastrzeżenie do kompletności wyników (na przykład brakuje
-indeksu semantycznego), nad listą pojawia się pomarańczowy pasek z wyjaśnieniem.
+Liczba znalezionych dokumentów i czas zapytania są po prawej stronie tytułu
+ekranu. Jeżeli wyszukiwarka ma zastrzeżenie do kompletności wyników (na
+przykład brakuje indeksu semantycznego), nad listą pojawia się pomarańczowy
+pasek z wyjaśnieniem.
 
-Zapytanie uruchamiasz klawiszem Enter albo przyciskiem lupy. W trakcie pracy
-lupa zmienia się w kwadrat: naciśnięcie przerywa wyszukiwanie natychmiast,
-nie trzeba czekać do końca.
+Zapytanie uruchamiasz klawiszem Enter albo przyciskiem lupy. W trybie
+**Dokładne** wyniki liczą się też same, w trakcie pisania, po krótkiej przerwie
+od ostatniego znaku (można to wyłączyć w Ustawieniach). W trakcie pracy lupa
+zmienia się w kwadrat: naciśnięcie przerywa wyszukiwanie natychmiast. Pole
+zapytania podpowiada ostatnie zapytania tej sesji; historia nie jest nigdzie
+zapisywana.
+
+Lista **Sortowanie** ma dwie pozycje: **Trafność** i **Najnowsze** (po dacie
+modyfikacji). Sortowanie po dacie działa w trybie **Dokładne**, bo tryby
+z udziałem modelu zwracają ranking podobieństwa.
 
 Skróty klawiszowe:
 
@@ -66,10 +76,11 @@ Skróty klawiszowe:
 | --- | --- |
 | `Ctrl+F` | kursor do pola zapytania |
 | `Enter` | wyszukaj |
-| `Esc` | przerwij trwające wyszukiwanie |
+| `Esc` | przerwij wyszukiwanie, a poza nim wyczyść pole zapytania |
 | `Ctrl+Shift+F` | pokaż albo ukryj panel filtrów |
 | `Alt+Left`, `Alt+Right` | poprzednia i następna strona wyników |
 | `Ctrl+1` do `Ctrl+5` | przełącz ekran |
+| `Ctrl+6` | otwórz Ustawienia |
 | `F5` | odśwież stan indeksu |
 
 Pasek na dole okna pokazuje liczbę zaindeksowanych dokumentów i fragmentów,
@@ -153,21 +164,25 @@ Panel filtrów rozwija przycisk **Filtry** (albo `Ctrl+Shift+F`). Filtry można 
 | Źródło, Biblioteka | katalog lokalny albo konkretna biblioteka SharePoint |
 | Tylko dokumenty z OCR | wyłącznie teksty rozpoznane z obrazu |
 
-Liczba w nawiasie na przycisku **Filtry** mówi, ile filtrów działa. Dzięki temu
-po zwinięciu panelu widać, że lista wyników jest zawężona. Przycisk
-**Wyczyść filtry** przywraca stan wyjściowy. Liczba wyników przy tytule ekranu
-zawsze dotyczy stanu po zastosowaniu filtrów.
+Aktywne filtry są widoczne jako chipy pod paskiem trybów, także przy zwiniętym
+panelu. Kliknięcie krzyżyka na chipie zdejmuje pojedynczy filtr i odświeża
+wyniki. Liczba w nawiasie na przycisku **Filtry** mówi, ile filtrów działa.
+Przycisk **Wyczyść filtry** przywraca stan wyjściowy. Liczba wyników przy tytule
+ekranu zawsze dotyczy stanu po zastosowaniu filtrów.
 
 ## Wyniki
 
 Każdy wynik to jeden dokument, a nie pojedynczy fragment. W karcie wyniku
 znajdziesz:
 
-* nazwę pliku i jego położenie logiczne (folder albo biblioteka);
-* źródło, z którego pochodzi;
-* od jednego do trzech najlepiej pasujących fragmentów z wyróżnionymi trafieniami;
-* rodzaj dopasowania: dosłowne, znaczeniowe albo mieszane;
+* glif rodzaju pliku (tekst, tabela, obraz, poczta) i nazwę pliku;
+* położenie dokumentu jako okruszki: biblioteka i katalogi, bez powtarzania
+  nazwy pliku;
+* jeden albo dwa najlepiej pasujące fragmenty z wyróżnionymi trafieniami;
+  pozostałe pobrane fragmenty rozwija odnośnik **Pokaż więcej fragmentów**;
 * typ pliku i datę modyfikacji;
+* rodzaj dopasowania (dosłowne, znaczeniowe, mieszane), widoczny w trybie
+  hybrydowym, gdzie różni się między wynikami;
 * oznaczenie **OCR**, jeżeli tekst pochodzi z rozpoznawania obrazu;
 * ocenę dopasowania.
 
@@ -177,10 +192,15 @@ co dokładnie oznacza: datę modyfikacji, autora, jakość OCR albo siłę dopas
 Ocena służy do porównywania wyników **w obrębie jednej listy**. Nie jest
 procentem trafności i nie da się jej porównywać między różnymi zapytaniami.
 
+Odnośnik **Pokaż kontekst trafienia** dokleja do pierwszego fragmentu sąsiednie
+fragmenty dokumentu prosto z indeksu, bez otwierania pliku. Sąsiedzi są
+wyszarzeni, a trafienie zachowuje wyróżnienie.
+
 Dokument otwierasz na trzy sposoby: klikając jego nazwę, klikając kartę
 dwukrotnie albo naciskając `Enter`, gdy karta ma zaznaczenie klawiaturowe
-(klawiszem `Tab` przechodzisz między wynikami). Przy prawej krawędzi karty
-są dwa przyciski:
+(klawiszem `Tab` przechodzisz między wynikami). Przy prawej krawędzi karty,
+po najechaniu na nią albo po zaznaczeniu klawiaturą, pojawiają się dwa
+przyciski:
 
 * folder: otwiera katalog z zaznaczonym plikiem. Dla dokumentów z SharePointa
   otwiera stronę biblioteki w przeglądarce;
@@ -241,13 +261,18 @@ wbudowanych.
 
 ## Indeksowanie
 
-Ekran **Indeksowanie** pokazuje, co się dzieje:
+W spoczynku ekran **Indeksowanie** pokazuje podsumowanie ostatniego przebiegu:
+kiedy się odbył, jak się zakończył i ile dokumentów przetworzył. Karty postępu
+i statystyk pojawiają się wraz z uruchomieniem zadania i pokazują:
 
 * bieżący etap (skanowanie, pobieranie, odczyt, OCR, zapis);
 * liczby: wykryte, przetworzone, pominięte, błędy, bez zmian, usunięte;
 * nazwę aktualnie przetwarzanego pliku;
 * pasek postępu, czas trwania i zajęte miejsce tymczasowe;
 * stan połączenia ze źródłem.
+
+Liczba błędów większa od zera jest wyróżniona kolorem błędu; kliknięcie jej
+otwiera zakładkę z listą błędów.
 
 Przyciski:
 
@@ -261,7 +286,9 @@ Przyciski:
 
 Pod statystykami są dwie zakładki: **Błędy** (dokumenty, których nie udało się
 odczytać) oraz **Pliki pominięte** (pliki świadomie pominięte). Liczba
-w nawiasie przy nazwie zakładki mówi, ile jest w niej pozycji.
+w nawiasie przy nazwie zakładki mówi, ile jest w niej pozycji. Pole
+**Filtruj wiersze** przy zakładkach zawęża obie tabele do wierszy zawierających
+wpisany tekst.
 
 Okno działa normalnie w czasie indeksowania. Możesz przejść na ekran
 wyszukiwania i szukać w tym, co już jest w indeksie.
@@ -276,21 +303,39 @@ zapyta, czy wznowić przerwane zadanie.
 
 Ekran **Raport** odpowiada na pytanie „czego nie ma w indeksie i dlaczego”.
 
-Raport zawiera liczby dokumentów w podziale na stan (zaindeksowane, puste,
-uszkodzone, zabezpieczone hasłem, nieobsługiwany format, błąd odczytu),
-liczbę dokumentów i stron z OCR, datę ostatniego skanowania, wersję indeksu
-oraz nazwę modelu embeddingów.
+Raport liczy się sam przy wejściu na ekran i po każdej zmianie indeksu; stempel
+przy przyciskach mówi, z której godziny pochodzą liczby. Karta **Pokrycie**
+zawiera liczby dokumentów w podziale na stan (zaindeksowane, puste, uszkodzone,
+zabezpieczone hasłem, nieobsługiwany format, błąd odczytu) oraz liczbę
+dokumentów i stron z OCR. Karta **Informacje techniczne** pokazuje datę
+ostatniego skanowania, wersję indeksu i nazwę modelu embeddingów.
 
 Odpowiedź na pytanie o kompletność jest w pasku na górze ekranu: zielony oznacza,
 że wszystkie wykryte dokumenty da się wyszukać, pomarańczowy, że nie.
 
-Na dole znajduje się lista dokumentów niewyszukiwalnych wraz z powodem.
+Na dole znajduje się lista dokumentów niewyszukiwalnych wraz z powodem; pole
+**Filtruj wiersze** zawęża ją do wpisanego tekstu.
 **Jeżeli ta lista nie jest pusta, aplikacja nie twierdzi, że zbiór wyników jest
 kompletny.** Warto ją przejrzeć przed użyciem wyników do celów formalnych.
 
 Raport zapisują przyciski **Eksportuj do CSV** (do arkusza) albo
-**Eksportuj do JSON** (do dalszego przetwarzania). Oba są aktywne dopiero po
-naciśnięciu **Odśwież**, czyli wtedy, gdy jest co zapisać.
+**Eksportuj do JSON** (do dalszego przetwarzania).
+
+## Ustawienia
+
+Pozycja **Ustawienia** jest przypięta na dole panelu nawigacji (skrót `Ctrl+6`).
+Zmiany działają od razu i są zapamiętywane.
+
+* **Motyw**: systemowy, jasny albo ciemny. Zmiana przebudowuje okno.
+* **Tło Mica okna**: przezroczysty materiał systemowy pod oknem, dostępny
+  na Windows 11.
+* **Otwieranie dokumentów**: dokument w SharePoint (przeglądarka) albo kopia
+  lokalna, gdy jest dostępna.
+* **Wyników na stronę**: od 5 do 100.
+* **Pokazuj plakietkę siły dopasowania**: wyłącza ocenę na kartach wyników.
+* **Wyszukiwanie przyrostowe w trybie Dokładne**: wyniki w trakcie pisania.
+
+Przycisk **O programie** pokazuje wersję aplikacji oraz katalogi danych i logów.
 
 ## Częste pytania
 

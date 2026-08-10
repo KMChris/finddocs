@@ -18,8 +18,9 @@ Konsekwencje tej zasady widoczne w kodzie:
 
 * liczba wyników jest w wierszu tytułu ekranu, a nie w osobnym wierszu;
 * wiersz stron pojawia się dopiero wtedy, gdy stron jest więcej niż jedna;
-* panel filtrów jest zwinięty, a to, że jednak działa, sygnalizuje liczba
-  na przycisku **Filtry**;
+* panel filtrów jest zwinięty, a to, że jednak działa, sygnalizują chipy
+  aktywnych filtrów pod paskiem trybów i liczba na przycisku **Filtry**;
+  klik chipa zdejmuje pojedynczy filtr;
 * baner nad listą wyników dostaje wyłącznie uwagi zależne od zapytania
   (obcięta lista, niedostępny indeks semantyczny). Stała charakterystyka trybu
   jest w podpowiedzi pod przełącznikiem trybów: ostrzeżenie pokazywane przy
@@ -166,6 +167,10 @@ pozycji, na cienkiej linii biegnącej pod całym paskiem. Zakładka w pudełku
 z obramowaniem wygląda jak przycisk, czyli tak samo jak akcje nad nią, a przecież
 nie jest akcją: nie robi nic poza zmianą widoku. Panel zakładek nie ma ramki
 (`setDocumentMode(True)`), bo tabele w środku mają własne obramowanie.
+
+Ustawienia są przypięte na dole panelu nawigacji jako osobna lista, wzorem
+nawigacji Windows 11. Wybór jest uzgadniany między listami tak, żeby zaznaczona
+była zawsze dokładnie jedna pozycja (`MainWindow._on_bottom_nav_changed`).
 
 ## Ruch i cień
 
