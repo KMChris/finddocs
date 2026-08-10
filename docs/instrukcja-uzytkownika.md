@@ -25,11 +25,14 @@ nie w przeglądarce. Nie trzeba niczego startować ręcznie.
 Przy pierwszym uruchomieniu indeks jest pusty. Kolejność pracy jest zawsze taka sama:
 
 1. **Źródła i konfiguracja**: wskaż, gdzie leżą dokumenty.
-2. **Indeksowanie**: naciśnij **Start** i poczekaj.
+2. **Indeksowanie**: naciśnij **Skanuj źródła** i poczekaj.
 3. **Wyszukiwanie**: wpisz zapytanie.
 
-Jeśli chcesz najpierw zobaczyć, jak to działa, na ekranie **Źródła i konfiguracja**
-naciśnij **Wygeneruj zbiór demonstracyjny**. Powstanie kilkadziesiąt fikcyjnych
+Dopóki nie ma żadnego źródła, ekran **Źródła i konfiguracja** pokazuje nad pustą
+listą wskazówkę, od czego zacząć.
+
+Jeśli chcesz najpierw zobaczyć, jak to działa, na tym samym ekranie
+naciśnij **Zbiór demonstracyjny**. Powstanie kilkadziesiąt fikcyjnych
 dokumentów po polsku (umowy, notatki, faktury, skany, wiadomości e-mail), które
 możesz od razu zaindeksować. Nie ma w nich żadnych prawdziwych danych osobowych
 ani firmowych.
@@ -43,15 +46,19 @@ albo poprosić administratora, patrz
 
 ## Ekran wyszukiwania
 
-Ekran ma trzy części:
+Ekran czyta się od góry:
 
-* pole zapytania na górze, z przyciskiem **Szukaj** i wyborem trybu;
-* panel filtrów po prawej stronie;
-* listę wyników na środku.
+* pole zapytania z przyciskiem lupy;
+* wybór trybu i przycisk **Filtry**, który rozwija panel filtrów;
+* listę wyników.
 
-Zapytanie uruchamiasz klawiszem Enter albo przyciskiem **Szukaj**. Podczas
-wyszukiwania pojawia się przycisk **Anuluj**: aplikacja przerwie pracę
-natychmiast, nie trzeba czekać do końca.
+Liczba znalezionych dokumentów jest po prawej stronie tytułu ekranu. Jeżeli
+wyszukiwarka ma zastrzeżenie do kompletności wyników (na przykład brakuje
+indeksu semantycznego), nad listą pojawia się pomarańczowy pasek z wyjaśnieniem.
+
+Zapytanie uruchamiasz klawiszem Enter albo przyciskiem lupy. W trakcie pracy
+lupa zmienia się w kwadrat: naciśnięcie przerywa wyszukiwanie natychmiast,
+nie trzeba czekać do końca.
 
 Skróty klawiszowe:
 
@@ -59,12 +66,16 @@ Skróty klawiszowe:
 | --- | --- |
 | `Ctrl+F` | kursor do pola zapytania |
 | `Enter` | wyszukaj |
-| `Esc` | anuluj trwające wyszukiwanie |
+| `Esc` | przerwij trwające wyszukiwanie |
+| `Ctrl+Shift+F` | pokaż albo ukryj panel filtrów |
+| `Alt+Left`, `Alt+Right` | poprzednia i następna strona wyników |
 | `Ctrl+1` do `Ctrl+5` | przełącz ekran |
 | `F5` | odśwież stan indeksu |
 
 Pasek na dole okna pokazuje liczbę zaindeksowanych dokumentów i fragmentów,
-rozmiar indeksu oraz to, czy tryb semantyczny jest dostępny.
+rozmiar indeksu oraz to, czy tryb semantyczny jest dostępny. Kropka po lewej
+stronie paska ma kolor zielony, gdy tryb semantyczny działa, pomarańczowy,
+gdy brakuje modelu, i szary, gdy jest wyłączony w ustawieniach.
 
 ## Tryby wyszukiwania
 
@@ -131,17 +142,20 @@ te same dokumenty. Dotyczy to także litery `ł`.
 
 ## Filtry
 
-Panel filtrów ogranicza wynik. Filtry można łączyć.
+Panel filtrów rozwija przycisk **Filtry** (albo `Ctrl+Shift+F`). Filtry można łączyć.
 
 | Filtr | Opis |
 | --- | --- |
-| Lokalizacja | fragment ścieżki albo nazwa folderu |
-| Typ pliku | jedno lub więcej rozszerzeń |
-| Data modyfikacji | zakres od i do |
+| Katalog albo lokalizacja | fragment ścieżki albo nazwa folderu |
+| Typ pliku | rozszerzenie występujące w indeksie |
+| Data od, Data do | zakres dat modyfikacji |
 | Autor | osoba zapisana w metadanych dokumentu |
-| Źródło | katalog lokalny albo konkretna biblioteka SharePoint |
+| Źródło, Biblioteka | katalog lokalny albo konkretna biblioteka SharePoint |
+| Tylko dokumenty z OCR | wyłącznie teksty rozpoznane z obrazu |
 
-Przycisk **Wyczyść filtry** przywraca stan wyjściowy. Liczba wyników nad listą
+Liczba w nawiasie na przycisku **Filtry** mówi, ile filtrów działa. Dzięki temu
+po zwinięciu panelu widać, że lista wyników jest zawężona. Przycisk
+**Wyczyść filtry** przywraca stan wyjściowy. Liczba wyników przy tytule ekranu
 zawsze dotyczy stanu po zastosowaniu filtrów.
 
 ## Wyniki
@@ -157,19 +171,26 @@ znajdziesz:
 * oznaczenie **OCR**, jeżeli tekst pochodzi z rozpoznawania obrazu;
 * ocenę dopasowania.
 
+Plakietki pod nazwą pliku są skrócone. Najedź na plakietkę, żeby zobaczyć,
+co dokładnie oznacza: datę modyfikacji, autora, jakość OCR albo siłę dopasowania.
+
 Ocena służy do porównywania wyników **w obrębie jednej listy**. Nie jest
 procentem trafności i nie da się jej porównywać między różnymi zapytaniami.
 
-Trzy przyciski na karcie:
+Dokument otwierasz na trzy sposoby: klikając jego nazwę, klikając kartę
+dwukrotnie albo naciskając `Enter`, gdy karta ma zaznaczenie klawiaturowe
+(klawiszem `Tab` przechodzisz między wynikami). Przy prawej krawędzi karty
+są dwa przyciski:
 
-* **Otwórz dokument**: otwiera plik w domyślnej aplikacji systemu.
-* **Otwórz lokalizację**: otwiera folder z zaznaczonym plikiem. Dla dokumentów
-  z SharePointa otwiera stronę biblioteki w przeglądarce.
-* **Kopiuj odnośnik**: kopiuje ścieżkę albo adres do schowka.
+* folder: otwiera katalog z zaznaczonym plikiem. Dla dokumentów z SharePointa
+  otwiera stronę biblioteki w przeglądarce;
+* kopia: kopiuje ścieżkę albo adres do schowka.
 
-Wyniki są stronicowane. Pod listą znajdziesz numer strony i łączną liczbę
-znalezionych dokumentów. W trybie dokładnym ta liczba jest dokładna,
-w pozostałych trybach opisuje wielkość rozważanego zbioru kandydatów.
+Wyniki są stronicowane. Wiersz z numerem strony pojawia się pod listą tylko
+wtedy, gdy stron jest więcej niż jedna; strony przewijasz też skrótami
+`Alt+Left` i `Alt+Right`. Łączna liczba znalezionych dokumentów jest przy
+tytule ekranu. W trybie dokładnym ta liczba jest dokładna, w pozostałych
+trybach opisuje wielkość rozważanego zbioru kandydatów.
 
 ## Źródła dokumentów
 
@@ -184,8 +205,10 @@ dzierżawy, identyfikatora aplikacji i adresu witryny. Po zapisaniu naciśnij
 **Testuj połączenie**: otworzy się okno logowania Microsoft. Zaloguj się swoim
 kontem służbowym. Zobaczysz tylko te dokumenty, do których i tak masz dostęp.
 
-Przycisk **Usuń** kasuje źródło z konfiguracji. Dokumenty tego źródła znikają
-z indeksu przy następnym skanowaniu.
+Przyciski **Testuj połączenie**, **Przełącz** (włącza albo wyłącza źródło)
+i **Usuń** działają na źródle zaznaczonym na liście. Dopóki nic nie jest
+zaznaczone, są nieaktywne. **Usuń** kasuje źródło z konfiguracji, a jego
+dokumenty znikają z indeksu.
 
 ## Model wyszukiwania semantycznego
 
@@ -229,14 +252,15 @@ Przyciski:
 
 | Przycisk | Działanie |
 | --- | --- |
-| **Start** | indeksuje nowe i zmienione dokumenty |
-| **Pauza** | wstrzymuje pracę, można wznowić później |
-| **Wznów** | kontynuuje od miejsca zatrzymania |
+| **Skanuj źródła** | dodaje nowe pliki, aktualizuje zmienione, usuwa skasowane |
+| **Pauza** i **Wznów** | jeden przycisk: wstrzymuje pracę i wraca do niej później |
 | **Anuluj** | przerywa zadanie, indeks pozostaje spójny |
-| **Skanuj ponownie** | pełne przeindeksowanie wszystkiego od nowa |
+| **Pełne przeindeksowanie** | przetwarza wszystko od nowa, także dokumenty bez zmian |
 | **Eksportuj raport** | zapisuje raport pokrycia do pliku |
-| **Pokaż błędy** | lista dokumentów, których nie udało się odczytać |
-| **Pokaż pliki pominięte** | lista plików świadomie pominiętych |
+
+Pod statystykami są dwie zakładki: **Błędy** (dokumenty, których nie udało się
+odczytać) oraz **Pliki pominięte** (pliki świadomie pominięte). Liczba
+w nawiasie przy nazwie zakładki mówi, ile jest w niej pozycji.
 
 Okno działa normalnie w czasie indeksowania. Możesz przejść na ekran
 wyszukiwania i szukać w tym, co już jest w indeksie.
@@ -256,12 +280,16 @@ uszkodzone, zabezpieczone hasłem, nieobsługiwany format, błąd odczytu),
 liczbę dokumentów i stron z OCR, datę ostatniego skanowania, wersję indeksu
 oraz nazwę modelu embeddingów.
 
+Odpowiedź na pytanie o kompletność jest w pasku na górze ekranu: zielony oznacza,
+że wszystkie wykryte dokumenty da się wyszukać, pomarańczowy, że nie.
+
 Na dole znajduje się lista dokumentów niewyszukiwalnych wraz z powodem.
 **Jeżeli ta lista nie jest pusta, aplikacja nie twierdzi, że zbiór wyników jest
 kompletny.** Warto ją przejrzeć przed użyciem wyników do celów formalnych.
 
-Raport można zapisać przyciskiem **Eksportuj** do pliku CSV (do arkusza)
-albo JSON (do dalszego przetwarzania).
+Raport zapisują przyciski **Eksportuj do CSV** (do arkusza) albo
+**Eksportuj do JSON** (do dalszego przetwarzania). Oba są aktywne dopiero po
+naciśnięciu **Odśwież**, czyli wtedy, gdy jest co zapisać.
 
 ## Częste pytania
 

@@ -74,9 +74,9 @@ dowolne repozytorium Hugging Face. Pełny opis instalacji, konfiguracji i modeli
 ## Szybki start bez SharePointa
 
 Aplikacja ma wbudowany zbiór demonstracyjny z fikcyjnymi polskimi dokumentami.
-Na ekranie **Źródła i konfiguracja** naciśnij **Wygeneruj zbiór demonstracyjny**,
-potem przejdź na ekran **Indeksowanie** i naciśnij **Start**. Po chwili można
-wyszukiwać.
+Na ekranie **Źródła i konfiguracja** naciśnij **Zbiór demonstracyjny**,
+potem przejdź na ekran **Indeksowanie** i naciśnij **Skanuj źródła**. Po chwili
+można wyszukiwać.
 
 To samo z wiersza poleceń:
 
@@ -170,6 +170,7 @@ Szczegóły i diagramy: [docs/architektura.md](https://github.com/KMChris/finddo
 | [Instrukcja administratora](https://github.com/KMChris/finddocs/blob/main/docs/instrukcja-administratora.md) | wdrożenie, konfiguracja, CLI |
 | [Integracja z SharePoint](https://github.com/KMChris/finddocs/blob/main/docs/integracja-sharepoint.md) | Microsoft Graph, Entra ID, uprawnienia |
 | [Architektura](https://github.com/KMChris/finddocs/blob/main/docs/architektura.md) | warstwy, diagramy, decyzje |
+| [System wizualny](https://github.com/KMChris/finddocs/blob/main/docs/ui-design.md) | tokeny, kontrolki wspólne, reguły interfejsu |
 | [Schemat danych](https://github.com/KMChris/finddocs/blob/main/docs/schemat-danych.md) | tabele, kolumny, wersjonowanie |
 | [Odbudowa indeksu](https://github.com/KMChris/finddocs/blob/main/docs/odbudowa-indeksu.md) | przebudowa, kopie, kompaktacja |
 | [Aktualizacja](https://github.com/KMChris/finddocs/blob/main/docs/aktualizacja.md) | procedura aktualizacji |

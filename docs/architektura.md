@@ -256,3 +256,8 @@ wykrywanie pozycji, pobieranie pliku i klucz zmiany.
 `providers/base.py`. Miejsce na wariant korzystający z wewnętrznego API
 organizacji jest już przygotowane (`providers/internal_api.py`) i objęte
 polityką sieciową jako osobna kategoria ruchu.
+
+**Nowy ekran interfejsu.** Zacznij od `widgets.page.page_layout` i `PageHeader`,
+odstępy bierz ze skali w `gui/theme.py`, powtarzalne elementy z `gui/widgets`.
+Reguły i powody, dla których interfejs wygląda tak, a nie inaczej, opisuje
+[system wizualny](ui-design.md).

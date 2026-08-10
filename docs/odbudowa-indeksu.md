@@ -103,7 +103,7 @@ pobierane ani parsowane, a OCR nie rusza z miejsca.
 **Wyszukiwanie dokładne działa przez cały czas przebudowy.** Stary indeks
 pełnotekstowy nie jest kasowany przed zbudowaniem nowego.
 
-W interfejsie ta sama operacja kryje się pod przyciskiem **Skanuj ponownie**
+W interfejsie ta sama operacja kryje się pod przyciskiem **Skanuj źródła**
 na ekranie **Indeksowanie**.
 
 ## Przebudowa od zera

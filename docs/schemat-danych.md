@@ -186,7 +186,7 @@ przerwane zadanie bez powtarzania całej pracy.
 
 Historia błędów: data, źródło, dokument, etap, kod błędu, klasa wyjątku,
 komunikat i informacja, czy błąd nadaje się do ponowienia. Zasila raport
-pokrycia i ekran **Pokaż błędy**. Tabela nie zawiera treści dokumentów.
+pokrycia i zakładkę **Błędy** na ekranie **Indeksowanie**. Tabela nie zawiera treści dokumentów.
 
 ### `ocr_cache`
 

@@ -53,7 +53,7 @@ parametrem `--data-dir` w CLI.
 
 Najprostsza ścieżka w GUI: na ekranie **Źródła i konfiguracja** dodaj katalog
 lokalny (albo wygeneruj zbiór demonstracyjny), przejdź na ekran **Indeksowanie**,
-naciśnij **Start**, po czym wyszukuj na ekranie **Wyszukiwanie**.
+naciśnij **Skanuj źródła**, po czym wyszukuj na ekranie **Wyszukiwanie**.
 
 To samo z wiersza poleceń:
 
