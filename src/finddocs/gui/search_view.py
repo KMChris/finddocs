@@ -16,7 +16,7 @@ import datetime as _dt
 from collections.abc import Callable
 from functools import partial
 
-from PySide6.QtCore import QDate, QSize, QStringListModel, Qt, Signal
+from PySide6.QtCore import QDate, QSize, QStringListModel, Qt, QTimer, Signal
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
@@ -88,6 +88,16 @@ EDUCATION_NOTES: frozenset[str] = frozenset({HYBRID_NOTE, SEMANTIC_NOTE})
 #: aplikacja unika (zapisywanie zapytan w logu jest osobna, jawna zgoda).
 QUERY_HISTORY_LIMIT = 20
 
+#: Opoznienie wyszukiwania przyrostowego od ostatniego wpisanego znaku.
+INCREMENTAL_DELAY_MS = 300
+
+#: Najkrotsze zapytanie uruchamiajace wyszukiwanie przyrostowe.
+INCREMENTAL_MIN_CHARS = 2
+
+#: Powyzej tylu dokumentow wyszukiwanie przyrostowe nie wlacza sie samo:
+#: kazde nacisniecie klawisza to pelne zapytanie FTS z licznikiem trafien.
+INCREMENTAL_MAX_DOCUMENTS = 50_000
+
 
 class SearchView(QWidget):
     """Pole zapytania, tryby, filtry i lista wynikow."""
@@ -154,8 +164,19 @@ class SearchView(QWidget):
         root.addWidget(self._pagination)
         self._update_pagination()
 
+        # Wyszukiwanie przyrostowe: tryb Dokladne liczy sie na zywo w trakcie
+        # pisania, po krotkiej przerwie od ostatniego znaku. Tryby z modelem
+        # czekaja na Enter, bo ich koszt jest nieporownywalnie wiekszy.
+        self._incremental_allowed = False
+        self._incremental_timer = QTimer(self)
+        self._incremental_timer.setSingleShot(True)
+        self._incremental_timer.setInterval(INCREMENTAL_DELAY_MS)
+        self._incremental_timer.timeout.connect(self._run_incremental)
+        self.query_edit.textChanged.connect(self._on_query_text_changed)
+
         self._build_shortcuts()
         self._update_filter_count()
+        self._refresh_incremental_allowed()
         self.show_default_empty()
 
     # --- budowa interfejsu ------------------------------------------------
@@ -572,6 +593,49 @@ class SearchView(QWidget):
         """
         self._page_size = self.context.config.search.page_size
         self._page = 0
+        self._refresh_incremental_allowed()
+
+    def _refresh_incremental_allowed(self) -> None:
+        """Sprawdza, czy wyszukiwanie przyrostowe ma prawo dzialac.
+
+        Odczyt stanu indeksu to zapytanie do bazy, wiec wynik jest trzymany
+        w polu i odswiezany przy wejsciu na ekran oraz po zmianie indeksu.
+        """
+        allowed = bool(self.context.config.search.incremental)
+        if allowed:
+            index = self.context.index
+            try:
+                allowed = (
+                    index is not None
+                    and index.status().indexed_documents <= INCREMENTAL_MAX_DOCUMENTS
+                )
+            except Exception as exc:
+                log.warning("gui.incremental_check_failed", error_type=type(exc).__name__)
+                allowed = False
+        self._incremental_allowed = allowed
+
+    def _on_query_text_changed(self, text: str) -> None:
+        stripped = text.strip()
+        if not stripped:
+            self._incremental_timer.stop()
+            if self._response is not None:
+                # Wyczyszczenie pola wraca do stanu poczatkowego. Stare wyniki
+                # bez zapytania nad nimi wygladaja jak wyniki niczego.
+                self.cancel_search()
+                self._response = None
+                self.show_default_empty()
+                self._update_pagination()
+            return
+        if (
+            self._incremental_allowed
+            and self.current_mode() is SearchMode.EXACT
+            and len(stripped) >= INCREMENTAL_MIN_CHARS
+        ):
+            self._incremental_timer.start()
+
+    def _run_incremental(self) -> None:
+        if self.query_edit.text().strip():
+            self.run_search()
 
     def focus_query(self) -> None:
         self.query_edit.setFocus()
@@ -609,6 +673,7 @@ class SearchView(QWidget):
         self._show_empty(i18n.SEARCH_EMPTY_TITLE, i18n.SEARCH_EMPTY_STATE)
 
     def run_search(self, *, reset_page: bool = True) -> None:
+        self._incremental_timer.stop()
         query = self.query_edit.text().strip()
         if not query:
             self.show_default_empty()

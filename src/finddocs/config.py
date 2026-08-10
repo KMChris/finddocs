@@ -164,6 +164,9 @@ class SearchSettings:
 
     default_mode: str = "hybrid"
     page_size: int = 20
+    incremental: bool = True
+    """Wyszukiwanie przyrostowe w trybie dokładnym, w trakcie pisania."""
+
     max_chunks_per_document: int = 3
     rrf_k: int = 60
     fts_weight: float = 1.0

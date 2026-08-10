@@ -939,6 +939,60 @@ def test_historia_zapytan_zasila_podpowiedzi(
 
 
 @pytest.mark.gui
+def test_wyszukiwanie_przyrostowe_liczy_sie_w_trakcie_pisania(
+    qtbot: object,
+    make_search_view: Callable[..., SearchView],
+    result_cards: Callable[[QWidget], list[ResultCard]],
+    corpus_stats: dict[str, int],
+) -> None:
+    """W trybie dokladnym wyniki pojawiaja sie bez klikania Szukaj."""
+    view = make_search_view()
+    _mode_button(view, SearchMode.EXACT).click()
+    assert view._incremental_allowed
+
+    view.query_edit.setText(QUERY)
+
+    qtbot.waitUntil(lambda: bool(result_cards(view)), timeout=TIMEOUT_MS)  # type: ignore[attr-defined]
+    assert len(result_cards(view)) == corpus_stats["przelewow"]
+
+
+@pytest.mark.gui
+def test_wyszukiwanie_przyrostowe_nie_dziala_w_trybie_hybrydowym(
+    qtbot: object,
+    make_search_view: Callable[..., SearchView],
+    result_cards: Callable[[QWidget], list[ResultCard]],
+) -> None:
+    """Tryby z modelem czekaja na Enter: ich koszt jest duzo wiekszy."""
+    from finddocs.gui.search_view import INCREMENTAL_DELAY_MS
+
+    view = make_search_view()
+    view.query_edit.setText(QUERY)
+
+    qtbot.wait(INCREMENTAL_DELAY_MS + 250)  # type: ignore[attr-defined]
+
+    assert not result_cards(view)
+
+
+@pytest.mark.gui
+def test_wyczyszczenie_pola_wraca_do_stanu_poczatkowego(
+    qtbot: object,
+    make_search_view: Callable[..., SearchView],
+    result_cards: Callable[[QWidget], list[ResultCard]],
+    empty_state_title: Callable[[QWidget], str],
+) -> None:
+    """Stare wyniki bez zapytania nad nimi wygladaja jak wyniki niczego."""
+    view = make_search_view()
+    view.query_edit.setText(QUERY)
+    view.run_search()
+    qtbot.waitUntil(lambda: bool(result_cards(view)), timeout=TIMEOUT_MS)  # type: ignore[attr-defined]
+
+    view.query_edit.clear()
+
+    assert empty_state_title(view) == i18n.SEARCH_EMPTY_TITLE
+    assert view._response is None
+
+
+@pytest.mark.gui
 def test_escape_czysci_pole_zapytania(make_search_view: Callable[..., SearchView]) -> None:
     view = make_search_view()
     view.query_edit.setText("cokolwiek")

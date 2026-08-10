@@ -187,6 +187,12 @@ class SettingsView(QWidget):
         self.show_scores_check.setChecked(self.context.config.ui.show_scores)
         self.show_scores_check.toggled.connect(self._on_show_scores_toggled)
         form.addRow("", self.show_scores_check)
+
+        self.incremental_check = QCheckBox(i18n.SETTINGS_INCREMENTAL)
+        self.incremental_check.setChecked(self.context.config.search.incremental)
+        self.incremental_check.setToolTip(i18n.SETTINGS_INCREMENTAL_HINT)
+        self.incremental_check.toggled.connect(self._on_incremental_toggled)
+        form.addRow("", self.incremental_check)
         return box
 
     # --- reakcje ----------------------------------------------------------
@@ -226,6 +232,11 @@ class SettingsView(QWidget):
     def _on_show_scores_toggled(self, checked: bool) -> None:
         self.context.config.ui.show_scores = bool(checked)
         self._save()
+
+    def _on_incremental_toggled(self, checked: bool) -> None:
+        self.context.config.search.incremental = bool(checked)
+        self._save()
+        self.search_settings_changed.emit()
 
     def show_about(self) -> None:
         dialog = AboutDialog(self.context, self)

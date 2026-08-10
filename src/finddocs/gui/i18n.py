@@ -34,6 +34,10 @@ SETTINGS_OPEN_WEB = "W SharePoint, w przeglądarce"
 SETTINGS_OPEN_LOCAL = "Kopia lokalna, gdy jest dostępna"
 SETTINGS_PAGE_SIZE = "Wyników na stronę"
 SETTINGS_SHOW_SCORES = "Pokazuj plakietkę siły dopasowania"
+SETTINGS_INCREMENTAL = "Wyszukiwanie przyrostowe w trybie Dokładne"
+SETTINGS_INCREMENTAL_HINT = (
+    "Wyniki pojawiają się w trakcie pisania. Działa dla indeksów do 50 tysięcy dokumentów."
+)
 SETTINGS_SAVED = "Zapisano ustawienia."
 ABOUT_TITLE = "O programie"
 ABOUT_DATA_DIR = "Katalog danych"
