@@ -153,8 +153,10 @@ GLYPHS: dict[str, tuple[float, tuple[Op, ...]]] = {
     ),
 }
 
-#: Glify z dodatkowym wariantem na tle akcentu.
-ACCENT_GLYPHS = ("search", "stop", "play", "refresh")
+#: Glify z dodatkowym wariantem na tle akcentu. Kazdy glif uzywany na przycisku
+#: ``#Primary`` albo ``#PrimaryIcon`` musi tu byc, inaczej dostanie kolor tekstu
+#: zwyklego przycisku i w trybie ciemnym bedzie jasny obok ciemnego napisu.
+ACCENT_GLYPHS = ("search", "stop", "play", "refresh", "plus")
 
 #: Glify, ktorych klasa podstawowa jest inna niz kolor tekstu.
 PLAIN_CLASS_OVERRIDES = {"trash": "danger"}

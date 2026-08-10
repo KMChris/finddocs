@@ -146,6 +146,36 @@ def test_kropka_stanu_odzwierciedla_tryb_semantyczny(main_window: MainWindow) ->
 
 
 @pytest.mark.gui
+def test_glify_na_przyciskach_akcentowych_maja_kolor_tekstu_na_akcencie(
+    main_window: MainWindow, gui_palette: Palette
+) -> None:
+    """Glif w kolorze zwyklego tekstu na tle akcentu odcina sie od napisu obok.
+
+    W trybie ciemnym akcent jest jasny, a napis na nim ciemny. Glif wzięty
+    z ``theme_icon`` jest wtedy jasny, wiec ikona i napis na jednym przycisku
+    maja przeciwne kolory. Test sprawdza to na wszystkich przyciskach okna,
+    zeby kolejny przycisk akcentowy nie powtorzyl tej pomylki.
+    """
+    from PySide6.QtGui import QColor
+    from PySide6.QtWidgets import QPushButton
+    from tests.gui.helpers import color_distance, glyph_color
+
+    accent_text = QColor(gui_palette.accent_text)
+    plain_text = QColor(gui_palette.text)
+    checked = 0
+    for button in main_window.findChildren(QPushButton):
+        if button.objectName() not in ("Primary", "PrimaryIcon") or button.icon().isNull():
+            continue
+        color = glyph_color(button.icon())
+        assert color_distance(color, accent_text) < color_distance(color, plain_text), (
+            f"przycisk {button.objectName()} z napisem {button.text()!r} "
+            "ma glif w kolorze tekstu zwyklego przycisku"
+        )
+        checked += 1
+    assert checked >= 4, "okno powinno miec kilka przyciskow akcentowych z ikona"
+
+
+@pytest.mark.gui
 def test_status_message_reaches_status_bar(main_window: MainWindow) -> None:
     """Widoki zglaszaja komunikaty przez sygnal status_message do paska stanu."""
     main_window.search_view.status_message.emit("Komunikat testowy")

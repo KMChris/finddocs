@@ -35,7 +35,7 @@ from finddocs.gui.context import AppContext
 from finddocs.gui.dialogs import ask_yes_no, show_error, show_info, show_warning
 from finddocs.gui.model_dialog import ModelSettingsDialog
 from finddocs.gui.tables import configure_columns
-from finddocs.gui.theme import SPACE_LG, SPACE_SM, theme_icon
+from finddocs.gui.theme import SPACE_LG, SPACE_SM, accent_icon, theme_icon
 from finddocs.gui.widgets.page import Banner, PageHeader, page_layout
 from finddocs.gui.workers import CallableTask, thread_pool
 from finddocs.logging_setup import get_logger
@@ -210,7 +210,10 @@ class SourcesView(QWidget):
         buttons.setSpacing(SPACE_SM)
         add_local = QPushButton(i18n.SOURCES_ADD_LOCAL)
         add_local.setObjectName("Primary")
-        add_local.setIcon(theme_icon("plus"))
+        # Przycisk akcentowy potrzebuje glifu w kolorze tekstu na akcencie.
+        # Glif w kolorze tekstu zwyklego przycisku jest w trybie ciemnym jasny,
+        # a napis obok niego ciemny.
+        add_local.setIcon(accent_icon("plus"))
         add_local.setToolTip(i18n.SOURCES_ADD_LOCAL_HINT)
         add_local.clicked.connect(self.add_local_source)
         buttons.addWidget(add_local)

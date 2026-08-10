@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pytest
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPalette
 from PySide6.QtWidgets import QApplication, QPushButton, QStyle, QStyleFactory
@@ -76,7 +77,7 @@ GLYPH_NAMES = (
 )
 
 #: Glify z wariantem na tle akcentu (przyciski Primary i PrimaryIcon).
-ACCENT_GLYPH_NAMES = ("search", "stop", "play", "refresh")
+ACCENT_GLYPH_NAMES = ("search", "stop", "play", "refresh", "plus")
 
 
 def test_glify_svg_istnieja_we_wszystkich_klasach() -> None:
@@ -176,6 +177,67 @@ def test_karta_wyniku_odroznia_fokus_od_najechania() -> None:
         css = theme.build_stylesheet(palette)
         focus = css.split("QFrame#ResultCard:focus {", 1)[1].split("}", 1)[0]
         assert f"border: 2px solid {palette.accent}" in focus
+
+
+def test_rodzina_pisma_ma_kroj_semibold(qapp: QApplication) -> None:
+    """Bez prawdziwego kroju 600 Qt awansuje go do 700 i hierarchia robi skok.
+
+    ``Segoe UI Variable Text`` ma w bazie czcionek tylko Regular i Bold, wiec
+    tytul pisany stopniem 600 wychodzi tak samo ciezki jak 700, a obok tekstu
+    podstawowego wyglada to jak dwa rozne pisma na jednym ekranie.
+
+    Testy interfejsu dzialaja na platformie ``offscreen``, ktora nie ma bazy
+    czcionek systemowych. Wtedy nie ma czego sprawdzac i test jest pomijany;
+    sens ma dopiero na maszynie z zainstalowanymi czcionkami.
+    """
+    from PySide6.QtGui import QFont, QFontDatabase
+
+    family = theme.font_family()
+    assert family in theme.FONT_CANDIDATES
+
+    if family not in QFontDatabase.families():
+        pytest.skip("platforma bez bazy czcionek systemowych")
+
+    weights = {QFontDatabase.weight(family, style) for style in QFontDatabase.styles(family)}
+    between = {
+        weight for weight in weights if int(QFont.Weight.Normal) < weight < int(QFont.Weight.Bold)
+    }
+    assert between, f"rodzina {family} nie ma kroju miedzy Regular i Bold: {sorted(weights)}"
+
+
+def test_arkusz_stylow_podaje_jedna_rodzine_pisma() -> None:
+    """Lista rozdzielona przecinkami nie mowi, ktora rodzina jest uzywana."""
+    css = theme.build_stylesheet(theme.LIGHT)
+    declaration = css.split("font-family:", 1)[1].split(";", 1)[0].strip()
+
+    assert "," not in declaration
+    assert declaration.strip('"') in theme.FONT_CANDIDATES
+
+
+def test_zakladki_sa_podkresleniem_a_nie_pudelkiem() -> None:
+    """Zakladka w ramce wyglada jak przycisk, czyli jak akcja, a nia nie jest."""
+    for palette in (theme.LIGHT, theme.DARK):
+        css = theme.build_stylesheet(palette)
+        selected = css.split("QTabBar::tab:selected {", 1)[1].split("}", 1)[0]
+        assert f"border-bottom: 2px solid {palette.accent}" in selected
+        assert "background" not in selected
+        pane = css.split("QTabWidget::pane {", 1)[1].split("}", 1)[0]
+        assert "border: none" in pane
+
+
+def test_pozycja_nawigacji_nie_ma_obramowania() -> None:
+    """Krawedz przycieta zaokragleniem wygladala jak zakrzywiony pasek.
+
+    Wskaznik zaznaczenia rysuje delegat, wiec arkusz stylow nie moze wracac do
+    obramowania: dostalibysmy oba wskazniki naraz.
+    """
+    for palette in (theme.LIGHT, theme.DARK):
+        css = theme.build_stylesheet(palette)
+        item = css.split("#SidebarList::item {", 1)[1].split("}", 1)[0]
+        assert "border: none" in item
+        selected = css.split("#SidebarList::item:selected {", 1)[1].split("}", 1)[0]
+        assert "border" not in selected
+        assert palette.accent not in selected
 
 
 def test_muted_icon_renderuje_sie_w_obu_paletach(qapp: QApplication) -> None:

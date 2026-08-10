@@ -48,13 +48,39 @@ zmiana jednej stałej, a nie przegląd pięciu plików.
 | --- | --- | --- |
 | `FONT_SIZE_SMALL` | 9 pt | plakietki, podpisy, podpowiedzi |
 | `FONT_SIZE` | 10 pt | tekst podstawowy |
-| `FONT_SIZE_TITLE` | 12 pt | nazwa dokumentu, tytuł sekcji |
+| `FONT_SIZE_TITLE` | 12 pt | nazwa dokumentu, tytuł sekcji, zakładki |
 | `FONT_SIZE_QUERY` | 13 pt | pole zapytania |
 | `FONT_SIZE_BRAND` | 15 pt | nazwa aplikacji |
 | `FONT_SIZE_PAGE` | 17 pt | tytuł ekranu |
 
 Skala jest zamknięta: test `test_stopnie_pisma_pochodza_ze_skali_typografii`
 sprawdza, że w arkuszu stylów nie ma stopnia pisma spoza tej tabeli.
+
+### Rodzina pisma
+
+Interfejs używa **Segoe UI**, a nie Segoe UI Variable, mimo że Windows 11
+składa swój własny interfejs rodziną Variable. Powód jest mierzalny: Qt widzi
+w rodzinie `Segoe UI Variable Text` tylko dwa kroje, Regular i Bold. Stopień
+600 nie ma wtedy odpowiednika i Qt awansuje go do 700, więc tytuł pisany
+stopniem 600 wychodzi tak ciężki jak 700. Obok tekstu podstawowego w stopniu
+400 daje to skok bez wartości pośredniej i cała strona wygląda na złożoną
+z dwóch różnych pism. Semibold z rodziny Variable jest w systemie osobną
+rodziną (`Segoe UI Variable Text Semibold`), której Qt nie kojarzy z podstawową.
+
+`Segoe UI` ma prawdziwe kroje o wagach 300, 350, 400, 600, 700 i 900, więc
+hierarchia 400 / 600 / 700 jest równa. Sprawdza to test
+`test_rodzina_pisma_ma_kroj_semibold`; na platformie `offscreen` nie ma bazy
+czcionek systemowych, więc tam jest pomijany.
+
+Rodzinę rozwiązuje `theme.font_family()`: bierze pierwszą zainstalowaną z listy
+`FONT_CANDIDATES` i podaje tę samą, jedną nazwę zarówno do `QFont`, jak i do
+arkusza stylów. Lista rozdzielona przecinkami działałaby w obu miejscach, ale
+wtedy nie wiadomo, która rodzina jest naprawdę używana, a od tego zależy
+dostępność kroju Semibold.
+
+Aplikacja nie ustawia `QFont.StyleStrategy`. Wymuszenie `PreferAntialias` daje
+wygładzanie w odcieniach szarości, więc te same litery wyglądają cieniej niż
+w oknach systemowych.
 
 Hierarchia karty wyniku opiera się wyłącznie na tej skali: nazwa dokumentu
 12 pt w kolorze akcentu, ścieżka i plakietki 9 pt, treść fragmentu 10 pt.
@@ -87,6 +113,7 @@ inny widok, bierze to stąd zamiast pisać drugi raz.
 | `StatusDot` | stan składnika wyrażony kolorem, w roli `ok`, `warn`, `off` |
 | `SegmentedControl` | wybór jednej opcji z kilku, złączony w jedną kontrolkę |
 | `StatGrid` | siatka par podpis/wartość |
+| `NavDelegate` | pigułka zaznaczenia w panelu nawigacji |
 | `ResultCard`, `EmptyState` | karta wyniku i komunikat zastępczy |
 
 Uwagi implementacyjne:
@@ -100,7 +127,27 @@ Uwagi implementacyjne:
 * `StatGrid` ma stałą strukturę i podmienia same wartości. Odświeżenie raportu
   nie tworzy kontrolek od nowa;
 * `SegmentedControl` liczy wspólną szerokość segmentów pismem pogrubionym,
-  bo wybrany segment jest pogrubiony i inaczej ucinałby pierwszą literę.
+  bo wybrany segment jest pogrubiony i inaczej ucinałby pierwszą literę;
+* `NavDelegate` rysuje pigułkę, bo arkusz stylów nie umie narysować prostokąta
+  wewnątrz pozycji listy. Pozostały wygląd pozycji nadal pochodzi z arkusza.
+
+## Dwa wskaźniki wyboru
+
+Interfejs ma dwa miejsca, w których widać wybraną pozycję, i każde ma inny
+wzorzec, bo odpowiada na inne pytanie.
+
+**Panel nawigacji: pigułka.** Zaznaczona pozycja ma neutralne, zaokrąglone tło,
+a przy jej lewej krawędzi leży pigułka w kolorze akcentu (3 na 16 pikseli, w pełni
+zaokrąglona). Wcześniej zaznaczenie rysowała lewa krawędź obramowania, ale rogi
+pozycji są zaokrąglone, więc ta krawędź była przycinana łukiem i wyglądała jak
+zakrzywiony pasek, a nie jak wskaźnik. Kolor niesie wyłącznie pigułka, tło jest
+neutralne w obu wariantach palety.
+
+**Zakładki: podkreślenie.** Zakładka jest samym napisem z podkreśleniem wybranej
+pozycji, na cienkiej linii biegnącej pod całym paskiem. Zakładka w pudełku
+z obramowaniem wygląda jak przycisk, czyli tak samo jak akcje nad nią, a przecież
+nie jest akcją: nie robi nic poza zmianą widoku. Panel zakładek nie ma ramki
+(`setDocumentMode(True)`), bo tabele w środku mają własne obramowanie.
 
 ## Reguły, które łatwo złamać
 
@@ -125,6 +172,15 @@ Uwagi implementacyjne:
 8. **Fokus z klawiatury musi być wyraźniejszy niż najechanie myszką.** Karta
    wyniku dostaje przy fokusie obramowanie dwupikselowe w kolorze akcentu,
    przy najechaniu tylko szarą krawędź.
+9. **Glif na przycisku akcentowym bierze się z `accent_icon`, nie z `theme_icon`.**
+   Napis na przycisku `#Primary` ma kolor `accent_text`, więc ikona musi mieć ten
+   sam kolor. W trybie ciemnym akcent jest jasny, a napis na nim ciemny: glif
+   z `theme_icon` byłby wtedy jasny i ikona miałaby przeciwny kolor niż napis
+   obok niej. Każdy glif używany na akcencie musi być w `ACCENT_GLYPHS`
+   w `tools/make_theme_icons.py`. Pilnuje tego test
+   `test_glify_na_przyciskach_akcentowych_maja_kolor_tekstu_na_akcencie`, który
+   odczytuje kolor glifu z wyrenderowanej ikony każdego przycisku akcentowego
+   w oknie głównym.
 
 ## Klawiatura
 

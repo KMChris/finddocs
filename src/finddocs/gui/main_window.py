@@ -25,6 +25,7 @@ from finddocs.gui.report_view import ReportView
 from finddocs.gui.search_view import SearchView
 from finddocs.gui.sources_view import SourcesView
 from finddocs.gui.theme import SPACE_LG, SPACE_MD, SPACE_SM, SPACE_XS, Palette, theme_icon
+from finddocs.gui.widgets.nav import install_nav_delegate
 from finddocs.gui.widgets.page import StatusDot
 from finddocs.logging_setup import get_logger
 from finddocs.version import APP_VERSION
@@ -124,6 +125,7 @@ class MainWindow(QMainWindow):
         self.nav.setObjectName("SidebarList")
         self.nav.setFrameShape(QListWidget.Shape.NoFrame)
         self.nav.setIconSize(QSize(18, 18))
+        install_nav_delegate(self.nav, self.palette_colors)
         for position, (label, icon_name) in enumerate(NAV_ITEMS, start=1):
             item = QListWidgetItem(theme_icon(icon_name, self.palette_colors), label, self.nav)
             item.setToolTip(f"{label} (Ctrl+{position})")

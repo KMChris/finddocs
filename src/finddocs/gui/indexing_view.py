@@ -178,6 +178,9 @@ class IndexingView(QWidget):
 
     def _build_tables(self) -> QWidget:
         tabs = QTabWidget()
+        # Tryb dokumentowy zdejmuje ramke panelu i rozciaga pasek zakladek na cala
+        # szerokosc, dzieki czemu linia pod zakladkami biegnie przez caly ekran.
+        tabs.setDocumentMode(True)
         self.error_table = self._make_table(
             ["Plik", "Etap", "Kod", "Komunikat", "Czas"], stretch=(0, 3)
         )

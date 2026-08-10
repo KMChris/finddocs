@@ -7,14 +7,28 @@ zachowanie sprawdzamy raz, tutaj, a nie po kawalku w testach kazdego ekranu.
 from __future__ import annotations
 
 import pytest
-from PySide6.QtWidgets import QApplication, QLabel
+from PySide6.QtCore import QRect, Qt
+from PySide6.QtGui import QColor, QImage, QPainter
+from PySide6.QtWidgets import (
+    QApplication,
+    QLabel,
+    QListWidget,
+    QListWidgetItem,
+    QStyle,
+    QStyleOptionViewItem,
+)
+from tests.gui.helpers import color_distance
 
 from finddocs.gui import theme
+from finddocs.gui.widgets.nav import PILL_INSET, PILL_WIDTH, NavDelegate
 from finddocs.gui.widgets.page import Banner, PageHeader, StatusDot
 from finddocs.gui.widgets.segmented import SEGMENT_PADDING, SegmentedControl
 from finddocs.gui.widgets.stat_grid import StatGrid
 
 LABELS = ("Hybrydowe", "Dokładne", "Semantyczne")
+
+#: Rozmiar pozycji nawigacji uzywany w testach rysowania pigulki.
+ITEM_RECT = QRect(0, 0, 200, 40)
 
 
 # --- segmentowany wybor ---------------------------------------------------------
@@ -193,6 +207,74 @@ def test_kazda_rola_kropki_ma_kolor_w_obu_paletach() -> None:
         for role, color in theme.DOT_COLORS[palette.variant].items():
             assert f'QLabel#StatusDot[dotRole="{role}"]' in css
             assert color in css
+
+
+# --- wskaznik nawigacji ---------------------------------------------------------
+
+
+def _paint_nav_item(palette: theme.Palette, *, selected: bool) -> QImage:
+    """Rysuje jedna pozycje nawigacji delegatem i zwraca obraz."""
+    nav = QListWidget()
+    QListWidgetItem("Wyszukiwanie", nav)
+    index = nav.model().index(0, 0)
+
+    image = QImage(ITEM_RECT.size(), QImage.Format.Format_ARGB32)
+    image.fill(Qt.GlobalColor.transparent)
+    option = QStyleOptionViewItem()
+    option.rect = ITEM_RECT
+    option.state = QStyle.StateFlag.State_Enabled
+    if selected:
+        option.state |= QStyle.StateFlag.State_Selected
+
+    painter = QPainter(image)
+    NavDelegate(palette).paint(painter, option, index)
+    painter.end()
+    nav.deleteLater()
+    return image
+
+
+def _pill_pixel(image: QImage) -> QColor:
+    """Kolor w miejscu, w ktorym ma lezec pigulka."""
+    return image.pixelColor(PILL_INSET + PILL_WIDTH // 2, ITEM_RECT.height() // 2)
+
+
+@pytest.mark.gui
+def test_pigulka_pojawia_sie_na_zaznaczonej_pozycji(qtbot: object) -> None:
+    """Zaznaczenie w nawigacji niesie pigulka akcentu, a nie krawedz pozycji."""
+    for palette in (theme.LIGHT, theme.DARK):
+        pixel = _pill_pixel(_paint_nav_item(palette, selected=True))
+
+        assert pixel.alpha() > 200
+        assert color_distance(pixel, QColor(palette.accent)) <= 3
+
+
+@pytest.mark.gui
+def test_pozycja_niezaznaczona_nie_ma_pigulki(qtbot: object) -> None:
+    for palette in (theme.LIGHT, theme.DARK):
+        pixel = _pill_pixel(_paint_nav_item(palette, selected=False))
+
+        assert color_distance(pixel, QColor(palette.accent)) > 3 or pixel.alpha() < 10
+
+
+@pytest.mark.gui
+def test_pigulka_jest_krotsza_niz_pozycja(qtbot: object) -> None:
+    """Wskaznik na cala wysokosc pozycji czyta sie jako obramowanie."""
+    from finddocs.gui.widgets.nav import PILL_HEIGHT
+
+    assert ITEM_RECT.height() > PILL_HEIGHT
+    image = _paint_nav_item(theme.LIGHT, selected=True)
+    column = PILL_INSET + PILL_WIDTH // 2
+    accent = QColor(theme.LIGHT.accent)
+    # Tlo zaznaczenia rysuje styl bazowy i wypelnia cala pozycje, wiec liczymy
+    # wiersze w kolorze akcentu, a nie wiersze niepuste.
+    painted = [
+        row
+        for row in range(image.height())
+        if color_distance(image.pixelColor(column, row), accent) <= 3
+    ]
+
+    assert painted, "pigulka nie zostala narysowana"
+    assert len(painted) <= PILL_HEIGHT + 1
 
 
 # --- naglowek ekranu ------------------------------------------------------------

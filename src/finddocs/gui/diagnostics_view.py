@@ -63,6 +63,7 @@ class DiagnosticsView(QWidget):
         root.addLayout(self._build_buttons())
 
         self.tabs = QTabWidget()
+        self.tabs.setDocumentMode(True)
         self.environment_table = self._make_table()
         self.components_table = self._make_table()
         self.index_table = self._make_table()

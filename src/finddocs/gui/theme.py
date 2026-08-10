@@ -26,10 +26,22 @@ from typing import Any
 # biblioteke Qt6Svg i wtyczki SVG do pakietu; w kodzie modul nie jest uzywany.
 import PySide6.QtSvg  # noqa: F401
 from PySide6.QtCore import QSize, Qt
-from PySide6.QtGui import QColor, QFont, QIcon, QPalette
+from PySide6.QtGui import QColor, QFont, QFontDatabase, QIcon, QPalette
 from PySide6.QtWidgets import QApplication, QProxyStyle, QStyle, QStyleOption, QWidget
 
-FONT_FAMILY = "Segoe UI Variable Text, Segoe UI, Inter, sans-serif"
+#: Rodziny pisma w kolejnosci preferencji. Pierwsza zainstalowana wygrywa.
+#:
+#: ``Segoe UI Variable Text`` wyglada nowocześniej, ale Qt widzi w tej rodzinie
+#: tylko dwa kroje: Regular i Bold. Stopien 600 awansuje wtedy do 700, wiec
+#: tytul obok tekstu podstawowego robi skok z 400 na 700 i cala strona wyglada
+#: na zlozona z dwoch roznych pism. ``Segoe UI`` ma prawdziwy krój Semibold,
+#: dlatego hierarchia 400 / 600 / 700 jest rowna. Semibold z rodziny Variable
+#: jest w systemie osobna rodzina, ktorej Qt nie kojarzy z podstawowa.
+FONT_CANDIDATES: tuple[str, ...] = ("Segoe UI", "Inter", "Noto Sans", "DejaVu Sans")
+
+#: Rodzina uzywana, gdy nie da sie zapytac systemu o liste zainstalowanych.
+FONT_FAMILY = FONT_CANDIDATES[0]
+
 MONO_FAMILY = "Cascadia Mono, Consolas, monospace"
 
 #: Skala typografii w punktach. Interfejs uzywa tylko tych stopni pisma.
@@ -202,6 +214,32 @@ class TabFocusStyle(QProxyStyle):
         return super().styleHint(hint, option, widget, returnData)
 
 
+#: Rodzina rozwiazana raz, przy pierwszym pytaniu. Lista zainstalowanych rodzin
+#: nie zmienia sie w trakcie dzialania aplikacji.
+_resolved_family: str | None = None
+
+
+def font_family() -> str:
+    """Pierwsza zainstalowana rodzina z ``FONT_CANDIDATES``.
+
+    Arkusz stylow i ``QFont`` musza dostac te sama, jedna nazwe rodziny. Lista
+    rozdzielona przecinkami dziala w obu miejscach, ale wtedy nie wiadomo, ktora
+    rodzina naprawde jest uzywana, a od tego zalezy dostepnosc kroju Semibold.
+    """
+    global _resolved_family
+    if _resolved_family is not None:
+        return _resolved_family
+    if QApplication.instance() is None:
+        # Bez aplikacji Qt nie ma bazy czcionek. Zwracamy pierwszego kandydata,
+        # zeby arkusz stylow dal sie zbudowac takze w tescie bez okna.
+        return FONT_CANDIDATES[0]
+    installed = set(QFontDatabase.families())
+    _resolved_family = next(
+        (family for family in FONT_CANDIDATES if family in installed), FONT_CANDIDATES[0]
+    )
+    return _resolved_family
+
+
 def is_dark_mode(app: QApplication) -> bool:
     """Czy system albo aplikacja uzywaja ciemnego motywu."""
     color = app.palette().color(QPalette.ColorRole.Window)
@@ -274,6 +312,11 @@ def build_stylesheet(palette: Palette) -> str:
     scroll = "rgba(0, 0, 0, 0.24)" if light else "rgba(255, 255, 255, 0.28)"
     scroll_hover = "rgba(0, 0, 0, 0.40)" if light else "rgba(255, 255, 255, 0.45)"
     card_hover = "rgba(0, 0, 0, 0.18)" if light else "rgba(255, 255, 255, 0.24)"
+    # Tla pozycji nawigacji sa neutralne, a kolor zaznaczenia niesie pigulka
+    # akcentu. Dwa poziomy przezroczystosci wystarcza, zeby najechanie rozniilo
+    # sie od zaznaczenia w obu wariantach palety.
+    nav_hover = "rgba(0, 0, 0, 0.04)" if light else "rgba(255, 255, 255, 0.05)"
+    nav_selected = "rgba(0, 0, 0, 0.07)" if light else "rgba(255, 255, 255, 0.09)"
     badge_rules = "\n".join(
         f'QLabel#Badge[badgeRole="{role}"] {{'
         f" background-color: {bg}; color: {fg}; border-color: transparent; }}"
@@ -292,8 +335,9 @@ def build_stylesheet(palette: Palette) -> str:
     return f"""
     QWidget {{
         color: {p.text};
-        font-family: "{FONT_FAMILY}";
+        font-family: "{font_family()}";
         font-size: {FONT_SIZE}pt;
+        font-weight: 400;
     }}
     QMainWindow, QDialog {{
         background-color: {p.background};
@@ -311,21 +355,22 @@ def build_stylesheet(palette: Palette) -> str:
         padding: {SPACE_SM}px {SPACE_XS + 2}px;
         outline: none;
     }}
+    /* Pozycja nawigacji: samo tlo i zaokraglenie. Wskaznik zaznaczenia rysuje
+       delegat z ``widgets/nav.py``, bo obramowanie przyciete zaokragleniem
+       wygladalo jak zakrzywiony pasek. Lewy odstep robi miejsce na pigulke. */
     #SidebarList::item {{
-        padding: 9px 10px;
+        padding: 10px 12px 10px 24px;
         border-radius: {RADIUS}px;
-        margin: 2px 4px;
+        margin: 2px 6px;
         color: {p.text};
-        border: 1px solid transparent;
-        border-left: 3px solid transparent;
+        border: none;
     }}
     #SidebarList::item:selected {{
-        background-color: {p.surface};
-        border: 1px solid {p.border};
-        border-left: 3px solid {p.accent};
+        background-color: {nav_selected};
+        color: {p.text};
     }}
     #SidebarList::item:hover:!selected {{
-        background-color: {p.surface};
+        background-color: {nav_hover};
     }}
     #AppTitle {{
         font-size: {FONT_SIZE_BRAND}pt;
@@ -752,31 +797,40 @@ def build_stylesheet(palette: Palette) -> str:
         border-radius: {RADIUS}px;
         padding: 6px 8px;
     }}
+    /* Zakladki w ukladzie pivot: sam napis z podkresleniem wybranej pozycji.
+       Zakladka w pudelku z obramowaniem wyglada jak przycisk, wiec wyglada tak
+       samo jak akcje nad nia, a przeciez nie jest akcja, tylko wyborem widoku.
+       Cienka linia pod calym paskiem jest torem, po ktorym biegnie podkreslenie. */
     QTabWidget::pane {{
-        border: 1px solid {p.border};
-        border-radius: {RADIUS_LARGE}px;
-        background-color: {p.surface};
-        top: -1px;
+        border: none;
+        background: transparent;
+        margin-top: {SPACE_MD}px;
     }}
     QTabBar {{
         background: transparent;
         outline: none;
+        border-bottom: 1px solid {p.border};
     }}
     QTabBar::tab {{
         background: transparent;
-        padding: {SPACE_SM}px {SPACE_LG}px;
-        margin-right: {SPACE_XS}px;
-        border-radius: {RADIUS}px;
+        border: none;
+        border-bottom: 2px solid transparent;
+        padding: {SPACE_SM}px 2px;
+        margin-right: {SPACE_XL}px;
+        font-size: {FONT_SIZE_TITLE}pt;
         color: {p.text_muted};
     }}
     QTabBar::tab:hover:!selected {{
         color: {p.text};
+        border-bottom: 2px solid {card_hover};
     }}
     QTabBar::tab:selected {{
-        background-color: {p.surface};
         color: {p.text};
-        border: 1px solid {p.border};
+        border-bottom: 2px solid {p.accent};
         font-weight: 600;
+    }}
+    QTabBar::tab:disabled {{
+        color: {p.text_muted};
     }}
     QSplitter::handle {{
         background-color: {p.border};
@@ -835,8 +889,11 @@ def apply_theme(app: QApplication, preference: str = "system") -> Palette:
     if _base_style_key is None:
         _base_style_key = app.style().objectName() or "windowsvista"
     app.setStyle(TabFocusStyle(_base_style_key))
-    font = QFont(FONT_FAMILY.split(",")[0].strip(), FONT_SIZE)
-    font.setStyleStrategy(QFont.StyleStrategy.PreferAntialias)
+    # Bez jawnej strategii Qt renderuje pismo tak, jak reszta systemu. Wymuszenie
+    # ``PreferAntialias`` daje wygladzanie w odcieniach szarosci, wiec te same
+    # litery wygladaja cieniej niz w oknach systemowych.
+    font = QFont(font_family(), FONT_SIZE)
+    font.setWeight(QFont.Weight.Normal)
     app.setFont(font)
     app.setStyleSheet(build_stylesheet(palette))
     app.setPalette(build_qt_palette(palette))
@@ -854,6 +911,7 @@ __all__ = [
     "BANNER_COLORS",
     "DARK",
     "DOT_COLORS",
+    "FONT_CANDIDATES",
     "FONT_FAMILY",
     "FONT_SIZE",
     "FONT_SIZE_BRAND",
@@ -883,6 +941,7 @@ __all__ = [
     "apply_theme",
     "build_qt_palette",
     "build_stylesheet",
+    "font_family",
     "highlight_css",
     "is_dark_mode",
     "muted_icon",
