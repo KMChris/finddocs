@@ -89,6 +89,11 @@ Hierarchia karty wyniku opiera się wyłącznie na tej skali: nazwa dokumentu
 Fragment jest jedyną rzeczą, którą czytelnik naprawdę czyta, więc nic obok
 niego nie może być większe.
 
+Karta pokazuje od razu najwyżej dwa fragmenty, pozostałe rozwija odnośnik
+na karcie. Proza jest sklejana z łamań wierszy pochodzących z ekstrakcji
+(fragmenty tabel zachowują wiersze), bo te łamania potrafiły potroić wysokość
+karty i w oknie mieścił się jeden wynik.
+
 ### Kształt i kolor
 
 `RADIUS_SMALL` 6 px (wstawki), `RADIUS` 8 px (pola, przyciski),

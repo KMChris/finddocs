@@ -14,7 +14,12 @@ from finddocs.gui import i18n
 from finddocs.gui.context import AppContext
 from finddocs.gui.search_view import SearchView
 from finddocs.gui.theme import Palette
-from finddocs.gui.widgets.result_card import ResultCard, score_role
+from finddocs.gui.widgets.result_card import (
+    VISIBLE_CHUNKS,
+    ResultCard,
+    flatten_snippet,
+    score_role,
+)
 from finddocs.search.service import HYBRID_NOTE, SEMANTIC_NOTE, TRUNCATED_NOTE
 from finddocs.types import (
     ChunkHit,
@@ -482,6 +487,83 @@ def test_score_role_thresholds() -> None:
     assert score_role(0.9) == "score-high"
     assert score_role(0.5) == "score-mid"
     assert score_role(0.1) == "score-low"
+
+
+def _hit_with_chunks(count: int, *, total: int, sheet: str | None = None) -> DocumentHit:
+    """Wynik z podana liczba fragmentow, do testow zwijania."""
+    chunks = [
+        ChunkHit(
+            chunk_id=index + 1,
+            doc_id=7,
+            ordinal=index,
+            text=f"Fragment {index}\nz lamaniem wiersza.",
+            highlighted=f"Fragment [[hl]]{index}[[/hl]]\nz lamaniem wiersza.",
+            score=0.5,
+            match_kind=MatchKind.EXACT,
+            origin=TextOrigin.NATIVE,
+            sheet=sheet,
+        )
+        for index in range(count)
+    ]
+    hit = _sample_hit()
+    hit.chunks = chunks
+    hit.total_matching_chunks = total
+    return hit
+
+
+def _snippets(card: ResultCard) -> list[QLabel]:
+    return [label for label in card.findChildren(QLabel) if label.objectName() == "Snippet"]
+
+
+@pytest.mark.gui
+def test_karta_zwija_fragmenty_ponad_limit(qtbot: object, gui_palette: Palette) -> None:
+    """Widoczne sa najwyzej dwa fragmenty, reszte rozwija odnosnik."""
+    card = ResultCard(_hit_with_chunks(3, total=9), gui_palette)
+    qtbot.addWidget(card)  # type: ignore[attr-defined]
+
+    snippets = _snippets(card)
+    assert len(snippets) == 3
+    assert sum(1 for s in snippets if not s.isHidden()) == VISIBLE_CHUNKS == 2
+    assert card.expand_button is not None
+    assert card.expand_button.text() == i18n.RESULT_SHOW_MORE.format(count=1)
+    assert card.more_hint is not None
+    assert card.more_hint.isHidden()
+
+    card.expand_button.click()
+
+    assert all(not s.isHidden() for s in _snippets(card))
+    assert card.expand_button.isHidden()
+    assert not card.more_hint.isHidden()
+    assert card.more_hint.text() == i18n.RESULT_MORE_CHUNKS.format(count=9)
+
+
+@pytest.mark.gui
+def test_karta_bez_nadmiaru_nie_ma_odnosnika(qtbot: object, gui_palette: Palette) -> None:
+    """Dwa fragmenty mieszcza sie w limicie, wiec odnosnik nie powstaje."""
+    card = ResultCard(_hit_with_chunks(2, total=2), gui_palette)
+    qtbot.addWidget(card)  # type: ignore[attr-defined]
+
+    assert card.expand_button is None
+    assert card.more_hint is None
+    assert all(not s.isHidden() for s in _snippets(card))
+
+
+@pytest.mark.gui
+def test_proza_jest_sklejana_a_tabela_zachowuje_wiersze(
+    qtbot: object, gui_palette: Palette
+) -> None:
+    """Lamania z ekstrakcji znikaja w prozie, fragment arkusza trzyma uklad."""
+    prose = ResultCard(_hit_with_chunks(1, total=1), gui_palette)
+    table = ResultCard(_hit_with_chunks(1, total=1, sheet="Dane"), gui_palette)
+    qtbot.addWidget(prose)  # type: ignore[attr-defined]
+    qtbot.addWidget(table)  # type: ignore[attr-defined]
+
+    assert "<br>" not in _snippets(prose)[0].text()
+    assert "<br>" in _snippets(table)[0].text()
+
+
+def test_flatten_snippet_skleja_biale_znaki() -> None:
+    assert flatten_snippet("a\nb\n\n  c\td") == "a b c d"
 
 
 @pytest.mark.gui

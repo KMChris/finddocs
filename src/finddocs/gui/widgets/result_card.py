@@ -5,11 +5,18 @@ nazwa dokumentu, potem plakietki i sciezka, na koncu fragmenty tresci.
 Plakietki niosa krotki napis, a pelne zdanie jest w podpowiedzi. Wczesniej
 cztery pelne zdania w jednym wierszu konkurowaly wzrokowo z trescia fragmentu,
 czyli z jedyna rzecza, ktora czytelnik naprawde chce przeczytac.
+
+Koszt przegladania listy to koszt glowny wyszukiwarki, dlatego karta jest
+niska: najwyzej dwa fragmenty od razu, reszta po rozwinieciu odnosnikiem.
+Tekst prozy jest sklejany z laman wierszy pochodzacych z ekstrakcji, bo te
+lamania nie niosa tresci, a potrafia potroic wysokosc fragmentu. Fragmenty
+tabel zachowuja uklad wierszy.
 """
 
 from __future__ import annotations
 
 import html
+import re
 
 from PySide6.QtCore import QSize, Qt, Signal, SignalInstance
 from PySide6.QtGui import QKeyEvent, QMouseEvent
@@ -48,6 +55,10 @@ SCORE_MID = 0.4
 #: Rozmiar glifu w stanie pustym.
 EMPTY_GLYPH_SIZE = 40
 
+#: Liczba fragmentow widocznych bez rozwijania. Wieksza liczba robi karty
+#: wyzsze niz okno i zamienia przeglad listy w przewijanie jednej karty.
+VISIBLE_CHUNKS = 2
+
 
 def snippet_to_html(text: str, palette: Palette) -> str:
     """Zamienia znaczniki trafien na bezpieczny HTML z wyroznieniem."""
@@ -56,6 +67,17 @@ def snippet_to_html(text: str, palette: Palette) -> str:
     escaped = escaped.replace(html.escape(HIGHLIGHT_OPEN), open_tag)
     escaped = escaped.replace(html.escape(HIGHLIGHT_CLOSE), "</span>")
     return escaped.replace("\n", "<br>")
+
+
+def flatten_snippet(text: str) -> str:
+    """Skleja lamania wierszy i wielokrotne odstepy w pojedyncze spacje.
+
+    Ekstrakcja PDF lamie zdania w miejscach lamania na stronie. W fragmencie
+    o dlugosci 320 znakow te lamania nie niosa informacji, a kazde z nich
+    dodaje wiersz do wysokosci karty. Znaczniki trafien nie zawieraja bialych
+    znakow, wiec sklejanie ich nie narusza.
+    """
+    return re.sub(r"\s+", " ", text).strip()
 
 
 def shorten_path(value: str, limit: int = MAX_PATH_CHARS) -> str:
@@ -114,21 +136,42 @@ class ResultCard(QFrame):
 
         layout.addLayout(self._build_badges(hit, show_score))
 
-        for chunk in hit.chunks:
+        self._hidden_snippets: list[QLabel] = []
+        for position, chunk in enumerate(hit.chunks):
             snippet = QLabel()
             snippet.setObjectName("Snippet")
             snippet.setTextFormat(Qt.TextFormat.RichText)
-            prefix = self._chunk_prefix(chunk)
-            snippet.setText(prefix + snippet_to_html(chunk.highlighted, palette))
+            # Fragment tabeli zachowuje uklad wierszy, proza jest sklejana.
+            text = chunk.highlighted
+            if getattr(chunk, "sheet", None) is None:
+                text = flatten_snippet(text)
+            snippet.setText(self._chunk_prefix(chunk) + snippet_to_html(text, palette))
             snippet.setWordWrap(True)
             snippet.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+            if position >= VISIBLE_CHUNKS:
+                snippet.setVisible(False)
+                self._hidden_snippets.append(snippet)
             layout.addWidget(snippet)
 
+        self.expand_button: QPushButton | None = None
+        self.more_hint: QLabel | None = None
         extra = hit.total_matching_chunks - len(hit.chunks)
         if extra > 0:
             more = QLabel(i18n.RESULT_MORE_CHUNKS.format(count=hit.total_matching_chunks))
             more.setObjectName("Hint")
-            layout.addWidget(more)
+            # Przed rozwinieciem informacje o liczbie fragmentow niesie odnosnik,
+            # wiec podpis pod spodem bylby druga wersja tej samej liczby.
+            more.setVisible(not self._hidden_snippets)
+            self.more_hint = more
+        if self._hidden_snippets:
+            button = QPushButton(i18n.RESULT_SHOW_MORE.format(count=len(self._hidden_snippets)))
+            button.setObjectName("Link")
+            button.setToolTip(i18n.RESULT_SHOW_MORE_HINT)
+            button.clicked.connect(self._show_hidden_snippets)
+            self.expand_button = button
+            layout.addWidget(button, 0, Qt.AlignmentFlag.AlignLeft)
+        if self.more_hint is not None:
+            layout.addWidget(self.more_hint)
 
     # --- czesci skladowe --------------------------------------------------
 
@@ -233,6 +276,16 @@ class ResultCard(QFrame):
             return ""
         return f'<span style="opacity:0.6">[{", ".join(parts)}]</span> '
 
+    def _show_hidden_snippets(self) -> None:
+        """Pokazuje zwiniete fragmenty i chowa odnosnik rozwijania."""
+        for snippet in self._hidden_snippets:
+            snippet.setVisible(True)
+        self._hidden_snippets = []
+        if self.expand_button is not None:
+            self.expand_button.setVisible(False)
+        if self.more_hint is not None:
+            self.more_hint.setVisible(True)
+
     # --- obsluga klawiatury i myszki --------------------------------------
 
     def keyPressEvent(self, event: QKeyEvent) -> None:
@@ -308,8 +361,10 @@ __all__ = [
     "MAX_PATH_CHARS",
     "SCORE_HIGH",
     "SCORE_MID",
+    "VISIBLE_CHUNKS",
     "EmptyState",
     "ResultCard",
+    "flatten_snippet",
     "score_role",
     "shorten_path",
     "snippet_to_html",
