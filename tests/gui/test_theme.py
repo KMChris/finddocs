@@ -114,6 +114,24 @@ def test_role_plakietek_sa_w_arkuszu_stylow_obu_palet() -> None:
             assert foreground in css
 
 
+def test_akcent_systemowy_zachowuje_kontrast_napisu() -> None:
+    """Typowe akcenty Windows po korekcie daja czytelny napis na przycisku."""
+    from PySide6.QtGui import QColor
+
+    for base in ("#0078d4", "#ffb900", "#e81123", "#00cc6a", "#8e8cd8"):
+        for palette in (theme.LIGHT, theme.DARK):
+            derived = theme.palette_with_accent(palette, QColor(base))
+            ratio = theme.contrast_ratio(QColor(derived.accent), QColor(derived.accent_text))
+            assert ratio >= theme.MIN_ACCENT_CONTRAST, (base, palette.variant, ratio)
+            # Role poza akcentem zostaja bez zmian.
+            assert derived.background == palette.background
+            assert derived.accent_text == palette.accent_text
+
+
+def test_brak_akcentu_systemowego_zostawia_palete_domyslna() -> None:
+    assert theme.palette_with_accent(theme.LIGHT, None) is theme.LIGHT
+
+
 def test_wylaczony_przycisk_danger_traci_czerwien() -> None:
     """Identyfikator wygrywa z pseudoklasa, wiec regula :disabled musi byc jawna."""
     for palette in (theme.LIGHT, theme.DARK):

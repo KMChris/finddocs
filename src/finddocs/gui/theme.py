@@ -18,7 +18,8 @@ Trzy zasady, ktore latwo zepsuc:
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import sys
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -249,6 +250,100 @@ def resolve_palette(app: QApplication, preference: str = "system") -> Palette:
     if preference == "light":
         return LIGHT
     return DARK if is_dark_mode(app) else LIGHT
+
+
+# --- akcent systemowy --------------------------------------------------------
+
+
+def _relative_luminance(color: QColor) -> float:
+    """Luminancja wzgledna wedlug WCAG."""
+
+    def channel(value: int) -> float:
+        c = value / 255
+        return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+
+    return (
+        0.2126 * channel(color.red())
+        + 0.7152 * channel(color.green())
+        + 0.0722 * channel(color.blue())
+    )
+
+
+def contrast_ratio(first: QColor, second: QColor) -> float:
+    """Wspolczynnik kontrastu WCAG dwoch kolorow."""
+    a = _relative_luminance(first)
+    b = _relative_luminance(second)
+    lighter, darker = max(a, b), min(a, b)
+    return (lighter + 0.05) / (darker + 0.05)
+
+
+#: Minimalny kontrast napisu na akcencie. Prog tekstu normalnego z WCAG AA.
+MIN_ACCENT_CONTRAST = 4.5
+
+
+def _adjusted_for_text(color: QColor, text: QColor) -> QColor:
+    """Przesuwa jasnosc akcentu, az napis na nim osiagnie wymagany kontrast.
+
+    Kolor tekstu na akcencie jest staly (bialy w palecie jasnej, ciemny
+    w ciemnej), bo w tych kolorach sa wygenerowane glify przyciskow
+    akcentowych. Dopasowujemy wiec akcent do tekstu, nie odwrotnie.
+    """
+    adjusted = QColor(color)
+    darken_text = _relative_luminance(text) < 0.5
+    for _step in range(40):
+        if contrast_ratio(adjusted, text) >= MIN_ACCENT_CONTRAST:
+            break
+        hue = adjusted.hslHueF()
+        saturation = adjusted.hslSaturationF()
+        shift = 0.02 if darken_text else -0.02
+        lightness = min(0.95, max(0.05, adjusted.lightnessF() + shift))
+        adjusted.setHslF(hue, saturation, lightness)
+    return adjusted
+
+
+def palette_with_accent(palette: Palette, accent: QColor | None) -> Palette:
+    """Paleta z akcentem zbudowanym z podanego koloru.
+
+    ``None`` zostawia domyslny niebieski. Warianty najechania i wcisniecia
+    ida w te same strony, co w palecie domyslnej: w jasnej akcent ciemnieje,
+    w ciemnej najechanie rozjasnia, a wcisniecie przyciemnia.
+    """
+    if accent is None or not accent.isValid():
+        return palette
+    base = _adjusted_for_text(accent, QColor(palette.accent_text))
+    if palette.variant == "light":
+        hover = base.darker(112)
+        pressed = base.darker(145)
+    else:
+        hover = base.lighter(112)
+        pressed = base.darker(112)
+    return replace(
+        palette,
+        accent=base.name(),
+        accent_hover=hover.name(),
+        accent_pressed=pressed.name(),
+    )
+
+
+def system_accent_color() -> QColor | None:
+    """Kolor akcentu Windows z rejestru DWM albo ``None``.
+
+    Rejestr, a nie paleta Qt: paleta aplikacji jest nadpisywana przez motyw,
+    wiec po pierwszym ``apply_theme`` nie byloby jak odczytac wartosci
+    systemowej. Wpis ``AccentColor`` ma uklad AABBGGRR.
+    """
+    if sys.platform != "win32":
+        return None
+    try:
+        import winreg
+
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\DWM") as key:
+            value, _kind = winreg.QueryValueEx(key, "AccentColor")
+    except OSError:
+        return None
+    raw = int(value)
+    color = QColor(raw & 0xFF, (raw >> 8) & 0xFF, (raw >> 16) & 0xFF)
+    return color if color.isValid() else None
 
 
 def _icon_url(name: str, variant: str) -> str:
@@ -902,9 +997,14 @@ _base_style_key: str | None = None
 
 
 def apply_theme(app: QApplication, preference: str = "system") -> Palette:
-    """Ustawia styl, czcionke, arkusz stylow i palete. Zwraca uzyta palete."""
+    """Ustawia styl, czcionke, arkusz stylow i palete. Zwraca uzyta palete.
+
+    Akcent pochodzi z ustawien personalizacji Windows, wiec aplikacja wyglada
+    jak czesc tego komputera. Gdy odczyt sie nie uda, zostaje domyslny
+    niebieski z palety.
+    """
     global _active_palette, _base_style_key
-    palette = resolve_palette(app, preference)
+    palette = palette_with_accent(resolve_palette(app, preference), system_accent_color())
     _active_palette = palette
     if _base_style_key is None:
         _base_style_key = app.style().objectName() or "windowsvista"
@@ -942,6 +1042,7 @@ __all__ = [
     "ICON_BUTTON_SIZE",
     "ICON_DIR",
     "LIGHT",
+    "MIN_ACCENT_CONTRAST",
     "MONO_FAMILY",
     "PAGE_MARGINS",
     "QUERY_HEIGHT",
@@ -961,10 +1062,13 @@ __all__ = [
     "apply_theme",
     "build_qt_palette",
     "build_stylesheet",
+    "contrast_ratio",
     "font_family",
     "highlight_css",
     "is_dark_mode",
     "muted_icon",
+    "palette_with_accent",
     "resolve_palette",
+    "system_accent_color",
     "theme_icon",
 ]
