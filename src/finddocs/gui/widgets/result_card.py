@@ -18,10 +18,11 @@ from __future__ import annotations
 import html
 import re
 
-from PySide6.QtCore import QSize, Qt, Signal, SignalInstance
-from PySide6.QtGui import QKeyEvent, QMouseEvent
+from PySide6.QtCore import QEvent, QObject, QSize, Qt, Signal, SignalInstance
+from PySide6.QtGui import QEnterEvent, QFocusEvent, QKeyEvent, QMouseEvent
 from PySide6.QtWidgets import (
     QFrame,
+    QGraphicsOpacityEffect,
     QHBoxLayout,
     QLabel,
     QPushButton,
@@ -62,6 +63,10 @@ VISIBLE_CHUNKS = 2
 #: Bok glifu rodziny pliku przy tytule karty.
 FILE_GLYPH_SIZE = 18
 
+#: Krycie przyciskow akcji karty w spoczynku. Zero: akcje pokazuja sie przy
+#: najechaniu i fokusie, a w spoczynku karta jest sama trescia.
+ACTIONS_HIDDEN_OPACITY = 0.0
+
 
 def snippet_to_html(text: str, palette: Palette) -> str:
     """Zamienia znaczniki trafien na bezpieczny HTML z wyroznieniem."""
@@ -89,6 +94,29 @@ def shorten_path(value: str, limit: int = MAX_PATH_CHARS) -> str:
     head = value[: limit // 3]
     tail = value[-(limit - limit // 3 - 3) :]
     return f"{head}...{tail}"
+
+
+#: Separator okruszkow sciezki na karcie wyniku.
+BREADCRUMB_SEPARATOR = " › "
+
+#: Powyzej tylu segmentow srodek sciezki zwija sie do wielokropka.
+BREADCRUMB_MAX_SEGMENTS = 6
+
+
+def breadcrumb_path(logical_path: str, library: str | None, *, exclude_name: str = "") -> str:
+    """Sciezka dokumentu jako okruszki: biblioteka i katalogi, bez nazwy pliku.
+
+    Nazwa pliku jest juz w tytule karty, wiec okruszki jej nie powtarzaja.
+    Dluga sciezke zwijamy w srodku: poczatek i koniec mowia najwiecej.
+    """
+    segments = [segment for segment in logical_path.split("/") if segment]
+    if segments and exclude_name and segments[-1] == exclude_name:
+        segments = segments[:-1]
+    if library:
+        segments.insert(0, library)
+    if len(segments) > BREADCRUMB_MAX_SEGMENTS:
+        segments = [*segments[:3], "...", *segments[-2:]]
+    return shorten_path(BREADCRUMB_SEPARATOR.join(segments))
 
 
 def score_role(score: float) -> str:
@@ -163,6 +191,7 @@ class ResultCard(QFrame):
         super().__init__()
         self.hit = hit
         self._show_match_kind = show_match_kind
+        self._action_effects: list[QGraphicsOpacityEffect] = []
         self.setObjectName("ResultCard")
         self.setFrameShape(QFrame.Shape.NoFrame)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
@@ -176,13 +205,12 @@ class ResultCard(QFrame):
 
         layout.addLayout(self._build_header(hit, palette))
 
-        location_parts = [shorten_path(hit.logical_path)]
-        if hit.library:
-            location_parts.insert(0, hit.library)
-        location = QLabel(" / ".join(location_parts))
+        location = QLabel(breadcrumb_path(hit.logical_path, hit.library, exclude_name=hit.name))
         location.setObjectName("ResultPath")
         location.setWordWrap(True)
         location.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        location.setVisible(bool(location.text()))
+        self.location_label = location
         layout.addWidget(location)
 
         layout.addLayout(self._build_badges(hit, show_score))
@@ -196,7 +224,7 @@ class ResultCard(QFrame):
             text = chunk.highlighted
             if getattr(chunk, "sheet", None) is None:
                 text = flatten_snippet(text)
-            snippet.setText(self._chunk_prefix(chunk) + snippet_to_html(text, palette))
+            snippet.setText(self._chunk_prefix(chunk, palette) + snippet_to_html(text, palette))
             snippet.setWordWrap(True)
             snippet.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
             if position >= VISIBLE_CHUNKS:
@@ -271,7 +299,12 @@ class ResultCard(QFrame):
     def _action_button(
         self, icon_name: str, label: str, palette: Palette, signal: SignalInstance
     ) -> QPushButton:
-        """Kwadratowy przycisk ikonowy: napis wedruje do podpowiedzi."""
+        """Kwadratowy przycisk ikonowy: napis wedruje do podpowiedzi.
+
+        Akcje pokazuja sie przy najechaniu na karte i przy fokusie. Zamiast
+        chowania kontrolek zmieniamy krycie: uklad karty nie drga, przyciski
+        caly czas zajmuja swoje miejsce i pozostaja w kolejnosci Tab.
+        """
         button = QPushButton()
         button.setObjectName("IconButton")
         button.setIcon(theme_icon(icon_name, palette))
@@ -280,7 +313,45 @@ class ResultCard(QFrame):
         button.setToolTip(label)
         button.setAccessibleName(label)
         button.clicked.connect(lambda: signal.emit(self.hit))
+        effect = QGraphicsOpacityEffect(button)
+        effect.setOpacity(ACTIONS_HIDDEN_OPACITY)
+        button.setGraphicsEffect(effect)
+        button.installEventFilter(self)
+        self._action_effects.append(effect)
         return button
+
+    def _set_actions_revealed(self, revealed: bool) -> None:
+        for effect in self._action_effects:
+            effect.setOpacity(1.0 if revealed else ACTIONS_HIDDEN_OPACITY)
+
+    def _should_stay_revealed(self) -> bool:
+        return self.underMouse() or self.hasFocus()
+
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
+        # Fokus klawiatury na przycisku akcji tez odslania akcje.
+        if event.type() is QEvent.Type.FocusIn:
+            self._set_actions_revealed(True)
+        elif event.type() is QEvent.Type.FocusOut and not self._should_stay_revealed():
+            self._set_actions_revealed(False)
+        return False
+
+    def enterEvent(self, event: QEnterEvent) -> None:
+        self._set_actions_revealed(True)
+        super().enterEvent(event)
+
+    def leaveEvent(self, event: QEvent) -> None:
+        if not self.hasFocus():
+            self._set_actions_revealed(False)
+        super().leaveEvent(event)
+
+    def focusInEvent(self, event: QFocusEvent) -> None:
+        self._set_actions_revealed(True)
+        super().focusInEvent(event)
+
+    def focusOutEvent(self, event: QFocusEvent) -> None:
+        if not self._should_stay_revealed():
+            self._set_actions_revealed(False)
+        super().focusOutEvent(event)
 
     def _build_badges(self, hit: DocumentHit, show_score: bool) -> QHBoxLayout:
         row = QHBoxLayout()
@@ -329,7 +400,12 @@ class ResultCard(QFrame):
         row.addStretch(1)
         return row
 
-    def _chunk_prefix(self, chunk: object) -> str:
+    def _chunk_prefix(self, chunk: object, palette: Palette) -> str:
+        """Polozenie fragmentu jako podbarwiona plakietka przed trescia.
+
+        Nawiasy kwadratowe z wyszarzonym tekstem wygladaly jak pozostalosc
+        debugowania. Podbarwienie odroznia metadane od tresci bez nawiasow.
+        """
         parts: list[str] = []
         page = getattr(chunk, "page", None)
         sheet = getattr(chunk, "sheet", None)
@@ -345,7 +421,10 @@ class ResultCard(QFrame):
             parts.append("tekst z OCR")
         if not parts:
             return ""
-        return f'<span style="opacity:0.6">[{", ".join(parts)}]</span> '
+        return (
+            f'<span style="background-color:{palette.border}; color:{palette.text_muted};">'
+            f"&nbsp;{', '.join(parts)}&nbsp;</span> "
+        )
 
     def _show_hidden_snippets(self) -> None:
         """Pokazuje zwiniete fragmenty i chowa odnosnik rozwijania."""
@@ -428,6 +507,9 @@ class EmptyState(QWidget):
 
 
 __all__ = [
+    "ACTIONS_HIDDEN_OPACITY",
+    "BREADCRUMB_MAX_SEGMENTS",
+    "BREADCRUMB_SEPARATOR",
     "EMPTY_GLYPH_SIZE",
     "FILE_GLYPH_FAMILIES",
     "FILE_GLYPH_SIZE",
@@ -437,6 +519,7 @@ __all__ = [
     "VISIBLE_CHUNKS",
     "EmptyState",
     "ResultCard",
+    "breadcrumb_path",
     "file_glyph",
     "flatten_snippet",
     "score_role",

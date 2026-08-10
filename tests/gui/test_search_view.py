@@ -585,6 +585,50 @@ def test_score_role_thresholds() -> None:
     assert score_role(0.1) == "score-low"
 
 
+def test_breadcrumb_path_pomija_nazwe_pliku_i_zwija_srodek() -> None:
+    from finddocs.gui.widgets.result_card import breadcrumb_path
+
+    assert (
+        breadcrumb_path("procedury/2024/procedura.pdf", "Dokumenty", exclude_name="procedura.pdf")
+        == "Dokumenty › procedury › 2024"
+    )
+    long_path = "a/b/c/d/e/f/g/plik.txt"
+    crumbs = breadcrumb_path(long_path, None, exclude_name="plik.txt")
+    assert "..." in crumbs
+    assert crumbs.startswith("a › b")
+    assert crumbs.endswith("f › g")
+    assert breadcrumb_path("plik.txt", None, exclude_name="plik.txt") == ""
+
+
+@pytest.mark.gui
+def test_akcje_karty_odslaniaja_sie_przy_fokusie(qtbot: object, gui_palette: Palette) -> None:
+    """W spoczynku akcje sa niewidoczne, fokus i najechanie je pokazuja."""
+    from finddocs.gui.widgets.result_card import ACTIONS_HIDDEN_OPACITY
+
+    card = ResultCard(_sample_hit(), gui_palette)
+    qtbot.addWidget(card)  # type: ignore[attr-defined]
+    effects = card._action_effects
+    assert len(effects) == 2
+    assert all(effect.opacity() == ACTIONS_HIDDEN_OPACITY for effect in effects)
+
+    card._set_actions_revealed(True)
+    assert all(effect.opacity() == 1.0 for effect in effects)
+
+    card._set_actions_revealed(False)
+    assert all(effect.opacity() == ACTIONS_HIDDEN_OPACITY for effect in effects)
+
+
+@pytest.mark.gui
+def test_prefiks_fragmentu_jest_plakietka_bez_nawiasow(qtbot: object, gui_palette: Palette) -> None:
+    card = ResultCard(_sample_hit(), gui_palette)
+    qtbot.addWidget(card)  # type: ignore[attr-defined]
+
+    snippet = _snippets(card)[0]
+    assert "strona 2" in snippet.text()
+    assert "[strona" not in snippet.text()
+    assert "background-color" in snippet.text()
+
+
 def test_file_glyph_mapuje_rozszerzenia_na_rodziny() -> None:
     assert file_glyph(".XLSX") == "file-table"
     assert file_glyph(".pdf") == "file-text"
