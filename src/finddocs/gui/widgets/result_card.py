@@ -254,7 +254,14 @@ class EmptyState(QWidget):
     do gornej krawedzi duzego pustego prostokata wyglada jak bledny render.
     """
 
-    def __init__(self, message: str, *, title: str = "", glyph: str = "search") -> None:
+    def __init__(
+        self,
+        message: str,
+        *,
+        title: str = "",
+        glyph: str = "search",
+        palette: Palette | None = None,
+    ) -> None:
         super().__init__()
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         layout = QVBoxLayout(self)
@@ -264,7 +271,9 @@ class EmptyState(QWidget):
 
         self._glyph = QLabel()
         self._glyph.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._glyph.setPixmap(muted_icon(glyph).pixmap(QSize(EMPTY_GLYPH_SIZE, EMPTY_GLYPH_SIZE)))
+        self._glyph.setPixmap(
+            muted_icon(glyph, palette).pixmap(QSize(EMPTY_GLYPH_SIZE, EMPTY_GLYPH_SIZE))
+        )
         layout.addWidget(self._glyph)
         layout.addSpacing(SPACE_XS)
 

@@ -10,7 +10,7 @@ from PySide6.QtWidgets import QLabel
 from finddocs.gui import i18n
 from finddocs.gui.context import AppContext
 from finddocs.gui.diagnostics_view import DiagnosticsView
-from finddocs.gui.report_view import ReportView
+from finddocs.gui.report_view import SUMMARY_ENTRIES, ReportView, summary_values
 
 #: Raport i diagnostyka licza sie w tle, wiec czekamy na wynik.
 TIMEOUT_MS = 15_000
@@ -64,6 +64,17 @@ def test_report_shows_summary_after_refresh(qtbot: object, report_view: ReportVi
     # zgadywac, w ktorym miejscu ukladu lezy dana liczba.
     assert int(report_view.summary.value("discovered")) > 0
     assert report_view.summary.value("app_version")
+
+
+@pytest.mark.gui
+def test_klucze_podsumowania_zgadzaja_sie_z_siatka(qtbot: object, report_view: ReportView) -> None:
+    """Klucz siatki bez wartosci zostalby na napisie ,,brak'' i nikt by nie zauwazyl."""
+    report_view.refresh()
+    _wait_for_report(qtbot, report_view)
+
+    values = summary_values(report_view._report)
+
+    assert set(values) == {key for key, _ in SUMMARY_ENTRIES}
 
 
 @pytest.mark.gui

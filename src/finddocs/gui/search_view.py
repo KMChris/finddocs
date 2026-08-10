@@ -309,6 +309,9 @@ class SearchView(QWidget):
         self._fill_combo(self.filter_author, [(a, a) for a in authors])
         self._fill_combo(self.filter_library, [(lib, lib) for lib in libraries])
         self._fill_combo(self.filter_source, sources)
+        # Wartosc, ktorej po przeindeksowaniu nie ma juz w indeksie, wraca do
+        # ,,wszystkie''. Licznik na przycisku Filtry musi to zauwazyc.
+        self._update_filter_count()
 
     def _fill_combo(self, combo: QComboBox, values: list[tuple[str, str]]) -> None:
         current = combo.currentData()
@@ -545,7 +548,7 @@ class SearchView(QWidget):
         if not keep_meta:
             self.header.set_meta("")
             self.notes_banner.hide_message()
-        placeholder = EmptyState(message, title=title, glyph=glyph)
+        placeholder = EmptyState(message, title=title, glyph=glyph, palette=self.palette_colors)
         # Wspolczynnik rozciagania oddaje stanowi pustemu cala wolna wysokosc,
         # dzieki czemu komunikat jest wysrodkowany, a nie przyklejony do gory.
         self._results_layout.insertWidget(0, placeholder, 1)
