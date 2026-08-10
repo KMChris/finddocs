@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import QSize, Qt
+from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtGui import QAction, QCloseEvent, QIcon, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QHBoxLayout,
@@ -23,6 +23,7 @@ from finddocs.gui.dialogs import ask_yes_no, show_info
 from finddocs.gui.indexing_view import IndexingView
 from finddocs.gui.report_view import ReportView
 from finddocs.gui.search_view import SearchView
+from finddocs.gui.settings_view import SettingsView
 from finddocs.gui.sources_view import SourcesView
 from finddocs.gui.theme import SPACE_LG, SPACE_MD, SPACE_SM, SPACE_XS, Palette, theme_icon
 from finddocs.gui.widgets.nav import install_nav_delegate
@@ -47,9 +48,21 @@ NAV_ITEMS: tuple[tuple[str, str], ...] = (
     (i18n.NAV_DIAGNOSTICS, "pulse"),
 )
 
+#: Numer widoku ustawien na stosie: za ekranami z ``NAV_ITEMS``.
+SETTINGS_STACK_INDEX = len(NAV_ITEMS)
+
 
 class MainWindow(QMainWindow):
-    """Okno z panelem nawigacji i widokami."""
+    """Okno z panelem nawigacji i widokami.
+
+    Ustawienia sa przypieta pozycja na dole panelu, wzorem nawigacji
+    Windows 11. To osobna lista, wiec wybor musi byc reczne uzgadniany
+    miedzy listami: zaznaczona jest zawsze dokladnie jedna pozycja.
+    """
+
+    #: Zadanie zmiany motywu. Okno trzeba zbudowac od nowa, bo ikony
+    #: i palety kontrolek powstaja w konstruktorach widokow.
+    theme_change_requested = Signal(str)
 
     def __init__(self, context: AppContext, palette: Palette, icon: QIcon | None = None) -> None:
         super().__init__()
@@ -80,6 +93,7 @@ class MainWindow(QMainWindow):
         self.indexing_view = IndexingView(context)
         self.report_view = ReportView(context)
         self.diagnostics_view = DiagnosticsView(context)
+        self.settings_view = SettingsView(context)
 
         for view in (
             self.search_view,
@@ -87,6 +101,7 @@ class MainWindow(QMainWindow):
             self.indexing_view,
             self.report_view,
             self.diagnostics_view,
+            self.settings_view,
         ):
             self.stack.addWidget(view)
             signal = getattr(view, "status_message", None)
@@ -95,6 +110,8 @@ class MainWindow(QMainWindow):
 
         self.indexing_view.index_changed.connect(self._on_index_changed)
         self.sources_view.sources_changed.connect(self._on_sources_changed)
+        self.settings_view.theme_change_requested.connect(self.theme_change_requested)
+        self.settings_view.search_settings_changed.connect(self.search_view.apply_config)
 
         self.status = QStatusBar()
         self.setStatusBar(self.status)
@@ -131,6 +148,20 @@ class MainWindow(QMainWindow):
             item.setToolTip(f"{label} (Ctrl+{position})")
         self.nav.currentRowChanged.connect(self._on_nav_changed)
         layout.addWidget(self.nav, stretch=1)
+
+        # Ustawienia sa przypiete na dole panelu, wzorem nawigacji Windows 11.
+        self.bottom_nav = QListWidget()
+        self.bottom_nav.setObjectName("SidebarList")
+        self.bottom_nav.setFrameShape(QListWidget.Shape.NoFrame)
+        self.bottom_nav.setIconSize(QSize(18, 18))
+        install_nav_delegate(self.bottom_nav, self.palette_colors)
+        settings_item = QListWidgetItem(
+            theme_icon("settings", self.palette_colors), i18n.NAV_SETTINGS, self.bottom_nav
+        )
+        settings_item.setToolTip(f"{i18n.NAV_SETTINGS} (Ctrl+{SETTINGS_STACK_INDEX + 1})")
+        self.bottom_nav.setFixedHeight(self.bottom_nav.sizeHintForRow(0) + SPACE_LG)
+        self.bottom_nav.currentRowChanged.connect(self._on_bottom_nav_changed)
+        layout.addWidget(self.bottom_nav)
 
         version = QLabel(f"Wersja {APP_VERSION}")
         version.setObjectName("Hint")
@@ -175,14 +206,36 @@ class MainWindow(QMainWindow):
         refresh.triggered.connect(self.refresh_index_status)
         self.addAction(refresh)
 
-        # Ctrl+1 do Ctrl+5 przelaczaja ekrany w kolejnosci panelu nawigacji.
+        # Ctrl+1 do Ctrl+5 przelaczaja ekrany w kolejnosci panelu nawigacji,
+        # Ctrl+6 otwiera Ustawienia przypiete na dole.
         for position in range(1, len(NAV_ITEMS) + 1):
             shortcut = QShortcut(QKeySequence(f"Ctrl+{position}"), self)
             shortcut.activated.connect(lambda row=position - 1: self.nav.setCurrentRow(row))
+        settings_shortcut = QShortcut(QKeySequence(f"Ctrl+{SETTINGS_STACK_INDEX + 1}"), self)
+        settings_shortcut.activated.connect(self.select_settings)
 
     # --- reakcje ----------------------------------------------------------
 
+    def select_settings(self) -> None:
+        """Otwiera ekran ustawien, tak jak klikniecie pozycji na dole panelu."""
+        self.bottom_nav.setCurrentRow(0)
+
+    def _clear_selection(self, nav: QListWidget) -> None:
+        nav.blockSignals(True)
+        nav.setCurrentRow(-1)
+        nav.clearSelection()
+        nav.blockSignals(False)
+
+    def _on_bottom_nav_changed(self, row: int) -> None:
+        if row < 0:
+            return
+        self._clear_selection(self.nav)
+        self.stack.setCurrentIndex(SETTINGS_STACK_INDEX)
+
     def _on_nav_changed(self, row: int) -> None:
+        if row < 0:
+            return
+        self._clear_selection(self.bottom_nav)
         self.stack.setCurrentIndex(row)
         widget = self.stack.currentWidget()
         if widget is self.search_view:

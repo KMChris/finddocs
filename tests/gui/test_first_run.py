@@ -27,8 +27,10 @@ def test_window_builds_on_empty_config(
     qtbot.addWidget(window)  # type: ignore[attr-defined]
 
     assert window.windowTitle().startswith(i18n.APP_TITLE)
-    assert window.stack.count() == 5
+    # Piec ekranow nawigacji glownej plus Ustawienia przypiete na dole.
+    assert window.stack.count() == 6
     assert window.nav.count() == 5
+    assert window.bottom_nav.count() == 1
 
 
 @pytest.mark.gui

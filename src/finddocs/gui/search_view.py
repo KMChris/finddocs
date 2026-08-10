@@ -421,6 +421,15 @@ class SearchView(QWidget):
 
     # --- wyszukiwanie -----------------------------------------------------
 
+    def apply_config(self) -> None:
+        """Przejmuje zmienione ustawienia wyszukiwania bez restartu aplikacji.
+
+        Liczba wynikow na stronie jest trzymana w polu, bo wchodzi do wyliczen
+        stron. Wracamy tez na pierwsza strone, zeby numeracja byla spojna.
+        """
+        self._page_size = self.context.config.search.page_size
+        self._page = 0
+
     def focus_query(self) -> None:
         self.query_edit.setFocus()
         self.query_edit.selectAll()

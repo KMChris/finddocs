@@ -18,6 +18,26 @@ NAV_SOURCES = "Źródła i konfiguracja"
 NAV_INDEXING = "Indeksowanie"
 NAV_REPORT = "Raport pokrycia"
 NAV_DIAGNOSTICS = "Diagnostyka"
+NAV_SETTINGS = "Ustawienia"
+
+# --- ekran ustawien ----------------------------------------------------------
+
+SETTINGS_APPEARANCE = "Wygląd"
+SETTINGS_THEME = "Motyw"
+THEME_LABELS: dict[str, str] = {"system": "Systemowy", "light": "Jasny", "dark": "Ciemny"}
+SETTINGS_THEME_HINT = "Zmiana motywu działa od razu i jest zapamiętywana."
+SETTINGS_BEHAVIOR = "Zachowanie"
+SETTINGS_OPEN_WITH = "Otwieranie dokumentów"
+SETTINGS_OPEN_WEB = "W SharePoint, w przeglądarce"
+SETTINGS_OPEN_LOCAL = "Kopia lokalna, gdy jest dostępna"
+SETTINGS_PAGE_SIZE = "Wyników na stronę"
+SETTINGS_SHOW_SCORES = "Pokazuj plakietkę siły dopasowania"
+SETTINGS_SAVED = "Zapisano ustawienia."
+ABOUT_TITLE = "O programie"
+ABOUT_DATA_DIR = "Katalog danych"
+ABOUT_LOGS_DIR = "Katalog logów"
+ABOUT_OPEN_DATA = "Otwórz katalog danych"
+ABOUT_OPEN_LOGS = "Otwórz katalog logów"
 
 # --- ekran wyszukiwania ------------------------------------------------------
 

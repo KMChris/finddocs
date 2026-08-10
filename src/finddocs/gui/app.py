@@ -116,6 +116,29 @@ def main(argv: list[str] | None = None) -> int:
         context.close()
         return 1
 
+    def relaunch_with_theme(preference: str) -> None:
+        """Buduje okno od nowa po zmianie motywu.
+
+        Ikony i palety kontrolek powstaja w konstruktorach widokow, wiec sama
+        podmiana arkusza stylow zostawilaby glify w kolorach starego motywu.
+        Kontekst aplikacji zyje dalej, wymieniamy tylko warstwe okna.
+        """
+        nonlocal window
+        new_palette = apply_theme(app, preference)
+        old = window
+        replacement = MainWindow(context, new_palette, icon)
+        replacement.resize(old.size())
+        replacement.move(old.pos())
+        replacement.theme_change_requested.connect(relaunch_with_theme)
+        replacement.show()
+        replacement.select_settings()
+        window = replacement
+        # Bez zamykania: closeEvent starego okna zamknalby wspolny kontekst.
+        old.hide()
+        old.deleteLater()
+
+    window.theme_change_requested.connect(relaunch_with_theme)
+
     window.show()
     if args.query:
         window.search_view.query_edit.setText(args.query)
