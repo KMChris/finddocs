@@ -25,18 +25,23 @@ SEARCH_PLACEHOLDER = "Wpisz zapytanie, na przykład: procedura przelewów z 24.0
 SEARCH_BUTTON = "Szukaj"
 SEARCH_CANCEL = "Przerwij"
 SEARCH_FILTERS = "Filtry"
+SEARCH_FILTERS_ACTIVE = "Filtry ({count})"
 SEARCH_FILTERS_CLEAR = "Wyczyść filtry"
-SEARCH_NO_RESULTS = "Brak wyników dla tego zapytania."
+SEARCH_FILTERS_SHORTCUT = "Pokaż albo ukryj panel filtrów (Ctrl+Shift+F)"
+SEARCH_NO_RESULTS_TITLE = "Brak wyników"
+SEARCH_NO_RESULTS = (
+    "Żaden dokument nie odpowiada temu zapytaniu. Spróbuj krótszego zapytania, "
+    "zmień tryb na Semantyczne albo wyczyść filtry."
+)
+SEARCH_EMPTY_TITLE = "Zacznij od zapytania"
 SEARCH_EMPTY_STATE = (
-    "Wpisz zapytanie i naciśnij Enter.\n\n"
     "Tryb Dokładne znajduje wszystkie dokumenty zawierające podane słowa, numery i daty.\n"
     "Tryb Semantyczne szuka dokumentów powiązanych znaczeniowo.\n"
     "Tryb Hybrydowe łączy oba podejścia."
 )
 SEARCH_RUNNING = "Wyszukiwanie w toku..."
-SEARCH_INDEX_EMPTY = (
-    "Indeks jest pusty. Przejdź do ekranu Indeksowanie i uruchom skanowanie źródła."
-)
+SEARCH_INDEX_EMPTY_TITLE = "Indeks jest pusty"
+SEARCH_INDEX_EMPTY = "Przejdź do ekranu Indeksowanie i uruchom skanowanie źródła."
 
 MODE_LABELS: dict[SearchMode, str] = {
     SearchMode.HYBRID: "Hybrydowe",
@@ -57,6 +62,7 @@ MATCH_LABELS: dict[MatchKind, str] = {
 }
 
 RESULT_OPEN = "Otwórz dokument"
+RESULT_OPEN_HINT = "Otwórz dokument (Enter)"
 RESULT_OPEN_LOCATION = "Otwórz lokalizację"
 RESULT_COPY_LINK = "Kopiuj odnośnik"
 RESULT_OCR_BADGE = "OCR"
@@ -65,8 +71,16 @@ RESULT_MODIFIED = "Zmodyfikowano: {value}"
 RESULT_INDEXED = "Zaindeksowano: {value}"
 RESULT_AUTHOR = "Autor: {value}"
 RESULT_SCORE = "Siła dopasowania: {value}"
+
+# Plakietki na karcie wyniku niosa krotki napis, a pelne zdanie jest
+# w podpowiedzi. Cztery pelne zdania obok siebie zaslanialy tresc fragmentu.
+BADGE_TYPE_TOOLTIP = "Typ pliku"
+BADGE_MODIFIED_TOOLTIP = "Data modyfikacji dokumentu"
+BADGE_AUTHOR_TOOLTIP = "Autor z metadanych dokumentu"
+BADGE_OCR_TOOLTIP = "Tekst rozpoznany z obrazu, wraz z jakością rozpoznania"
+RESULT_SCORE_SHORT = "dopasowanie {value}"
 RESULT_SCORE_TOOLTIP = (
-    "Wartość względna wobec najlepszego wyniku na tej stronie. "
+    "Siła dopasowania. Wartość względna wobec najlepszego wyniku na tej stronie. "
     "Nie jest to prawdopodobieństwo ani miara bezwzględna."
 )
 
@@ -82,9 +96,13 @@ FILTER_ANY = "wszystkie"
 
 PAGINATION_PREVIOUS = "Poprzednia"
 PAGINATION_NEXT = "Następna"
+PAGINATION_PREVIOUS_HINT = "Poprzednia strona wyników (Alt+Left)"
+PAGINATION_NEXT_HINT = "Następna strona wyników (Alt+Right)"
 PAGINATION_STATUS = "Strona {page} z {pages}"
-RESULTS_COUNT_EXACT = "Znaleziono {count} dokumentów"
-RESULTS_COUNT_APPROX = "Znaleziono co najmniej {count} dokumentów"
+#: Liczbe dokumentow wstawia ``documents_count``, zeby odmiana byla poprawna
+#: takze dla jednego i dla dwoch dokumentow.
+RESULTS_COUNT_EXACT = "Znaleziono {count}"
+RESULTS_COUNT_APPROX = "Znaleziono co najmniej {count}"
 RESULTS_TOOK = "czas: {ms} ms"
 
 # --- ekran zrodel ------------------------------------------------------------

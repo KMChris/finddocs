@@ -1,14 +1,22 @@
-"""Ekran wyszukiwania."""
+"""Ekran wyszukiwania.
+
+Uklad ekranu jest podporzadkowany jednemu zadaniu: wpisac zapytanie i przejrzec
+wyniki. Dlatego chrome nad lista jest tak niski, jak to mozliwe:
+
+* liczba wynikow jest w wierszu tytulu, a nie w osobnym wierszu;
+* uwagi o niekompletnosci wynikow ida do kolorowego banera, bo szary tekst
+  czytelnik pomija, a to wlasnie one mowia, czego wyszukiwarka nie gwarantuje;
+* wiersz stron pojawia sie tylko wtedy, gdy jest wiecej niz jedna strona.
+"""
 
 from __future__ import annotations
 
 import datetime as _dt
 
 from PySide6.QtCore import QDate, QSize, Qt, Signal
-from PySide6.QtGui import QFont, QFontMetrics
+from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
-    QButtonGroup,
     QCheckBox,
     QComboBox,
     QDateEdit,
@@ -25,8 +33,19 @@ from PySide6.QtWidgets import (
 
 from finddocs.gui import i18n
 from finddocs.gui.context import AppContext
-from finddocs.gui.theme import Palette, accent_icon, theme_icon
+from finddocs.gui.theme import (
+    QUERY_HEIGHT,
+    SPACE_LG,
+    SPACE_MD,
+    SPACE_SM,
+    SPACE_XS,
+    Palette,
+    accent_icon,
+    theme_icon,
+)
+from finddocs.gui.widgets.page import Banner, PageHeader, page_layout
 from finddocs.gui.widgets.result_card import EmptyState, ResultCard
+from finddocs.gui.widgets.segmented import SegmentedControl
 from finddocs.gui.workers import CancellationFlag, SearchTask, thread_pool
 from finddocs.logging_setup import get_logger
 from finddocs.search.highlight import strip_highlight
@@ -43,8 +62,13 @@ log = get_logger(__name__)
 
 FILTER_ANY = i18n.FILTER_ANY
 
-#: Zapas na obramowanie i wypelnienie przycisku trybu wyszukiwania.
-MODE_BUTTON_PADDING = 44
+#: Data oznaczajaca brak ograniczenia w polu daty. Pole pokazuje wtedy napis
+#: ``wszystkie`` zamiast liczby.
+NO_DATE = QDate(1900, 1, 1)
+
+#: Liczba kolumn panelu filtrow. Kolumny dziela szerokosc rowno, wiec pola
+#: sasiadujacych wierszy sa wyrownane niezaleznie od dlugosci podpisow.
+FILTER_COLUMNS = 4
 
 
 class SearchView(QWidget):
@@ -63,37 +87,43 @@ class SearchView(QWidget):
         self._page = 0
         self._page_size = context.config.search.page_size
 
-        root = QVBoxLayout(self)
-        root.setContentsMargins(24, 20, 24, 16)
-        root.setSpacing(12)
+        root = page_layout(self)
 
-        title = QLabel(i18n.NAV_SEARCH)
-        title.setObjectName("PageTitle")
-        root.addWidget(title)
+        self.header = PageHeader(i18n.NAV_SEARCH)
+        root.addWidget(self.header)
 
         root.addWidget(self._build_query_row())
         root.addWidget(self._build_mode_row())
+
+        self.mode_hint = QLabel(i18n.MODE_HINTS[self.current_mode()])
+        self.mode_hint.setObjectName("Hint")
+        self.mode_hint.setWordWrap(True)
+        root.addWidget(self.mode_hint)
+
         self._filters_panel = self._build_filters()
         root.addWidget(self._filters_panel)
         self._filters_panel.setVisible(False)
 
-        self._summary = QLabel("")
-        self._summary.setObjectName("Muted")
-        self._summary.setWordWrap(True)
-        root.addWidget(self._summary)
+        self.notes_banner = Banner()
+        root.addWidget(self.notes_banner)
 
         self._scroll = QScrollArea()
         self._scroll.setWidgetResizable(True)
         self._results_host = QWidget()
         self._results_layout = QVBoxLayout(self._results_host)
-        self._results_layout.setContentsMargins(0, 0, 8, 0)
-        self._results_layout.setSpacing(12)
+        self._results_layout.setContentsMargins(0, 0, SPACE_SM, 0)
+        self._results_layout.setSpacing(SPACE_MD)
         self._results_layout.addStretch(1)
         self._scroll.setWidget(self._results_host)
         root.addWidget(self._scroll, stretch=1)
 
-        root.addLayout(self._build_pagination())
-        self._show_empty(i18n.SEARCH_EMPTY_STATE)
+        self._pagination = self._build_pagination()
+        root.addWidget(self._pagination)
+        self._update_pagination()
+
+        self._build_shortcuts()
+        self._update_filter_count()
+        self._show_empty(i18n.SEARCH_EMPTY_TITLE, i18n.SEARCH_EMPTY_STATE)
 
     # --- budowa interfejsu ------------------------------------------------
 
@@ -101,7 +131,7 @@ class SearchView(QWidget):
         container = QWidget()
         row = QHBoxLayout(container)
         row.setContentsMargins(0, 0, 0, 0)
-        row.setSpacing(8)
+        row.setSpacing(SPACE_SM)
 
         self.query_edit = QLineEdit()
         self.query_edit.setObjectName("SearchBox")
@@ -116,7 +146,7 @@ class SearchView(QWidget):
         self.search_button.setObjectName("PrimaryIcon")
         self.search_button.setIcon(accent_icon("search", self.palette_colors))
         self.search_button.setIconSize(QSize(18, 18))
-        side = max(self.query_edit.sizeHint().height(), 40)
+        side = max(self.query_edit.sizeHint().height(), QUERY_HEIGHT)
         self.search_button.setFixedSize(QSize(side, side))
         self.search_button.setToolTip(i18n.SEARCH_BUTTON)
         self.search_button.setAccessibleName(i18n.SEARCH_BUTTON)
@@ -124,49 +154,29 @@ class SearchView(QWidget):
         row.addWidget(self.search_button)
         return container
 
-    def _mode_button_width(self) -> int:
-        """Wspolna szerokosc przyciskow trybu.
-
-        Wybrany tryb jest pisany pogrubieniem, wiec jego napis jest szerszy niz
-        w chwili, gdy Qt liczylo rozmiar przycisku. Bez tego zabiegu pierwsza
-        litera napisu ,,Hybrydowe'' znika po zaznaczeniu trybu.
-        """
-        bold = QFont(self.font())
-        bold.setBold(True)
-        metrics = QFontMetrics(bold)
-        widest = max(metrics.horizontalAdvance(label) for label in i18n.MODE_LABELS.values())
-        return widest + MODE_BUTTON_PADDING
-
     def _build_mode_row(self) -> QWidget:
         container = QWidget()
         row = QHBoxLayout(container)
         row.setContentsMargins(0, 0, 0, 0)
-        row.setSpacing(8)
+        row.setSpacing(SPACE_SM)
 
-        self.mode_group = QButtonGroup(self)
-        self.mode_group.setExclusive(True)
+        modes = list(SearchMode)
         default_mode = SearchMode(self.context.config.search.default_mode)
-        width = self._mode_button_width()
-        for index, mode in enumerate(SearchMode):
-            button = QPushButton(i18n.MODE_LABELS[mode])
-            button.setObjectName("ModeButton")
-            button.setCheckable(True)
-            button.setToolTip(i18n.MODE_HINTS[mode])
-            button.setChecked(mode is default_mode)
-            button.setMinimumWidth(width)
-            self.mode_group.addButton(button, index)
-            row.addWidget(button)
-        self.mode_group.idClicked.connect(lambda _id: self._update_mode_hint())
-
-        row.addSpacing(8)
-        self.mode_hint = QLabel(i18n.MODE_HINTS[default_mode])
-        self.mode_hint.setObjectName("Hint")
-        row.addWidget(self.mode_hint)
+        self.mode_switch = SegmentedControl(
+            [i18n.MODE_LABELS[mode] for mode in modes],
+            hints=[i18n.MODE_HINTS[mode] for mode in modes],
+            checked=modes.index(default_mode),
+        )
+        self.mode_switch.changed.connect(lambda _index: self._update_mode_hint())
+        # Testy i skroty klawiszowe siegaja po grupe przyciskow bezposrednio.
+        self.mode_group = self.mode_switch.group
+        row.addWidget(self.mode_switch)
         row.addStretch(1)
 
         self.filters_toggle = QPushButton(i18n.SEARCH_FILTERS)
         self.filters_toggle.setIcon(theme_icon("filter", self.palette_colors))
         self.filters_toggle.setCheckable(True)
+        self.filters_toggle.setToolTip(i18n.SEARCH_FILTERS_SHORTCUT)
         self.filters_toggle.toggled.connect(self._toggle_filters)
         row.addWidget(self.filters_toggle)
         return container
@@ -175,10 +185,12 @@ class SearchView(QWidget):
         panel = QFrame()
         panel.setObjectName("Card")
         grid = QGridLayout(panel)
-        grid.setContentsMargins(16, 14, 16, 14)
-        grid.setHorizontalSpacing(16)
+        grid.setContentsMargins(SPACE_LG, SPACE_LG - 2, SPACE_LG, SPACE_LG - 2)
+        grid.setHorizontalSpacing(SPACE_LG)
         # Podpis przylega do swojego pola, a grupy pol rozdziela pusty wiersz.
-        grid.setVerticalSpacing(4)
+        grid.setVerticalSpacing(SPACE_XS)
+        for column in range(FILTER_COLUMNS):
+            grid.setColumnStretch(column, 1)
 
         self.filter_extension = QComboBox()
         self.filter_source = QComboBox()
@@ -191,9 +203,12 @@ class SearchView(QWidget):
             self.filter_author,
         ):
             combo.addItem(FILTER_ANY, "")
+            combo.currentIndexChanged.connect(self._update_filter_count)
 
         self.filter_path = QLineEdit()
         self.filter_path.setPlaceholderText("np. transakcje/klientA")
+        self.filter_path.textChanged.connect(self._update_filter_count)
+        self.filter_path.returnPressed.connect(self.run_search)
 
         self.filter_date_from = QDateEdit()
         self.filter_date_to = QDateEdit()
@@ -201,12 +216,14 @@ class SearchView(QWidget):
             editor.setCalendarPopup(True)
             editor.setDisplayFormat("dd.MM.yyyy")
             editor.setSpecialValueText(FILTER_ANY)
-            editor.setMinimumDate(QDate(1900, 1, 1))
-            editor.setDate(QDate(1900, 1, 1))
+            editor.setMinimumDate(NO_DATE)
+            editor.setDate(NO_DATE)
+            editor.dateChanged.connect(self._update_filter_count)
 
         self.filter_ocr = QCheckBox(i18n.FILTER_OCR)
+        self.filter_ocr.toggled.connect(self._update_filter_count)
 
-        widgets = [
+        fields = [
             (i18n.FILTER_EXTENSION, self.filter_extension),
             (i18n.FILTER_SOURCE, self.filter_source),
             (i18n.FILTER_LIBRARY, self.filter_library),
@@ -215,29 +232,43 @@ class SearchView(QWidget):
             (i18n.FILTER_DATE_FROM, self.filter_date_from),
             (i18n.FILTER_DATE_TO, self.filter_date_to),
         ]
-        for index, (label_text, widget) in enumerate(widgets):
+        for index, (label_text, widget) in enumerate(fields):
             label = QLabel(label_text)
-            label.setObjectName("Muted")
-            base_row = index // 4 * 3
-            grid.addWidget(label, base_row, index % 4)
-            grid.addWidget(widget, base_row + 1, index % 4)
-        grid.setRowMinimumHeight(2, 10)
-        grid.setRowMinimumHeight(5, 10)
+            label.setObjectName("StatCaption")
+            base_row = index // FILTER_COLUMNS * 3
+            grid.addWidget(label, base_row, index % FILTER_COLUMNS)
+            grid.addWidget(widget, base_row + 1, index % FILTER_COLUMNS)
+        rows = -(-len(fields) // FILTER_COLUMNS)
+        for row in range(rows):
+            grid.setRowMinimumHeight(row * 3 + 2, SPACE_MD)
 
-        grid.addWidget(self.filter_ocr, 4, 3)
-        clear = QPushButton(i18n.SEARCH_FILTERS_CLEAR)
-        clear.clicked.connect(self.clear_filters)
-        grid.addWidget(clear, 6, 0, Qt.AlignmentFlag.AlignLeft)
+        # Pole wyboru OCR trafia w wolne miejsce po prawej stronie wiersza dat,
+        # a przycisk czyszczenia pod nie, w jednej pionowej linii z przyciskiem
+        # Filtry nad panelem.
+        grid.addWidget(self.filter_ocr, 4, FILTER_COLUMNS - 1)
+        self.clear_filters_button = QPushButton(i18n.SEARCH_FILTERS_CLEAR)
+        self.clear_filters_button.setIcon(theme_icon("cross", self.palette_colors))
+        self.clear_filters_button.clicked.connect(self.clear_filters)
+        grid.addWidget(
+            self.clear_filters_button,
+            6,
+            FILTER_COLUMNS - 1,
+            Qt.AlignmentFlag.AlignRight,
+        )
         return panel
 
-    def _build_pagination(self) -> QHBoxLayout:
-        row = QHBoxLayout()
-        row.setSpacing(8)
+    def _build_pagination(self) -> QWidget:
+        container = QWidget()
+        row = QHBoxLayout(container)
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(SPACE_SM)
         self.previous_button = QPushButton(i18n.PAGINATION_PREVIOUS)
         self.previous_button.setIcon(theme_icon("chevron-left", self.palette_colors))
+        self.previous_button.setToolTip(i18n.PAGINATION_PREVIOUS_HINT)
         self.previous_button.clicked.connect(lambda: self.change_page(-1))
         self.next_button = QPushButton(i18n.PAGINATION_NEXT)
         self.next_button.setIcon(theme_icon("chevron-right", self.palette_colors))
+        self.next_button.setToolTip(i18n.PAGINATION_NEXT_HINT)
         # Odwrocony kierunek ukladu stawia ikone po prawej stronie napisu.
         self.next_button.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         self.next_button.clicked.connect(lambda: self.change_page(1))
@@ -248,8 +279,15 @@ class SearchView(QWidget):
         row.addWidget(self.page_label)
         row.addWidget(self.next_button)
         row.addStretch(1)
-        self._update_pagination()
-        return row
+        return container
+
+    def _build_shortcuts(self) -> None:
+        """Skroty dzialajace na tym ekranie."""
+        for keys, delta in (("Alt+Left", -1), ("Alt+Right", 1)):
+            shortcut = QShortcut(QKeySequence(keys), self)
+            shortcut.activated.connect(lambda step=delta: self.change_page(step))
+        filters = QShortcut(QKeySequence("Ctrl+Shift+F"), self)
+        filters.activated.connect(self.filters_toggle.toggle)
 
     # --- dane pomocnicze --------------------------------------------------
 
@@ -295,7 +333,7 @@ class SearchView(QWidget):
 
         def date_value(editor: QDateEdit) -> _dt.date | None:
             qdate = editor.date()
-            if qdate == QDate(1900, 1, 1):
+            if qdate == NO_DATE:
                 return None
             return _dt.date(qdate.year(), qdate.month(), qdate.day())
 
@@ -311,6 +349,21 @@ class SearchView(QWidget):
             ocr_only=True if self.filter_ocr.isChecked() else None,
         )
 
+    def active_filter_count(self) -> int:
+        """Ile filtrow zaweza wyniki. Liczba idzie na przycisk Filtry."""
+        filters = self.current_filters()
+        parts: list[object] = [
+            filters.sources,
+            filters.libraries,
+            filters.extensions,
+            filters.authors,
+            filters.path_prefix,
+            filters.modified.start,
+            filters.modified.end,
+            filters.ocr_only,
+        ]
+        return sum(1 for part in parts if part)
+
     def clear_filters(self) -> None:
         for combo in (
             self.filter_extension,
@@ -320,14 +373,27 @@ class SearchView(QWidget):
         ):
             combo.setCurrentIndex(0)
         self.filter_path.clear()
-        self.filter_date_from.setDate(QDate(1900, 1, 1))
-        self.filter_date_to.setDate(QDate(1900, 1, 1))
+        self.filter_date_from.setDate(NO_DATE)
+        self.filter_date_to.setDate(NO_DATE)
         self.filter_ocr.setChecked(False)
+        self._update_filter_count()
 
     def _toggle_filters(self, visible: bool) -> None:
         self._filters_panel.setVisible(visible)
         if visible:
             self.refresh_filter_values()
+
+    def _update_filter_count(self) -> None:
+        """Napis na przycisku Filtry mowi, ile filtrow dziala.
+
+        Bez tego zwiniety panel ukrywa fakt, ze wyniki sa zawezone, a uzytkownik
+        widzi krotka liste i nie wie dlaczego.
+        """
+        count = self.active_filter_count()
+        self.filters_toggle.setText(
+            i18n.SEARCH_FILTERS_ACTIVE.format(count=count) if count else i18n.SEARCH_FILTERS
+        )
+        self.clear_filters_button.setEnabled(count > 0)
 
     def _update_mode_hint(self) -> None:
         self.mode_hint.setText(i18n.MODE_HINTS[self.current_mode()])
@@ -351,11 +417,13 @@ class SearchView(QWidget):
     def run_search(self, *, reset_page: bool = True) -> None:
         query = self.query_edit.text().strip()
         if not query:
-            self._show_empty(i18n.SEARCH_EMPTY_STATE)
+            self._show_empty(i18n.SEARCH_EMPTY_TITLE, i18n.SEARCH_EMPTY_STATE)
             return
         index = self.context.index
         if index is not None and index.status().indexed_documents == 0:
-            self._show_empty(i18n.SEARCH_INDEX_EMPTY)
+            self._show_empty(
+                i18n.SEARCH_INDEX_EMPTY_TITLE, i18n.SEARCH_INDEX_EMPTY, glyph="database"
+            )
             return
         if reset_page:
             self._page = 0
@@ -393,12 +461,16 @@ class SearchView(QWidget):
     def change_page(self, delta: int) -> None:
         if self._response is None:
             return
-        pages = max(1, -(-self._response.total_documents // self._page_size))
-        new_page = min(max(0, self._page + delta), pages - 1)
+        new_page = min(max(0, self._page + delta), self._page_count() - 1)
         if new_page == self._page:
             return
         self._page = new_page
         self.run_search(reset_page=False)
+
+    def _page_count(self) -> int:
+        if self._response is None:
+            return 1
+        return max(1, -(-self._response.total_documents // self._page_size))
 
     # --- reakcje na wynik -------------------------------------------------
 
@@ -414,7 +486,7 @@ class SearchView(QWidget):
 
     def _on_failed(self, code: str, message: str) -> None:
         self._set_busy(False)
-        self._show_empty(f"{message}\n\nKod błędu: {code}")
+        self._show_empty(i18n.ERROR_TITLE, f"{message}\n\nKod błędu: {code}")
         self.status_message.emit(message)
 
     def _on_cancelled(self) -> None:
@@ -434,18 +506,17 @@ class SearchView(QWidget):
         template = (
             i18n.RESULTS_COUNT_EXACT if response.total_is_exact else i18n.RESULTS_COUNT_APPROX
         )
-        return template.format(count=response.total_documents)
+        return template.format(count=i18n.documents_count(response.total_documents))
 
     def _render(self, response: SearchResponse) -> None:
         self._clear_results()
-        notes = list(response.notes)
-        summary = self._count_text(response)
-        if notes:
-            summary = f"{summary}. " + " ".join(notes)
-        self._summary.setText(summary)
+        self.header.set_meta(self._count_text(response))
+        # Uwagi wyszukiwarki mowia o niekompletnosci albo o ograniczeniu trybu,
+        # wiec traktujemy je jako ostrzezenie, nie jako informacje dodatkowa.
+        self.notes_banner.show_message(" ".join(response.notes), "warning")
 
         if not response.hits:
-            self._show_empty(i18n.SEARCH_NO_RESULTS)
+            self._show_empty(i18n.SEARCH_NO_RESULTS_TITLE, i18n.SEARCH_NO_RESULTS, keep_meta=True)
             self._update_pagination()
             return
 
@@ -467,19 +538,28 @@ class SearchView(QWidget):
             if widget is not None:
                 widget.deleteLater()
 
-    def _show_empty(self, message: str) -> None:
+    def _show_empty(
+        self, title: str, message: str, *, glyph: str = "search", keep_meta: bool = False
+    ) -> None:
         self._clear_results()
-        self._summary.setText("")
-        placeholder = EmptyState(message)
-        self._results_layout.insertWidget(0, placeholder)
+        if not keep_meta:
+            self.header.set_meta("")
+            self.notes_banner.hide_message()
+        placeholder = EmptyState(message, title=title, glyph=glyph)
+        # Wspolczynnik rozciagania oddaje stanowi pustemu cala wolna wysokosc,
+        # dzieki czemu komunikat jest wysrodkowany, a nie przyklejony do gory.
+        self._results_layout.insertWidget(0, placeholder, 1)
 
     def _update_pagination(self) -> None:
-        if self._response is None or self._response.total_documents == 0:
+        """Wiersz stron pojawia sie tylko wtedy, gdy jest co przewijac."""
+        pages = self._page_count()
+        has_results = self._response is not None and self._response.total_documents > 0
+        self._pagination.setVisible(has_results and pages > 1)
+        if not has_results:
             self.page_label.setText("")
             self.previous_button.setEnabled(False)
             self.next_button.setEnabled(False)
             return
-        pages = max(1, -(-self._response.total_documents // self._page_size))
         self.page_label.setText(i18n.PAGINATION_STATUS.format(page=self._page + 1, pages=pages))
         self.previous_button.setEnabled(self._page > 0)
         self.next_button.setEnabled(self._page + 1 < pages)
@@ -528,4 +608,4 @@ class SearchView(QWidget):
         super().keyPressEvent(event)  # type: ignore[arg-type]
 
 
-__all__ = ["SearchView"]
+__all__ = ["FILTER_COLUMNS", "NO_DATE", "SearchView"]

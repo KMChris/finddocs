@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pytest
 from PySide6.QtCore import QThreadPool
-from PySide6.QtWidgets import QApplication, QLabel, QMessageBox, QWidget
+from PySide6.QtWidgets import QApplication, QMessageBox, QWidget
 
 from finddocs.app_paths import AppPaths
 from finddocs.config import LocalDirSourceSettings, SourceConfig
@@ -225,8 +225,20 @@ def empty_state_text() -> Callable[[QWidget], str]:
     def read(view: QWidget) -> str:
         for widget in _result_widgets(view):
             if isinstance(widget, EmptyState):
-                label = widget.findChild(QLabel)
-                return label.text() if label is not None else ""
+                return widget.message()
+        return ""
+
+    return read
+
+
+@pytest.fixture
+def empty_state_title() -> Callable[[QWidget], str]:
+    """Funkcja zwracajaca naglowek komunikatu zastepczego albo pusty napis."""
+
+    def read(view: QWidget) -> str:
+        for widget in _result_widgets(view):
+            if isinstance(widget, EmptyState):
+                return widget.title()
         return ""
 
     return read

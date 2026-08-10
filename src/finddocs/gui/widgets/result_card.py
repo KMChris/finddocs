@@ -1,10 +1,18 @@
-"""Karta pojedynczego wyniku wyszukiwania."""
+"""Karta pojedynczego wyniku wyszukiwania.
+
+Karta ma trzy poziomy waznosci i kazdy z nich ma inny stopien pisma:
+nazwa dokumentu, potem plakietki i sciezka, na koncu fragmenty tresci.
+Plakietki niosa krotki napis, a pelne zdanie jest w podpowiedzi. Wczesniej
+cztery pelne zdania w jednym wierszu konkurowaly wzrokowo z trescia fragmentu,
+czyli z jedyna rzecza, ktora czytelnik naprawde chce przeczytac.
+"""
 
 from __future__ import annotations
 
 import html
 
 from PySide6.QtCore import QSize, Qt, Signal, SignalInstance
+from PySide6.QtGui import QKeyEvent, QMouseEvent
 from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -16,7 +24,18 @@ from PySide6.QtWidgets import (
 )
 
 from finddocs.gui import i18n
-from finddocs.gui.theme import Palette, highlight_css, theme_icon
+from finddocs.gui.theme import (
+    ICON_BUTTON_SIZE,
+    SPACE_LG,
+    SPACE_MD,
+    SPACE_SM,
+    SPACE_XL,
+    SPACE_XS,
+    Palette,
+    highlight_css,
+    muted_icon,
+    theme_icon,
+)
 from finddocs.search.highlight import HIGHLIGHT_CLOSE, HIGHLIGHT_OPEN
 from finddocs.types import DocumentHit, TextOrigin
 
@@ -26,8 +45,8 @@ MAX_PATH_CHARS = 110
 SCORE_HIGH = 0.75
 SCORE_MID = 0.4
 
-#: Bok kwadratowego przycisku ikonowego w wierszu nazwy pliku.
-ICON_BUTTON_SIZE = 30
+#: Rozmiar glifu w stanie pustym.
+EMPTY_GLYPH_SIZE = 40
 
 
 def snippet_to_html(text: str, palette: Palette) -> str:
@@ -57,7 +76,12 @@ def score_role(score: float) -> str:
 
 
 class ResultCard(QFrame):
-    """Wynik na poziomie dokumentu wraz z najlepszymi fragmentami."""
+    """Wynik na poziomie dokumentu wraz z najlepszymi fragmentami.
+
+    Karta przyjmuje fokus z klawiatury: Tab przechodzi miedzy wynikami, Enter
+    otwiera dokument. Dwuklik w dowolnym miejscu karty robi to samo, bo caly
+    prostokat wyglada na klikalny i uzytkownicy tak go traktuja.
+    """
 
     open_document = Signal(object)
     open_location = Signal(object)
@@ -69,10 +93,13 @@ class ResultCard(QFrame):
         self.setObjectName("ResultCard")
         self.setFrameShape(QFrame.Shape.NoFrame)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.setAccessibleName(hit.name)
+        self.setAccessibleDescription(hit.logical_path)
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(16, 14, 16, 14)
-        layout.setSpacing(10)
+        layout.setContentsMargins(SPACE_LG, SPACE_LG - 2, SPACE_LG, SPACE_LG - 2)
+        layout.setSpacing(SPACE_SM)
 
         layout.addLayout(self._build_header(hit, palette))
 
@@ -100,7 +127,7 @@ class ResultCard(QFrame):
         extra = hit.total_matching_chunks - len(hit.chunks)
         if extra > 0:
             more = QLabel(i18n.RESULT_MORE_CHUNKS.format(count=hit.total_matching_chunks))
-            more.setObjectName("Muted")
+            more.setObjectName("Hint")
             layout.addWidget(more)
 
     # --- czesci skladowe --------------------------------------------------
@@ -108,13 +135,13 @@ class ResultCard(QFrame):
     def _build_header(self, hit: DocumentHit, palette: Palette) -> QHBoxLayout:
         """Nazwa pliku jako odnosnik oraz akcje dokumentu przy prawej krawedzi."""
         row = QHBoxLayout()
-        row.setSpacing(4)
+        row.setSpacing(SPACE_XS)
 
         title = QLabel(f'<a href="open" style="text-decoration: none;">{html.escape(hit.name)}</a>')
         title.setObjectName("ResultTitle")
         title.setTextFormat(Qt.TextFormat.RichText)
         title.setWordWrap(True)
-        title.setToolTip(i18n.RESULT_OPEN)
+        title.setToolTip(i18n.RESULT_OPEN_HINT)
         title.setTextInteractionFlags(
             Qt.TextInteractionFlag.TextSelectableByMouse
             | Qt.TextInteractionFlag.LinksAccessibleByMouse
@@ -151,32 +178,40 @@ class ResultCard(QFrame):
 
     def _build_badges(self, hit: DocumentHit, show_score: bool) -> QHBoxLayout:
         row = QHBoxLayout()
-        row.setSpacing(8)
+        row.setSpacing(SPACE_SM)
 
-        def badge(text: str, role: str) -> QLabel:
+        def badge(text: str, role: str, tooltip: str = "") -> QLabel:
             label = QLabel(text)
             label.setObjectName("Badge")
             label.setProperty("badgeRole", role)
+            if tooltip:
+                label.setToolTip(tooltip)
+                label.setAccessibleDescription(tooltip)
             row.addWidget(label)
             return label
 
         badge(i18n.MATCH_LABELS.get(hit.match_kind, hit.match_kind.value), "match")
         if hit.extension:
-            badge(hit.extension.lstrip(".").upper(), "type")
+            badge(hit.extension.lstrip(".").upper(), "type", i18n.BADGE_TYPE_TOOLTIP)
         if hit.modified_at:
-            badge(i18n.RESULT_MODIFIED.format(value=hit.modified_at.strftime("%Y-%m-%d")), "date")
+            badge(
+                hit.modified_at.strftime("%Y-%m-%d"),
+                "date",
+                i18n.BADGE_MODIFIED_TOOLTIP,
+            )
         if hit.author:
-            badge(i18n.RESULT_AUTHOR.format(value=hit.author), "author")
+            badge(hit.author, "author", i18n.BADGE_AUTHOR_TOOLTIP)
         if hit.used_ocr:
             text = i18n.RESULT_OCR_BADGE
             if hit.ocr_confidence is not None:
                 text = f"{text} {hit.ocr_confidence * 100:.0f}%"
-            badge(text, "ocr")
+            badge(text, "ocr", i18n.BADGE_OCR_TOOLTIP)
         if show_score:
-            score = badge(
-                i18n.RESULT_SCORE.format(value=f"{hit.score * 100:.0f}%"), score_role(hit.score)
+            badge(
+                i18n.RESULT_SCORE_SHORT.format(value=f"{hit.score * 100:.0f}%"),
+                score_role(hit.score),
+                i18n.RESULT_SCORE_TOOLTIP,
             )
-            score.setToolTip(i18n.RESULT_SCORE_TOOLTIP)
         row.addStretch(1)
         return row
 
@@ -198,20 +233,61 @@ class ResultCard(QFrame):
             return ""
         return f'<span style="opacity:0.6">[{", ".join(parts)}]</span> '
 
+    # --- obsluga klawiatury i myszki --------------------------------------
+
+    def keyPressEvent(self, event: QKeyEvent) -> None:
+        if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter, Qt.Key.Key_Space):
+            self.open_document.emit(self.hit)
+            event.accept()
+            return
+        super().keyPressEvent(event)
+
+    def mouseDoubleClickEvent(self, event: QMouseEvent) -> None:
+        self.open_document.emit(self.hit)
+        event.accept()
+
 
 class EmptyState(QWidget):
-    """Prosty komunikat pokazywany, gdy nie ma czego wyswietlic."""
+    """Komunikat zastepczy: glif, naglowek i wyjasnienie, wysrodkowane.
 
-    def __init__(self, message: str) -> None:
+    Stan pusty zajmuje cala wolna przestrzen listy wynikow. Komunikat przyklejony
+    do gornej krawedzi duzego pustego prostokata wyglada jak bledny render.
+    """
+
+    def __init__(self, message: str, *, title: str = "", glyph: str = "search") -> None:
         super().__init__()
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(24, 48, 24, 48)
+        layout.setContentsMargins(SPACE_XL, SPACE_XL, SPACE_XL, SPACE_XL)
+        layout.setSpacing(SPACE_SM)
+        layout.addStretch(1)
+
+        self._glyph = QLabel()
+        self._glyph.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._glyph.setPixmap(muted_icon(glyph).pixmap(QSize(EMPTY_GLYPH_SIZE, EMPTY_GLYPH_SIZE)))
+        layout.addWidget(self._glyph)
+        layout.addSpacing(SPACE_XS)
+
+        self._title = QLabel(title)
+        self._title.setObjectName("SectionTitle")
+        self._title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._title.setVisible(bool(title))
+        layout.addWidget(self._title)
+
         self._label = QLabel(message)
         self._label.setObjectName("Muted")
         self._label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._label.setWordWrap(True)
         layout.addWidget(self._label)
+        layout.addSpacing(SPACE_MD)
         layout.addStretch(1)
+
+    def message(self) -> str:
+        """Tresc wyjasnienia, bez naglowka."""
+        return self._label.text()
+
+    def title(self) -> str:
+        return self._title.text()
 
     def set_message(self, message: str) -> None:
         """Podmienia tresc komunikatu bez tworzenia nowej kontrolki."""
@@ -219,7 +295,7 @@ class EmptyState(QWidget):
 
 
 __all__ = [
-    "ICON_BUTTON_SIZE",
+    "EMPTY_GLYPH_SIZE",
     "MAX_PATH_CHARS",
     "SCORE_HIGH",
     "SCORE_MID",

@@ -99,7 +99,11 @@ def test_query_returns_result_cards(
 
     qtbot.waitUntil(lambda: bool(result_cards(view)), timeout=TIMEOUT_MS)  # type: ignore[attr-defined]
     assert len(result_cards(view)) == corpus_stats["przelewow"]
-    assert i18n.RESULTS_COUNT_EXACT.format(count=corpus_stats["przelewow"]) in view._summary.text()
+    # Liczba wynikow jest w wierszu tytulu, wiec nie zabiera osobnego wiersza.
+    expected = i18n.RESULTS_COUNT_EXACT.format(
+        count=i18n.documents_count(corpus_stats["przelewow"])
+    )
+    assert view.header.meta_label.text() == expected
     assert not view.is_searching()
     assert view.query_edit.isEnabled()
     assert view.search_button.toolTip() == i18n.SEARCH_BUTTON
@@ -140,7 +144,10 @@ def test_hybrid_mode_reports_missing_semantic_index(
     view.run_search()
 
     qtbot.waitUntil(lambda: bool(result_cards(view)), timeout=TIMEOUT_MS)  # type: ignore[attr-defined]
-    assert "semantyczny jest niedostępny" in view._summary.text()
+    # Uwaga o niekompletnosci idzie do banera ostrzegawczego nad lista wynikow.
+    assert "semantyczny jest niedostępny" in view.notes_banner.text()
+    assert view.notes_banner.property("bannerRole") == "warning"
+    assert not view.notes_banner.isHidden()
 
 
 @pytest.mark.gui
@@ -159,6 +166,7 @@ def test_empty_index_asks_for_indexing(
     gui_context: AppContext,
     gui_palette: Palette,
     empty_state_text: Callable[[QWidget], str],
+    empty_state_title: Callable[[QWidget], str],
 ) -> None:
     """Pusty indeks konczy sie komunikatem o koniecznosci zaindeksowania."""
     view = SearchView(gui_context, gui_palette)
@@ -167,6 +175,7 @@ def test_empty_index_asks_for_indexing(
 
     view.run_search()
 
+    assert empty_state_title(view) == i18n.SEARCH_INDEX_EMPTY_TITLE
     assert empty_state_text(view) == i18n.SEARCH_INDEX_EMPTY
 
 
@@ -174,6 +183,7 @@ def test_empty_index_asks_for_indexing(
 def test_empty_query_shows_instructions(
     make_search_view: Callable[..., SearchView],
     empty_state_text: Callable[[QWidget], str],
+    empty_state_title: Callable[[QWidget], str],
 ) -> None:
     """Puste zapytanie nie uruchamia wyszukiwania, tylko przypomina o trybach."""
     view = make_search_view()
@@ -181,6 +191,7 @@ def test_empty_query_shows_instructions(
 
     view.run_search()
 
+    assert empty_state_title(view) == i18n.SEARCH_EMPTY_TITLE
     assert empty_state_text(view) == i18n.SEARCH_EMPTY_STATE
 
 
@@ -317,7 +328,7 @@ def test_result_card_emits_actions(qtbot: object, gui_palette: Palette) -> None:
     qtbot.addWidget(card)  # type: ignore[attr-defined]
 
     assert hit.name in card.title_label.text()
-    assert card.title_label.toolTip() == i18n.RESULT_OPEN
+    assert card.title_label.toolTip() == i18n.RESULT_OPEN_HINT
     opened: list[object] = []
     card.open_document.connect(opened.append)
     card.title_label.linkActivated.emit("open")

@@ -30,11 +30,38 @@ from PySide6.QtGui import QColor, QFont, QIcon, QPalette
 from PySide6.QtWidgets import QApplication, QProxyStyle, QStyle, QStyleOption, QWidget
 
 FONT_FAMILY = "Segoe UI Variable Text, Segoe UI, Inter, sans-serif"
-FONT_SIZE = 10
 MONO_FAMILY = "Cascadia Mono, Consolas, monospace"
 
+#: Skala typografii w punktach. Interfejs uzywa tylko tych stopni pisma.
+#: Kazdy kolejny jest wyraznie wieszy od poprzedniego, wiec hierarchia jest
+#: widoczna bez pogrubien i kolorow.
+FONT_SIZE_SMALL = 9
+FONT_SIZE = 10
+FONT_SIZE_TITLE = 12
+FONT_SIZE_QUERY = 13
+FONT_SIZE_BRAND = 15
+FONT_SIZE_PAGE = 17
+
+#: Skala odstepow. Uklady biora marginesy i przerwy wylacznie z tej skali,
+#: dlatego pionowy rytm ekranow jest ten sam bez zmawiania sie widokow.
+SPACE_XS = 4
+SPACE_SM = 8
+SPACE_MD = 12
+SPACE_LG = 16
+SPACE_XL = 24
+
+#: Marginesy wewnetrzne ekranu: lewy, gorny, prawy, dolny.
+PAGE_MARGINS = (SPACE_XL, SPACE_LG, SPACE_XL, SPACE_LG)
+
+RADIUS_SMALL = 6
 RADIUS = 8
 RADIUS_LARGE = 12
+#: Promien plakietki i kropki stanu: polowa wysokosci, czyli pelne zaokraglenie.
+RADIUS_PILL = 10
+
+#: Bok kwadratowego przycisku ikonowego oraz wysokosc pola zapytania.
+ICON_BUTTON_SIZE = 30
+QUERY_HEIGHT = 44
 
 #: Katalog z malymi obrazkami motywu (znacznik wyboru, strzalka listy).
 #: Pliki generuje ``tools/make_theme_icons.py``.
@@ -130,6 +157,29 @@ BADGE_COLORS: dict[str, dict[str, tuple[str, str]]] = {
 }
 
 
+#: Kolory banera komunikatu: rola -> (tlo, obramowanie i tekst).
+#: Baner niesie jedno zdanie o stanie ekranu, wiec kolor musi byc czytelny
+#: bez ikony i bez czytania tresci.
+BANNER_COLORS: dict[str, dict[str, tuple[str, str]]] = {
+    "light": {
+        "success": ("#e6f4e6", "#0f7b0f"),
+        "warning": ("#fdf3e2", "#9d5d00"),
+        "info": ("#e8f1fb", "#0b5394"),
+    },
+    "dark": {
+        "success": ("#1c3520", "#93d7a7"),
+        "warning": ("#3d2f0c", "#f2d67c"),
+        "info": ("#1d3145", "#9ed0ff"),
+    },
+}
+
+#: Kolory kropki stanu w pasku okna: rola -> kolor wypelnienia.
+DOT_COLORS: dict[str, dict[str, str]] = {
+    "light": {"ok": "#0f7b0f", "warn": "#9d5d00", "off": "#8a8a8a"},
+    "dark": {"ok": "#6ccb5f", "warn": "#fce100", "off": "#8a8a8a"},
+}
+
+
 class TabFocusStyle(QProxyStyle):
     """Styl, w ktorym przyciski przyjmuja fokus tylko z klawiatury.
 
@@ -200,18 +250,44 @@ def accent_icon(name: str, palette: Palette | None = None) -> QIcon:
     return _compose_icon(f"{name}-accent", name, variant)
 
 
+def muted_icon(name: str, palette: Palette | None = None) -> QIcon:
+    """Ikona ozdobna w kolorze wyciszonym, do stanow pustych."""
+    variant = (palette or _active_palette).variant
+    return QIcon(str(ICON_DIR / f"{name}-muted-{variant}.svg"))
+
+
 def build_stylesheet(palette: Palette) -> str:
     """Arkusz stylow Qt dla calej aplikacji."""
     p = palette
     check = _icon_url("check", p.variant)
     chevron = _icon_url("chevron", p.variant)
+    light = p.variant == "light"
     # Tlo najechania na przycisk ikonowy lezacy na bialej karcie musi byc
     # ciemniejsze niz karta, a w trybie ciemnym jasniejsze.
-    icon_hover = p.background if p.variant == "light" else p.surface_alt
+    icon_hover = p.background if light else p.surface_alt
+    # Wstawka z fragmentem tekstu lezy na karcie, czyli na najjasniejszej
+    # powierzchnii motywu. W jasnej palecie ``surface_alt`` byloby na niej
+    # niewidoczne, dlatego bierzemy tlo aplikacji.
+    inset = p.background if light else p.surface_alt
+    # Suwak i obramowanie najechania podajemy z przezroczystoscia, zeby dzialaly
+    # nad kazda powierzchnia i nie wymagaly osobnych kolorow w palecie.
+    scroll = "rgba(0, 0, 0, 0.24)" if light else "rgba(255, 255, 255, 0.28)"
+    scroll_hover = "rgba(0, 0, 0, 0.40)" if light else "rgba(255, 255, 255, 0.45)"
+    card_hover = "rgba(0, 0, 0, 0.18)" if light else "rgba(255, 255, 255, 0.24)"
     badge_rules = "\n".join(
         f'QLabel#Badge[badgeRole="{role}"] {{'
         f" background-color: {bg}; color: {fg}; border-color: transparent; }}"
         for role, (bg, fg) in BADGE_COLORS[p.variant].items()
+    )
+    banner_rules = "\n".join(
+        f'QFrame#Banner[bannerRole="{role}"] {{'
+        f" background-color: {bg}; border: 1px solid {fg}; }}"
+        f'\nQFrame#Banner[bannerRole="{role}"] QLabel {{ color: {fg}; }}'
+        for role, (bg, fg) in BANNER_COLORS[p.variant].items()
+    )
+    dot_rules = "\n".join(
+        f'QLabel#StatusDot[dotRole="{role}"] {{ background-color: {color}; }}'
+        for role, color in DOT_COLORS[p.variant].items()
     )
     return f"""
     QWidget {{
@@ -232,7 +308,7 @@ def build_stylesheet(palette: Palette) -> str:
     #SidebarList {{
         background: transparent;
         border: none;
-        padding: 8px 6px;
+        padding: {SPACE_SM}px {SPACE_XS + 2}px;
         outline: none;
     }}
     #SidebarList::item {{
@@ -252,30 +328,42 @@ def build_stylesheet(palette: Palette) -> str:
         background-color: {p.surface};
     }}
     #AppTitle {{
-        font-size: 15pt;
+        font-size: {FONT_SIZE_BRAND}pt;
         font-weight: 600;
-        padding: 16px 16px 0 16px;
     }}
     #AppSubtitle {{
         color: {p.text_muted};
-        padding: 0 16px 12px 16px;
+        font-size: {FONT_SIZE_SMALL}pt;
     }}
     QLabel#PageTitle {{
-        font-size: 17pt;
+        font-size: {FONT_SIZE_PAGE}pt;
         font-weight: 600;
-        padding-bottom: 2px;
+    }}
+    QLabel#PageMeta {{
+        color: {p.text_muted};
     }}
     QLabel#SectionTitle {{
-        font-size: 12pt;
+        font-size: {FONT_SIZE_TITLE}pt;
         font-weight: 600;
-        padding-top: 6px;
+        padding-top: {SPACE_XS + 2}px;
     }}
     QLabel#Muted, QLabel#Hint {{
         color: {p.text_muted};
     }}
+    QLabel#Hint {{
+        font-size: {FONT_SIZE_SMALL}pt;
+    }}
+    QLabel#StatCaption {{
+        color: {p.text_muted};
+        font-size: {FONT_SIZE_SMALL}pt;
+    }}
     QLabel#StatValue {{
-        font-size: 12pt;
+        font-size: {FONT_SIZE_TITLE}pt;
         font-weight: 600;
+    }}
+    QFrame#Divider {{
+        background-color: {p.border};
+        border: none;
     }}
     QFrame#Card, QGroupBox {{
         background-color: {p.surface};
@@ -284,8 +372,8 @@ def build_stylesheet(palette: Palette) -> str:
     }}
     QGroupBox {{
         margin-top: 26px;
-        padding: 6px;
-        font-size: 12pt;
+        padding: {RADIUS_SMALL}px;
+        font-size: {FONT_SIZE_TITLE}pt;
         font-weight: 600;
     }}
     QGroupBox::title {{
@@ -314,7 +402,7 @@ def build_stylesheet(palette: Palette) -> str:
         background-color: {p.surface_alt};
     }}
     QLineEdit#SearchBox {{
-        font-size: 13pt;
+        font-size: {FONT_SIZE_QUERY}pt;
         padding: 11px 14px;
     }}
     QComboBox::drop-down, QDateEdit::drop-down {{
@@ -400,17 +488,34 @@ def build_stylesheet(palette: Palette) -> str:
     QPushButton#Link:hover, QPushButton#Link:focus {{
         text-decoration: underline;
     }}
-    QPushButton#ModeButton {{
+    QPushButton#Segment {{
         padding: 7px 18px;
-        border-radius: {RADIUS}px;
+        border-radius: 0;
     }}
-    QPushButton#ModeButton:checked {{
+    QPushButton#Segment[segmentPos="first"], QPushButton#Segment[segmentPos="only"] {{
+        border-top-left-radius: {RADIUS}px;
+        border-bottom-left-radius: {RADIUS}px;
+    }}
+    QPushButton#Segment[segmentPos="last"], QPushButton#Segment[segmentPos="only"] {{
+        border-top-right-radius: {RADIUS}px;
+        border-bottom-right-radius: {RADIUS}px;
+    }}
+    /* Sasiadujace segmenty leza bez przerwy, wiec tylko pierwszy z nich rysuje
+       lewa krawedz. Inaczej granica miedzy segmentami mialaby dwa piksele. */
+    QPushButton#Segment[segmentPos="middle"], QPushButton#Segment[segmentPos="last"] {{
+        border-left: none;
+    }}
+    QPushButton#Segment:checked {{
         background-color: {p.accent};
         color: {p.accent_text};
         border: 1px solid {p.accent};
         font-weight: 600;
     }}
-    QPushButton#ModeButton:checked:focus {{
+    QPushButton#Segment:checked:hover {{
+        background-color: {p.accent_hover};
+        border: 1px solid {p.accent_hover};
+    }}
+    QPushButton#Segment:checked:focus {{
         border: 1px solid {p.text};
     }}
     QPushButton#IconButton {{
@@ -454,31 +559,51 @@ def build_stylesheet(palette: Palette) -> str:
         border-radius: {RADIUS_LARGE}px;
     }}
     QFrame#ResultCard:hover {{
-        border: 1px solid {p.accent};
+        border: 1px solid {card_hover};
+    }}
+    /* Karta przyjmuje fokus z klawiatury, wiec musi go pokazac wyrazniej niz
+       najechanie myszka: dwa piksele akcentu zamiast szarej krawedzi. */
+    QFrame#ResultCard:focus {{
+        border: 2px solid {p.accent};
     }}
     QLabel#ResultTitle {{
-        font-size: 12pt;
+        font-size: {FONT_SIZE_TITLE}pt;
         font-weight: 600;
         color: {p.accent};
     }}
     QLabel#ResultPath {{
         color: {p.text_muted};
+        font-size: {FONT_SIZE_SMALL}pt;
     }}
     QLabel#Badge {{
         background-color: {p.surface_alt};
         border: 1px solid {p.border};
-        border-radius: 10px;
+        border-radius: {RADIUS_PILL}px;
         padding: 2px 9px;
+        font-size: {FONT_SIZE_SMALL}pt;
         color: {p.text_muted};
     }}
     {badge_rules}
-    QLabel#Snippet {{
-        background-color: {p.surface_alt};
+    QLabel#StatusDot {{
+        border-radius: 5px;
+        min-width: 10px;
+        max-width: 10px;
+        min-height: 10px;
+        max-height: 10px;
+    }}
+    {dot_rules}
+    QFrame#Banner {{
         border-radius: {RADIUS}px;
-        padding: 8px 10px;
+    }}
+    {banner_rules}
+    QLabel#Snippet {{
+        background-color: {inset};
+        border-radius: {RADIUS_SMALL}px;
+        border-left: 2px solid {p.border};
+        padding: {SPACE_SM}px 10px;
     }}
     QProgressBar {{
-        background-color: {p.surface_alt};
+        background-color: {inset};
         border: 1px solid {p.border};
         border-radius: {RADIUS}px;
         height: 20px;
@@ -525,12 +650,12 @@ def build_stylesheet(palette: Palette) -> str:
         margin: 2px;
     }}
     QScrollBar::handle:vertical {{
-        background: {p.border};
+        background: {scroll};
         border-radius: 5px;
         min-height: 30px;
     }}
     QScrollBar::handle:vertical:hover {{
-        background: {p.text_muted};
+        background: {scroll_hover};
     }}
     QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
         height: 0;
@@ -541,9 +666,12 @@ def build_stylesheet(palette: Palette) -> str:
         margin: 2px;
     }}
     QScrollBar::handle:horizontal {{
-        background: {p.border};
+        background: {scroll};
         border-radius: 5px;
         min-width: 30px;
+    }}
+    QScrollBar::handle:horizontal:hover {{
+        background: {scroll_hover};
     }}
     QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{
         width: 0;
@@ -612,7 +740,10 @@ def build_stylesheet(palette: Palette) -> str:
     QStatusBar QLabel {{
         background: transparent;
         color: {p.text_muted};
-        padding: 0 6px;
+        padding: 0 {RADIUS_SMALL}px;
+    }}
+    QStatusBar QLabel#StatusDot {{
+        padding: 0;
     }}
     QToolTip {{
         background-color: {p.surface};
@@ -633,10 +764,13 @@ def build_stylesheet(palette: Palette) -> str:
     }}
     QTabBar::tab {{
         background: transparent;
-        padding: 8px 16px;
-        margin-right: 4px;
+        padding: {SPACE_SM}px {SPACE_LG}px;
+        margin-right: {SPACE_XS}px;
         border-radius: {RADIUS}px;
         color: {p.text_muted};
+    }}
+    QTabBar::tab:hover:!selected {{
+        color: {p.text};
     }}
     QTabBar::tab:selected {{
         background-color: {p.surface};
@@ -717,13 +851,31 @@ def highlight_css(palette: Palette) -> str:
 
 __all__ = [
     "BADGE_COLORS",
+    "BANNER_COLORS",
     "DARK",
+    "DOT_COLORS",
     "FONT_FAMILY",
+    "FONT_SIZE",
+    "FONT_SIZE_BRAND",
+    "FONT_SIZE_PAGE",
+    "FONT_SIZE_QUERY",
+    "FONT_SIZE_SMALL",
+    "FONT_SIZE_TITLE",
+    "ICON_BUTTON_SIZE",
     "ICON_DIR",
     "LIGHT",
     "MONO_FAMILY",
+    "PAGE_MARGINS",
+    "QUERY_HEIGHT",
     "RADIUS",
     "RADIUS_LARGE",
+    "RADIUS_PILL",
+    "RADIUS_SMALL",
+    "SPACE_LG",
+    "SPACE_MD",
+    "SPACE_SM",
+    "SPACE_XL",
+    "SPACE_XS",
     "Palette",
     "TabFocusStyle",
     "accent_icon",
@@ -733,6 +885,7 @@ __all__ = [
     "build_stylesheet",
     "highlight_css",
     "is_dark_mode",
+    "muted_icon",
     "resolve_palette",
     "theme_icon",
 ]
