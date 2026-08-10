@@ -528,9 +528,22 @@ def build_stylesheet(palette: Palette) -> str:
     check = _icon_url("check", p.variant)
     chevron = _icon_url("chevron", p.variant)
     light = p.variant == "light"
+    # Wypelnienie kontrolek (przyciski, pola formularzy): w jasnym motywie
+    # biala powierzchnia, w ciemnym odcien wyraznie jasniejszy od kart.
+    # Kontrolka w kolorze karty zlewala sie z nia i zostawala sama ramka,
+    # a stan wylaczony (surface_alt) byl jasniejszy od wlaczonego.
+    if light:
+        control_bg = p.surface
+        control_hover = p.surface_alt
+        control_pressed = p.border
+    else:
+        surface = QColor(p.surface)
+        control_bg = surface.lighter(128).name()
+        control_hover = surface.lighter(150).name()
+        control_pressed = surface.lighter(112).name()
     # Tlo najechania na przycisk ikonowy lezacy na bialej karcie musi byc
     # ciemniejsze niz karta, a w trybie ciemnym jasniejsze.
-    icon_hover = p.background if light else p.surface_alt
+    icon_hover = p.background if light else control_bg
     # Wstawka z fragmentem tekstu lezy na karcie, czyli na najjasniejszej
     # powierzchnii motywu. W jasnej palecie ``surface_alt`` byloby na niej
     # niewidoczne, dlatego bierzemy tlo aplikacji.
@@ -665,7 +678,7 @@ def build_stylesheet(palette: Palette) -> str:
         background: transparent;
     }}
     QLineEdit, QComboBox, QDateEdit, QSpinBox, QPlainTextEdit, QTextEdit {{
-        background-color: {p.surface};
+        background-color: {control_bg};
         border: 1px solid {p.border};
         border-bottom: 2px solid {p.border};
         border-radius: {RADIUS}px;
@@ -724,7 +737,7 @@ def build_stylesheet(palette: Palette) -> str:
         color: {p.accent_text};
     }}
     QPushButton {{
-        background-color: {p.surface};
+        background-color: {control_bg};
         border: 1px solid {p.border};
         border-radius: {RADIUS}px;
         padding: 8px 16px;
@@ -732,10 +745,10 @@ def build_stylesheet(palette: Palette) -> str:
         outline: none;
     }}
     QPushButton:hover {{
-        background-color: {p.surface_alt};
+        background-color: {control_hover};
     }}
     QPushButton:pressed {{
-        background-color: {p.border};
+        background-color: {control_pressed};
     }}
     QPushButton:focus {{
         border: 1px solid {p.accent};
@@ -996,7 +1009,7 @@ def build_stylesheet(palette: Palette) -> str:
         width: 16px;
         height: 16px;
         border: 1px solid {p.text_muted};
-        background-color: {p.surface};
+        background-color: {control_bg};
     }}
     QCheckBox::indicator {{
         border-radius: 4px;
@@ -1017,7 +1030,7 @@ def build_stylesheet(palette: Palette) -> str:
         border-color: {p.accent_hover};
     }}
     QRadioButton::indicator:checked {{
-        background-color: {p.surface};
+        background-color: {control_bg};
         border: 5px solid {p.accent};
     }}
     QMenu {{
