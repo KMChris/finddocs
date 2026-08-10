@@ -190,7 +190,12 @@ nie jest akcją: nie robi nic poza zmianą widoku. Panel zakładek nie ma ramki
 8. **Fokus z klawiatury musi być wyraźniejszy niż najechanie myszką.** Karta
    wyniku dostaje przy fokusie obramowanie dwupikselowe w kolorze akcentu,
    przy najechaniu tylko szarą krawędź.
-9. **Glif na przycisku akcentowym bierze się z `accent_icon`, nie z `theme_icon`.**
+9. **Styl roli przycisku wymaga jawnej reguły dla stanu wyłączonego.**
+   Selektor z identyfikatorem (`QPushButton#Danger`) wygrywa specyficznością
+   z samą pseudoklasą (`QPushButton:disabled`). Bez reguły
+   `#Danger:disabled` wyłączony przycisk zostaje czerwony i wygląda na
+   klikalny. Stan wyłączony osłabia napis, obramowanie i glif.
+10. **Glif na przycisku akcentowym bierze się z `accent_icon`, nie z `theme_icon`.**
    Napis na przycisku `#Primary` ma kolor `accent_text`, więc ikona musi mieć ten
    sam kolor. W trybie ciemnym akcent jest jasny, a napis na nim ciemny: glif
    z `theme_icon` byłby wtedy jasny i ikona miałaby przeciwny kolor niż napis

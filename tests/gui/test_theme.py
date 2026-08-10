@@ -114,6 +114,23 @@ def test_role_plakietek_sa_w_arkuszu_stylow_obu_palet() -> None:
             assert foreground in css
 
 
+def test_wylaczony_przycisk_danger_traci_czerwien() -> None:
+    """Identyfikator wygrywa z pseudoklasa, wiec regula :disabled musi byc jawna."""
+    for palette in (theme.LIGHT, theme.DARK):
+        css = theme.build_stylesheet(palette)
+        assert "QPushButton#Danger:disabled" in css
+        block = css.split("QPushButton#Danger:disabled", 1)[1].split("}", 1)[0]
+        assert palette.text_muted in block
+
+
+def test_wylaczony_przycisk_ma_oslabione_obramowanie() -> None:
+    """Na bialej karcie roznica tla nie istnieje, stan niesie obramowanie."""
+    for palette in (theme.LIGHT, theme.DARK):
+        css = theme.build_stylesheet(palette)
+        block = css.split("QPushButton:disabled", 1)[1].split("}", 1)[0]
+        assert "border: 1px solid" in block
+
+
 def test_podswietlenie_list_rozwijanych_i_tabel_ma_kontrast() -> None:
     """Ostylowany ::item nie dziedziczy selection-background-color z widoku.
 

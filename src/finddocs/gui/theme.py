@@ -309,6 +309,10 @@ def build_stylesheet(palette: Palette) -> str:
     scroll = "rgba(0, 0, 0, 0.24)" if light else "rgba(255, 255, 255, 0.28)"
     scroll_hover = "rgba(0, 0, 0, 0.40)" if light else "rgba(255, 255, 255, 0.45)"
     card_hover = "rgba(0, 0, 0, 0.18)" if light else "rgba(255, 255, 255, 0.24)"
+    # Przycisk wylaczony lezy najczesciej na bialej karcie, gdzie roznica tla
+    # surface/surface_alt jest niewidoczna. Stan wylaczony musi wiec oslabiac
+    # takze obramowanie, nie tylko kolor napisu.
+    disabled_border = "#ececec" if light else "#343434"
     # Tla pozycji nawigacji sa neutralne, a kolor zaznaczenia niesie pigulka
     # akcentu. Dwa poziomy przezroczystosci wystarcza, zeby najechanie rozniilo
     # sie od zaznaczenia w obu wariantach palety.
@@ -496,6 +500,7 @@ def build_stylesheet(palette: Palette) -> str:
     QPushButton:disabled {{
         color: {p.text_muted};
         background-color: {p.surface_alt};
+        border: 1px solid {disabled_border};
     }}
     QPushButton#Primary {{
         background-color: {p.accent};
@@ -515,10 +520,16 @@ def build_stylesheet(palette: Palette) -> str:
     QPushButton#Primary:disabled {{
         color: {p.text_muted};
         background-color: {p.surface_alt};
-        border: 1px solid {p.border};
+        border: 1px solid {disabled_border};
     }}
     QPushButton#Danger {{
         color: {p.danger};
+    }}
+    /* Selektor z identyfikatorem wygrywa specyficznoscia z sama pseudoklasa,
+       wiec bez tej reguly wylaczony przycisk Danger zostalby czerwony
+       i wygladal na klikalny. */
+    QPushButton#Danger:disabled {{
+        color: {p.text_muted};
     }}
     QPushButton#Link {{
         background: transparent;
@@ -593,7 +604,7 @@ def build_stylesheet(palette: Palette) -> str:
     }}
     QPushButton#PrimaryIcon:disabled {{
         background-color: {p.surface_alt};
-        border: 1px solid {p.border};
+        border: 1px solid {disabled_border};
     }}
     QFrame#ResultCard {{
         background-color: {p.surface};
