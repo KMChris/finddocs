@@ -447,6 +447,15 @@ def build_stylesheet(palette: Palette) -> str:
         color: {p.text_muted};
         background-color: {p.surface_alt};
     }}
+    /* Pole oznaczone jako brakujace w walidacji formularza. Wlasciwosc ustawia
+       formularz, a edycja pola ja zdejmuje. */
+    QLineEdit[fieldInvalid="true"], QComboBox[fieldInvalid="true"] {{
+        border: 1px solid {p.danger};
+        border-bottom: 2px solid {p.danger};
+    }}
+    QLabel#FormError {{
+        color: {p.danger};
+    }}
     QLineEdit#SearchBox {{
         font-size: {FONT_SIZE_QUERY}pt;
         padding: 11px 14px;

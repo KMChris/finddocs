@@ -36,7 +36,7 @@ from finddocs.gui.dialogs import ask_yes_no, show_error, show_info, show_warning
 from finddocs.gui.model_dialog import ModelSettingsDialog
 from finddocs.gui.tables import configure_columns
 from finddocs.gui.theme import SPACE_LG, SPACE_SM, accent_icon, theme_icon
-from finddocs.gui.widgets.page import Banner, PageHeader, page_layout
+from finddocs.gui.widgets.page import Banner, PageHeader, page_layout, repolish
 from finddocs.gui.workers import CallableTask, thread_pool
 from finddocs.logging_setup import get_logger
 from finddocs.providers.model_manifest import describe_models, sync_embedding_settings
@@ -98,6 +98,22 @@ class SharePointDialog(QDialog):
         form.addRow("", self.recursive_check)
         layout.addLayout(form)
 
+        # Brakujace pola sa oznaczane na miejscu, bez osobnego okna z pouczeniem.
+        self.error_label = QLabel("")
+        self.error_label.setObjectName("FormError")
+        self.error_label.setWordWrap(True)
+        self.error_label.setVisible(False)
+        layout.addWidget(self.error_label)
+
+        self._required_fields: tuple[tuple[QLineEdit, str], ...] = (
+            (self.site_edit, "adres witryny"),
+            (self.library_edit, "nazwa biblioteki"),
+            (self.tenant_edit, "identyfikator dzierżawy"),
+            (self.client_edit, "identyfikator aplikacji"),
+        )
+        for edit, _name in self._required_fields:
+            edit.textChanged.connect(lambda _text, field=edit: self._mark_invalid(field, False))
+
         hint = QLabel(
             "Aplikacja łączy się z SharePoint przez Microsoft Graph. Administrator musi "
             "zarejestrować aplikację w Entra ID i nadać uprawnienia delegowane "
@@ -118,21 +134,21 @@ class SharePointDialog(QDialog):
         layout.addWidget(buttons)
         self._existing = existing
 
+    def _mark_invalid(self, edit: QLineEdit, invalid: bool) -> None:
+        """Oznacza pole jako brakujace. Edycja pola zdejmuje oznaczenie."""
+        edit.setProperty("fieldInvalid", "true" if invalid else "")
+        repolish(edit)
+
     def _validate_and_accept(self) -> None:
-        missing = []
-        if not self.site_edit.text().strip():
-            missing.append("adres witryny")
-        if not self.library_edit.text().strip():
-            missing.append("nazwa biblioteki")
-        if not self.tenant_edit.text().strip():
-            missing.append("identyfikator dzierżawy")
-        if not self.client_edit.text().strip():
-            missing.append("identyfikator aplikacji")
+        missing: list[str] = []
+        for edit, name in self._required_fields:
+            empty = not edit.text().strip()
+            self._mark_invalid(edit, empty)
+            if empty:
+                missing.append(name)
         if missing:
-            show_warning(
-                self,
-                "Uzupełnij pola: " + ", ".join(missing) + ".",
-            )
+            self.error_label.setText("Uzupełnij pola: " + ", ".join(missing) + ".")
+            self.error_label.setVisible(True)
             return
         self.accept()
 
@@ -201,6 +217,10 @@ class SourcesView(QWidget):
         self.table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
         self.table.verticalHeader().setVisible(False)
         self.table.itemSelectionChanged.connect(self._refresh_buttons)
+        # Wlaczenie zrodla to stan wiersza, wiec przelacza je pole wyboru
+        # w kolumnie Aktywne. Osobny przycisk wymagal zaznaczenia wiersza
+        # i drugiego klikniecia w innym miejscu ekranu.
+        self.table.itemChanged.connect(self._on_item_changed)
         self.table.setMinimumHeight(TABLE_MIN_HEIGHT)
         self.table.setMaximumHeight(TABLE_MAX_HEIGHT)
         configure_columns(self.table, (2,))
@@ -231,17 +251,12 @@ class SourcesView(QWidget):
 
         buttons.addStretch(1)
 
-        # Trzy akcje ponizej dzialaja na zaznaczonym wierszu, wiec bez zaznaczenia
+        # Akcje ponizej dzialaja na zaznaczonym wierszu, wiec bez zaznaczenia
         # sa wylaczone. Wczesniej klikniecie konczylo sie oknem z pouczeniem.
         self.test_button = QPushButton(i18n.SOURCES_TEST)
         self.test_button.setToolTip(i18n.SOURCES_TEST_HINT)
         self.test_button.clicked.connect(self.test_selected)
         buttons.addWidget(self.test_button)
-
-        self.toggle_button = QPushButton(i18n.SOURCES_TOGGLE)
-        self.toggle_button.setToolTip(i18n.SOURCES_TOGGLE_HINT)
-        self.toggle_button.clicked.connect(self.toggle_selected)
-        buttons.addWidget(self.toggle_button)
 
         self.remove_button = QPushButton(i18n.SOURCES_REMOVE)
         self.remove_button.setObjectName("Danger")
@@ -255,7 +270,7 @@ class SourcesView(QWidget):
     def _refresh_buttons(self) -> None:
         """Akcje wymagajace zaznaczenia sa dostepne tylko wtedy, gdy jest wybor."""
         selected = self._selected_source() is not None
-        for button in (self.test_button, self.toggle_button, self.remove_button):
+        for button in (self.test_button, self.remove_button):
             button.setEnabled(selected)
 
     def _build_storage_box(self) -> QWidget:
@@ -317,13 +332,17 @@ class SourcesView(QWidget):
 
         apply_button = QPushButton("Zastosuj ustawienia modelu")
         apply_button.clicked.connect(self.apply_model)
-        layout.addWidget(apply_button)
+        # Wyrownanie do prawej trzyma naturalna szerokosc przycisku. Bez niego
+        # pionowy uklad rozciaga go na cala karte i wyglada jak pasek.
+        layout.addWidget(apply_button, 0, Qt.AlignmentFlag.AlignRight)
         layout.addStretch(1)
         return box
 
     # --- odswiezanie ------------------------------------------------------
 
     def refresh(self) -> None:
+        # Wypelnianie tabeli nie moze uruchamiac obslugi zmiany pola wyboru.
+        self.table.blockSignals(True)
         self.table.setRowCount(0)
         for source in self.context.config.sources:
             position = self.table.rowCount()
@@ -332,13 +351,24 @@ class SourcesView(QWidget):
                 source.label,
                 "katalog lokalny" if source.kind is SourceKind.LOCAL_DIR else "SharePoint",
                 source.describe_location(),
-                "tak" if source.enabled else "nie",
             ]
             for column, value in enumerate(values):
                 item = QTableWidgetItem(value)
                 if column == 0:
                     item.setData(SOURCE_ID_ROLE, source.source_id)
                 self.table.setItem(position, column, item)
+            toggle = QTableWidgetItem("")
+            toggle.setFlags(
+                Qt.ItemFlag.ItemIsUserCheckable
+                | Qt.ItemFlag.ItemIsEnabled
+                | Qt.ItemFlag.ItemIsSelectable
+            )
+            toggle.setCheckState(
+                Qt.CheckState.Checked if source.enabled else Qt.CheckState.Unchecked
+            )
+            toggle.setToolTip(i18n.SOURCES_ACTIVE_HINT)
+            self.table.setItem(position, 3, toggle)
+        self.table.blockSignals(False)
         if self.context.config.sources:
             self.empty_banner.hide_message()
         else:
@@ -452,15 +482,26 @@ class SourcesView(QWidget):
         )
         thread_pool().start(task)
 
-    def toggle_selected(self) -> None:
-        source = self._selected_source()
-        if source is None:
+    def _on_item_changed(self, item: QTableWidgetItem) -> None:
+        """Pole wyboru w kolumnie Aktywne wlacza i wylacza zrodlo."""
+        if item.column() != 3:
             return
-        source.enabled = not source.enabled
+        id_item = self.table.item(item.row(), 0)
+        if id_item is None:
+            return
+        try:
+            source = self.context.config.source(str(id_item.data(SOURCE_ID_ROLE)))
+        except Exception:
+            return
+        enabled = item.checkState() is Qt.CheckState.Checked
+        if source.enabled == enabled:
+            return
+        source.enabled = enabled
         self.context.config = self.context.config.with_source(source)
         self.context.save()
-        self.refresh()
         self.sources_changed.emit()
+        template = i18n.SOURCES_ENABLED_ON if enabled else i18n.SOURCES_ENABLED_OFF
+        self.status_message.emit(template.format(label=source.label))
 
     def remove_selected(self) -> None:
         source = self._selected_source()

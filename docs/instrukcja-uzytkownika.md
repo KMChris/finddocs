@@ -32,7 +32,7 @@ Dopóki nie ma żadnego źródła, ekran **Źródła i konfiguracja** pokazuje n
 listą wskazówkę, od czego zacząć.
 
 Jeśli chcesz najpierw zobaczyć, jak to działa, na tym samym ekranie
-naciśnij **Zbiór demonstracyjny**. Powstanie kilkadziesiąt fikcyjnych
+naciśnij **Utwórz zbiór demonstracyjny**. Powstanie kilkadziesiąt fikcyjnych
 dokumentów po polsku (umowy, notatki, faktury, skany, wiadomości e-mail), które
 możesz od razu zaindeksować. Nie ma w nich żadnych prawdziwych danych osobowych
 ani firmowych.
@@ -205,10 +205,11 @@ dzierżawy, identyfikatora aplikacji i adresu witryny. Po zapisaniu naciśnij
 **Testuj połączenie**: otworzy się okno logowania Microsoft. Zaloguj się swoim
 kontem służbowym. Zobaczysz tylko te dokumenty, do których i tak masz dostęp.
 
-Przyciski **Testuj połączenie**, **Przełącz** (włącza albo wyłącza źródło)
-i **Usuń** działają na źródle zaznaczonym na liście. Dopóki nic nie jest
-zaznaczone, są nieaktywne. **Usuń** kasuje źródło z konfiguracji, a jego
-dokumenty znikają z indeksu.
+Źródło włącza się i wyłącza polem wyboru w kolumnie **Aktywne**. Wyłączone
+źródło nie bierze udziału w skanowaniu, a jego dokumenty zostają w indeksie.
+Przyciski **Testuj połączenie** i **Usuń** działają na źródle zaznaczonym na
+liście. Dopóki nic nie jest zaznaczone, są nieaktywne. **Usuń** kasuje źródło
+z konfiguracji, a jego dokumenty znikają z indeksu.
 
 ## Model wyszukiwania semantycznego
 

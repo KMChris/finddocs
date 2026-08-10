@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import pytest
+from PySide6.QtCore import Qt
 
 from finddocs.gui import i18n
 from finddocs.gui.context import AppContext
-from finddocs.gui.sources_view import SOURCE_ID_ROLE, SourcesView
+from finddocs.gui.sources_view import SOURCE_ID_ROLE, SharePointDialog, SourcesView
 
 
 @pytest.fixture
@@ -22,13 +23,11 @@ def test_akcje_wymagajace_zaznaczenia_sa_wylaczone_bez_wyboru(sources_view: Sour
     """Klikniecie bez zaznaczenia konczylo sie oknem z pouczeniem, zamiast akcja."""
     assert sources_view.table.rowCount() == 1
     assert not sources_view.test_button.isEnabled()
-    assert not sources_view.toggle_button.isEnabled()
     assert not sources_view.remove_button.isEnabled()
 
     sources_view.table.selectRow(0)
 
     assert sources_view.test_button.isEnabled()
-    assert sources_view.toggle_button.isEnabled()
     assert sources_view.remove_button.isEnabled()
 
 
@@ -53,14 +52,32 @@ def test_identyfikator_zrodla_jest_w_danych_wiersza_a_nie_w_kolumnie(
 
 
 @pytest.mark.gui
-def test_przelaczenie_zrodla_dziala_na_zaznaczonym_wierszu(sources_view: SourcesView) -> None:
-    sources_view.table.selectRow(0)
+def test_pole_wyboru_w_wierszu_przelacza_zrodlo(sources_view: SourcesView) -> None:
+    """Wlaczenie zrodla to stan wiersza, bez zaznaczania i osobnego przycisku."""
+    item = sources_view.table.item(0, 3)
     before = sources_view.context.config.sources[0].enabled
+    assert item.checkState() is (Qt.CheckState.Checked if before else Qt.CheckState.Unchecked)
 
-    sources_view.toggle_selected()
+    item.setCheckState(Qt.CheckState.Unchecked if before else Qt.CheckState.Checked)
 
     assert sources_view.context.config.sources[0].enabled is not before
-    assert sources_view.table.item(0, 3).text() == ("tak" if not before else "nie")
+
+
+@pytest.mark.gui
+def test_dialog_sharepoint_oznacza_brakujace_pola(qtbot: object) -> None:
+    """Walidacja dziala na miejscu: czerwone pola i podpis, bez osobnego okna."""
+    dialog = SharePointDialog()
+    qtbot.addWidget(dialog)  # type: ignore[attr-defined]
+
+    dialog._validate_and_accept()
+
+    assert not dialog.error_label.isHidden()
+    assert "adres witryny" in dialog.error_label.text()
+    assert dialog.site_edit.property("fieldInvalid") == "true"
+
+    dialog.site_edit.setText("https://firma.sharepoint.com/sites/Finanse")
+
+    assert dialog.site_edit.property("fieldInvalid") == ""
 
 
 @pytest.mark.gui
