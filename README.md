@@ -35,8 +35,8 @@ z kodu źródłowego. Wymagany Python od 3.11 do 3.14 na Windows 11.
 
 ```bash
 py -3.11 -m venv .venv
-.venv\Scripts\python -m pip install -r requirements.txt
-.venv\Scripts\python run.py
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+.venv\Scripts\python.exe run.py
 ```
 
 Trzecie polecenie otwiera interfejs graficzny. Nie trzeba uruchamiać żadnego
@@ -44,13 +44,13 @@ serwera ani wpisywać adresu w przeglądarce. Ten sam skrypt daje dostęp do
 poleceń administracyjnych:
 
 ```bash
-.venv\Scripts\python run.py --help
+.venv\Scripts\python.exe run.py --help
 ```
 
 Silnik OCR jest opcjonalny i instaluje się osobno:
 
 ```bash
-.venv\Scripts\python -m pip install -r requirements-ocr.txt
+.venv\Scripts\python.exe -m pip install -r requirements-ocr.txt
 ```
 
 Wyszukiwanie dokładne działa od razu. Wyszukiwanie semantyczne i hybrydowe
@@ -58,8 +58,8 @@ wymaga lokalnego modelu embeddingów, który instaluje jedno polecenie (za jawn�
 zgodą pobiera model z Hugging Face i konwertuje do ONNX):
 
 ```bash
-.venv\Scripts\python -m pip install -r requirements-export.txt
-.venv\Scripts\python run.py model import --use
+.venv\Scripts\python.exe -m pip install -r requirements-export.txt
+.venv\Scripts\python.exe run.py model import --use
 ```
 
 Polecenie `model import` przyjmuje też katalog z własnym modelem albo dowolne
@@ -77,9 +77,9 @@ można wyszukiwać.
 To samo z wiersza poleceń:
 
 ```bash
-.venv\Scripts\python run.py demo --register
-.venv\Scripts\python run.py index
-.venv\Scripts\python run.py search "procedura przelewów 24.07.2015"
+.venv\Scripts\python.exe run.py demo --register
+.venv\Scripts\python.exe run.py index
+.venv\Scripts\python.exe run.py search "procedura przelewów 24.07.2015"
 ```
 
 ## Praca nad kodem
