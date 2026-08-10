@@ -190,6 +190,10 @@ class MainWindow(QMainWindow):
             self.search_view.focus_query()
         elif widget is self.indexing_view:
             self.indexing_view.refresh_tables()
+        elif widget is self.report_view:
+            # Raport liczy sie sam przy wejsciu. Ekran proszacy o klikniecie
+            # Odswiez byl jedynym, ktory tego wymagal.
+            self.report_view.refresh_if_stale()
         elif widget is self.diagnostics_view:
             self.diagnostics_view.refresh()
         elif widget is self.sources_view:
@@ -202,6 +206,7 @@ class MainWindow(QMainWindow):
     def _on_index_changed(self) -> None:
         self.refresh_index_status()
         self.search_view.refresh_filter_values()
+        self.report_view.mark_stale()
 
     def _on_sources_changed(self) -> None:
         self.refresh_index_status()

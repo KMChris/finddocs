@@ -287,7 +287,8 @@ REPORT_INCOMPLETE = (
     "Szczegóły znajdują się na liście poniżej."
 )
 REPORT_EMPTY = "Indeks jest pusty. Uruchom skanowanie na ekranie Indeksowanie."
-REPORT_NEEDS_REFRESH = "Naciśnij Odśwież, żeby policzyć raport."
+REPORT_STAMP = "Stan z {time}"
+REPORT_NEEDS_REFRESH = "Raport jest przeliczany..."
 
 # --- diagnostyka -------------------------------------------------------------
 

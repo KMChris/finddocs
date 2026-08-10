@@ -4,10 +4,16 @@ Ekran odpowiada na jedno pytanie: czy da sie wyszukac wszystko, co zostalo
 wykryte. Odpowiedz jest w banerze na gorze, kolorem: zielony gdy zbior jest
 kompletny, pomaranczowy gdy nie. Liczby sa nizej, dla osoby, ktora chce
 wiedziec dokladnie, czego brakuje.
+
+Raport liczy sie sam przy wejsciu na ekran i po zmianie indeksu. Ekran
+witajacy prosba o klikniecie Odswiez to niepotrzebny klik, a pozostale ekrany
+odswiezaja sie przy wejsciu. Stempel czasu przy przyciskach mowi, z ktorej
+chwili pochodza liczby.
 """
 
 from __future__ import annotations
 
+import datetime as _dt
 from pathlib import Path
 
 from PySide6.QtCore import Signal
@@ -103,6 +109,8 @@ class ReportView(QWidget):
         super().__init__()
         self.context = context
         self._report: CoverageReport | None = None
+        self._loading = False
+        self._stale = True
 
         root = page_layout(self)
 
@@ -127,6 +135,10 @@ class ReportView(QWidget):
         self.export_csv_button.clicked.connect(lambda: self.export("csv"))
         buttons.addWidget(self.export_csv_button)
         buttons.addStretch(1)
+
+        self.stamp_label = QLabel("")
+        self.stamp_label.setObjectName("Hint")
+        buttons.addWidget(self.stamp_label)
         root.addLayout(buttons)
 
         # Eksport bez policzonego raportu konczyl sie oknem z pouczeniem.
@@ -160,7 +172,24 @@ class ReportView(QWidget):
 
     # --- dane -------------------------------------------------------------
 
+    def mark_stale(self) -> None:
+        """Zaznacza, ze indeks sie zmienil i raport wymaga przeliczenia."""
+        self._stale = True
+
+    def refresh_if_stale(self) -> None:
+        """Odswieza raport przy wejsciu na ekran, gdy jest nieaktualny.
+
+        Raport liczy sie w tle, wiec wejscie na ekran niczego nie blokuje.
+        Powtorne wejscie w trakcie liczenia nie zleca drugiego przebiegu.
+        """
+        if self._loading:
+            return
+        if self._report is not None and not self._stale:
+            return
+        self.refresh()
+
     def refresh(self) -> None:
+        self._loading = True
         self.status_message.emit("Przygotowywanie raportu...")
 
         def work() -> CoverageReport:
@@ -170,19 +199,26 @@ class ReportView(QWidget):
 
         task = CallableTask(work, label="raport pokrycia")
         task.signals.finished.connect(self._on_report)
-        task.signals.failed.connect(
-            lambda code, message: show_error(self, f"{message}\n\nKod: {code}")
-        )
+        task.signals.failed.connect(self._on_failed)
         thread_pool().start(task)
+
+    def _on_failed(self, code: str, message: str) -> None:
+        self._loading = False
+        show_error(self, f"{message}\n\nKod: {code}")
 
     def _on_report(self, report: object) -> None:
         if not isinstance(report, CoverageReport):
             return
+        self._loading = False
+        self._stale = False
         self._report = report
         self._set_export_enabled(True)
         self.summary.set_values(summary_values(report))
         self._render_completeness(report)
         self._render_table(report)
+        self.stamp_label.setText(
+            i18n.REPORT_STAMP.format(time=_dt.datetime.now().strftime("%H:%M"))
+        )
         self.status_message.emit("Raport pokrycia zaktualizowany.")
 
     def _set_export_enabled(self, enabled: bool) -> None:

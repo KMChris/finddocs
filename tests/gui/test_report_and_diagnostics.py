@@ -129,6 +129,39 @@ def test_report_export_without_data_asks_for_refresh(
     assert list(gui_context.paths.reports_dir.iterdir()) == []
 
 
+@pytest.mark.gui
+def test_report_refresh_if_stale_liczy_raport_przy_wejsciu(
+    qtbot: object, report_view: ReportView
+) -> None:
+    """Wejscie na ekran uruchamia liczenie, bez klikania Odswiez."""
+    assert report_view._report is None
+
+    report_view.refresh_if_stale()
+
+    _wait_for_report(qtbot, report_view)
+    assert report_view.stamp_label.text().startswith("Stan z")
+
+
+@pytest.mark.gui
+def test_report_refresh_if_stale_nie_liczy_drugi_raz(
+    qtbot: object, report_view: ReportView
+) -> None:
+    """Powtorne wejscie bez zmiany indeksu nie zleca kolejnego przebiegu."""
+    report_view.refresh_if_stale()
+    _wait_for_report(qtbot, report_view)
+    first = report_view._report
+
+    report_view.refresh_if_stale()
+
+    assert report_view._report is first
+
+    report_view.mark_stale()
+    report_view.refresh_if_stale()
+    qtbot.waitUntil(  # type: ignore[attr-defined]
+        lambda: report_view._report is not first, timeout=TIMEOUT_MS
+    )
+
+
 # --- diagnostyka ----------------------------------------------------------------
 
 
