@@ -13,6 +13,8 @@ wyniki. Dlatego chrome nad lista jest tak niski, jak to mozliwe:
 from __future__ import annotations
 
 import datetime as _dt
+from collections.abc import Callable
+from functools import partial
 
 from PySide6.QtCore import QDate, QSize, QStringListModel, Qt, Signal
 from PySide6.QtGui import QKeySequence, QShortcut
@@ -115,6 +117,17 @@ class SearchView(QWidget):
         self.mode_hint.setObjectName("Hint")
         self.mode_hint.setWordWrap(True)
         root.addWidget(self.mode_hint)
+
+        # Chipy aktywnych filtrow: stan filtrow widac bez otwierania panelu,
+        # a klikniecie chipa zdejmuje pojedynczy filtr. Licznik na przycisku
+        # Filtry zostaje, bo mowi o zawezeniu takze przy zwinietym panelu.
+        self._chips_row = QWidget()
+        self._chips_layout = QHBoxLayout(self._chips_row)
+        self._chips_layout.setContentsMargins(0, 0, 0, 0)
+        self._chips_layout.setSpacing(SPACE_SM)
+        self._chips_layout.addStretch(1)
+        self._chips_row.setVisible(False)
+        root.addWidget(self._chips_row)
 
         self._filters_panel = self._build_filters()
         root.addWidget(self._filters_panel)
@@ -445,6 +458,83 @@ class SearchView(QWidget):
             i18n.SEARCH_FILTERS_ACTIVE.format(count=count) if count else i18n.SEARCH_FILTERS
         )
         self.clear_filters_button.setEnabled(count > 0)
+        self._rebuild_filter_chips()
+
+    def _active_filter_entries(self) -> list[tuple[str, Callable[[], None]]]:
+        """Pary (napis chipa, zdjecie filtra) dla aktywnych filtrow."""
+        entries: list[tuple[str, Callable[[], None]]] = []
+        combos = (
+            (i18n.FILTER_EXTENSION, self.filter_extension),
+            (i18n.FILTER_SOURCE, self.filter_source),
+            (i18n.FILTER_LIBRARY, self.filter_library),
+            (i18n.FILTER_AUTHOR, self.filter_author),
+        )
+        for caption, combo in combos:
+            if combo.currentData():
+                entries.append(
+                    (f"{caption}: {combo.currentText()}", partial(combo.setCurrentIndex, 0))
+                )
+        if self.filter_path.text().strip():
+            entries.append(
+                (
+                    f"{i18n.FILTER_PATH}: {self.filter_path.text().strip()}",
+                    self.filter_path.clear,
+                )
+            )
+        for template, editor in (
+            (i18n.FILTER_DATE_FROM_CHIP, self.filter_date_from),
+            (i18n.FILTER_DATE_TO_CHIP, self.filter_date_to),
+        ):
+            if editor.date() != NO_DATE:
+                entries.append(
+                    (
+                        template.format(date=editor.date().toString("dd.MM.yyyy")),
+                        partial(editor.setDate, NO_DATE),
+                    )
+                )
+        if self.filter_ocr.isChecked():
+            entries.append((i18n.FILTER_OCR, partial(self.filter_ocr.setChecked, False)))
+        return entries
+
+    def filter_chips(self) -> list[QPushButton]:
+        """Chipy widoczne aktualnie w wierszu filtrow.
+
+        Czytamy uklad, a nie liste dzieci: chip usuniety przez ``deleteLater``
+        jest dzieckiem do najblizszego obiegu petli zdarzen, ale w ukladzie
+        juz go nie ma.
+        """
+        chips: list[QPushButton] = []
+        for position in range(self._chips_layout.count()):
+            item = self._chips_layout.itemAt(position)
+            widget = item.widget() if item is not None else None
+            if isinstance(widget, QPushButton) and widget.objectName() == "FilterChip":
+                chips.append(widget)
+        return chips
+
+    def _rebuild_filter_chips(self) -> None:
+        while self._chips_layout.count() > 1:
+            item = self._chips_layout.takeAt(0)
+            widget = item.widget() if item is not None else None
+            if widget is not None:
+                widget.deleteLater()
+        entries = self._active_filter_entries()
+        for position, (text, reset) in enumerate(entries):
+            chip = QPushButton(text)
+            chip.setObjectName("FilterChip")
+            chip.setIcon(theme_icon("cross", self.palette_colors))
+            chip.setIconSize(QSize(10, 10))
+            # Odwrocony kierunek ukladu stawia krzyzyk po prawej stronie napisu.
+            chip.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+            chip.setToolTip(i18n.FILTER_CHIP_HINT)
+            chip.clicked.connect(partial(self._remove_filter, reset))
+            self._chips_layout.insertWidget(position, chip)
+        self._chips_row.setVisible(bool(entries))
+
+    def _remove_filter(self, reset: Callable[[], None]) -> None:
+        """Zdejmuje jeden filtr i odswieza wyniki, jezeli jakies sa."""
+        reset()
+        if self._response is not None and self.query_edit.text().strip():
+            self.run_search()
 
     def _update_mode_hint(self) -> None:
         self.mode_hint.setText(i18n.MODE_HINTS[self.current_mode()])

@@ -414,6 +414,45 @@ def test_przycisk_filtrow_liczy_aktywne_filtry(
 
 
 @pytest.mark.gui
+def test_chipy_pokazuja_aktywne_filtry_i_zdejmuja_je(
+    make_search_view: Callable[..., SearchView],
+) -> None:
+    """Stan filtrow widac bez otwierania panelu, a chip zdejmuje jeden filtr."""
+    view = make_search_view()
+    assert view._chips_row.isHidden()
+    assert view.filter_chips() == []
+
+    view.filter_path.setText("procedury/2024")
+    view.filter_ocr.setChecked(True)
+
+    texts = [chip.text() for chip in view.filter_chips()]
+    assert any("procedury/2024" in text for text in texts)
+    assert i18n.FILTER_OCR in texts
+    assert not view._chips_row.isHidden()
+
+    path_chip = next(chip for chip in view.filter_chips() if "procedury" in chip.text())
+    path_chip.click()
+
+    assert view.filter_path.text() == ""
+    assert view.active_filter_count() == 1
+    assert [chip.text() for chip in view.filter_chips()] == [i18n.FILTER_OCR]
+
+    view.clear_filters()
+
+    assert view.filter_chips() == []
+    assert view._chips_row.isHidden()
+
+
+@pytest.mark.gui
+def test_chip_daty_pokazuje_zakres(make_search_view: Callable[..., SearchView]) -> None:
+    view = make_search_view()
+    view.filter_date_from.setDate(QDate(2024, 3, 1))
+
+    texts = [chip.text() for chip in view.filter_chips()]
+    assert i18n.FILTER_DATE_FROM_CHIP.format(date="01.03.2024") in texts
+
+
+@pytest.mark.gui
 def test_wiersz_stron_pojawia_sie_dopiero_przy_wielu_stronach(
     qtbot: object,
     make_search_view: Callable[..., SearchView],

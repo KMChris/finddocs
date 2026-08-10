@@ -698,6 +698,20 @@ def build_stylesheet(palette: Palette) -> str:
     QPushButton#Link:hover, QPushButton#Link:focus {{
         text-decoration: underline;
     }}
+    /* Chip aktywnego filtra: pigulka z krzyzykiem, klikniecie zdejmuje filtr. */
+    QPushButton#FilterChip {{
+        background-color: {p.surface_alt};
+        border: 1px solid {p.border};
+        border-radius: {RADIUS_PILL}px;
+        padding: 2px 10px;
+        font-size: {FONT_SIZE_SMALL}pt;
+        color: {p.text};
+        min-height: 0;
+    }}
+    QPushButton#FilterChip:hover {{
+        border-color: {p.accent};
+        background-color: {p.surface_alt};
+    }}
     QPushButton#Segment {{
         padding: 7px 18px;
         border-radius: 0;
