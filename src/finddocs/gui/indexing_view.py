@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
     QGroupBox,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QProgressBar,
     QPushButton,
     QTableWidget,
@@ -37,7 +38,7 @@ from PySide6.QtWidgets import (
 from finddocs.gui import i18n
 from finddocs.gui.context import AppContext
 from finddocs.gui.dialogs import ask_yes_no, show_error, show_info, show_warning
-from finddocs.gui.tables import configure_columns, format_stamp
+from finddocs.gui.tables import configure_columns, filter_table_rows, format_stamp
 from finddocs.gui.theme import SPACE_SM, accent_icon, theme_icon
 from finddocs.gui.widgets.page import PageHeader, page_layout
 from finddocs.gui.widgets.stat_grid import StatGrid
@@ -267,8 +268,20 @@ class IndexingView(QWidget):
         tabs.addTab(self.error_table, i18n.INDEXING_TAB_ERRORS)
         tabs.addTab(self.skipped_table, i18n.INDEXING_TAB_SKIPPED)
         tabs.currentChanged.connect(lambda _index: self.refresh_tables())
+        # Filtr w rogu paska zakladek zaweza obie tabele do wierszy
+        # zawierajacych wpisany tekst. Liczby w nazwach zakladek zostaja pelne.
+        self.table_filter = QLineEdit()
+        self.table_filter.setPlaceholderText(i18n.TABLE_FILTER_PLACEHOLDER)
+        self.table_filter.setClearButtonEnabled(True)
+        self.table_filter.setFixedWidth(220)
+        self.table_filter.textChanged.connect(lambda _text: self._apply_table_filter())
+        tabs.setCornerWidget(self.table_filter, Qt.Corner.TopRightCorner)
         self._tabs = tabs
         return tabs
+
+    def _apply_table_filter(self) -> None:
+        for table in (self.error_table, self.skipped_table):
+            filter_table_rows(table, self.table_filter.text())
 
     def _make_table(self, headers: list[str], *, stretch: tuple[int, ...]) -> QTableWidget:
         """Tabela, w ktorej kolumny opisowe dostaja wolne miejsce, a krotkie tyle, ile trzeba."""
@@ -454,9 +467,10 @@ class IndexingView(QWidget):
         for row in errors:
             position = self.error_table.rowCount()
             self.error_table.insertRow(position)
+            stage = str(row["stage"] or "")
             values = [
                 str(row["file_name"] or ""),
-                str(row["stage"] or ""),
+                i18n.STAGE_LABELS.get(stage, stage),
                 str(row["code"] or ""),
                 str(row["message"] or ""),
                 format_stamp(str(row["created_at"] or "")),
@@ -485,6 +499,7 @@ class IndexingView(QWidget):
             for column, value in enumerate(values):
                 self.skipped_table.setItem(position, column, QTableWidgetItem(value))
         self._refresh_tab_labels()
+        self._apply_table_filter()
 
     def _refresh_tab_labels(self) -> None:
         """Nazwa zakladki niesie liczbe wierszy, wiec nie trzeba jej otwierac."""

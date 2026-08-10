@@ -38,6 +38,26 @@ def configure_columns(table: QTableWidget, stretch: tuple[int, ...]) -> None:
             header.setSectionResizeMode(column, QHeaderView.ResizeMode.ResizeToContents)
 
 
+def filter_table_rows(table: QTableWidget, needle: str) -> None:
+    """Ukrywa wiersze, w ktorych zadna komorka nie zawiera szukanego tekstu.
+
+    Filtr dziala na tym, co widac, wiec nie wymaga ponownego zapytania do bazy.
+    Pusty tekst pokazuje wszystkie wiersze.
+    """
+    folded = needle.strip().casefold()
+    for row in range(table.rowCount()):
+        if not folded:
+            table.setRowHidden(row, False)
+            continue
+        match = False
+        for column in range(table.columnCount()):
+            item = table.item(row, column)
+            if item is not None and folded in item.text().casefold():
+                match = True
+                break
+        table.setRowHidden(row, not match)
+
+
 def format_stamp(value: str) -> str:
     """Data i godzina w postaci czytelnej dla czlowieka.
 
@@ -54,4 +74,10 @@ def format_stamp(value: str) -> str:
     return moment.strftime("%Y-%m-%d %H:%M:%S")
 
 
-__all__ = ["MIN_STRETCH_WIDTH", "ROW_HEIGHT", "configure_columns", "format_stamp"]
+__all__ = [
+    "MIN_STRETCH_WIDTH",
+    "ROW_HEIGHT",
+    "configure_columns",
+    "filter_table_rows",
+    "format_stamp",
+]

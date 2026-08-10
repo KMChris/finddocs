@@ -274,6 +274,20 @@ JOB_KIND_LABELS: dict[str, str] = {
     "rebuild_vectors": "Przebudowa indeksu wektorowego",
 }
 
+# Nazwy etapow z logu bledow. Wartosci spoza slownika przechodza bez zmian.
+STAGE_LABELS: dict[str, str] = {
+    "attachment": "załącznik",
+    "chunk": "fragmentacja",
+    "download": "pobieranie",
+    "extract": "ekstrakcja",
+    "pipeline": "przetwarzanie",
+    "process": "przetwarzanie",
+    "scan": "skanowanie",
+    "warning": "ostrzeżenie",
+}
+
+TABLE_FILTER_PLACEHOLDER = "Filtruj wiersze..."
+
 INDEXING_LAST_RUN = "Ostatni przebieg"
 INDEXING_LAST_RUN_SUMMARY = (
     "Przetworzone: {processed}, błędy: {failed}, pominięte: {skipped}, czas: {elapsed}"
@@ -292,7 +306,8 @@ REPORT_TITLE = "Raport pokrycia"
 REPORT_EXPORT_JSON = "Eksportuj do JSON"
 REPORT_EXPORT_CSV = "Eksportuj do CSV"
 REPORT_REFRESH = "Odśwież"
-REPORT_SUMMARY = "Podsumowanie"
+REPORT_SUMMARY = "Pokrycie"
+REPORT_TECH = "Informacje techniczne"
 REPORT_NON_SEARCHABLE = "Dokumenty, których nie można wyszukać"
 REPORT_COMPLETE = "Wszystkie wykryte dokumenty są wyszukiwalne."
 REPORT_INCOMPLETE = (

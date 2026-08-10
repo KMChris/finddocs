@@ -17,8 +17,10 @@ TIMEOUT_MS = 15_000
 
 
 def _summary_labels(view: ReportView) -> list[str]:
-    """Napisy widoczne w siatce podsumowania raportu."""
-    return [label.text() for label in view.summary_box.findChildren(QLabel)]
+    """Napisy widoczne w obu siatkach podsumowania raportu."""
+    labels = [label.text() for label in view.summary_box.findChildren(QLabel)]
+    labels += [label.text() for label in view.tech_box.findChildren(QLabel)]
+    return labels
 
 
 @pytest.fixture
@@ -61,9 +63,10 @@ def test_report_shows_summary_after_refresh(qtbot: object, report_view: ReportVi
     assert "Rozmiar indeksu" in labels
     assert "Wersja aplikacji" in labels
     # Siatka podsumowania trzyma wartosci pod kluczami, wiec test nie musi
-    # zgadywac, w ktorym miejscu ukladu lezy dana liczba.
+    # zgadywac, w ktorym miejscu ukladu lezy dana liczba. Liczby pokrycia
+    # i metadane techniczne leza w osobnych kartach.
     assert int(report_view.summary.value("discovered")) > 0
-    assert report_view.summary.value("app_version")
+    assert report_view.tech_summary.value("app_version")
 
 
 @pytest.mark.gui
@@ -162,6 +165,48 @@ def test_report_refresh_if_stale_nie_liczy_drugi_raz(
     )
 
 
+@pytest.mark.gui
+def test_filtr_tabeli_zaweza_wiersze(qtbot: object, report_view: ReportView) -> None:
+    """Wpisanie tekstu w polu filtra ukrywa wiersze bez dopasowania."""
+    report_view.refresh()
+    _wait_for_report(qtbot, report_view)
+    total = report_view.table.rowCount()
+    assert total > 0
+
+    report_view.table_filter.setText("pusty")
+
+    visible = [
+        row for row in range(report_view.table.rowCount()) if not report_view.table.isRowHidden(row)
+    ]
+    assert 0 < len(visible) < total or total == 1
+
+    report_view.table_filter.setText("")
+
+    assert all(
+        not report_view.table.isRowHidden(row) for row in range(report_view.table.rowCount())
+    )
+
+
+def test_wartosci_diagnostyki_sa_czytelne() -> None:
+    """True/False, None i bajty nie moga trafiac do tabeli w surowej postaci."""
+    from finddocs.gui.diagnostics_view import _flatten
+
+    rows = dict(
+        _flatten(
+            {
+                "fts5_dostepne": True,
+                "sciezka": None,
+                "pamiec_calkowita_bajty": 2048,
+                "sqlite": {"wersja_sqlite": "3.42"},
+            }
+        )
+    )
+    assert rows["fts5 dostepne"] == "tak"
+    assert rows["sciezka"] == "brak"
+    assert rows["pamiec calkowita bajty"] == "2,0 kB"
+    assert rows["sqlite / wersja sqlite"] == "3.42"
+
+
 # --- diagnostyka ----------------------------------------------------------------
 
 
@@ -183,8 +228,10 @@ def test_diagnostics_refresh_fills_tables(qtbot: object, diagnostics_view: Diagn
         diagnostics_view.components_table.item(row, 0).text()
         for row in range(diagnostics_view.components_table.rowCount())
     }
+    # Klucze sa humanizowane: podkreslenia zamieniaja sie w spacje.
     assert any(name.startswith("parsery") for name in parameters)
-    assert "model_embeddingow" in parameters
+    assert "model embeddingow" in parameters
+    assert not any("_" in name for name in parameters)
 
 
 @pytest.mark.gui

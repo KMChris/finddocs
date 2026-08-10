@@ -4,11 +4,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
@@ -19,7 +20,7 @@ from PySide6.QtWidgets import (
 from finddocs.gui import i18n
 from finddocs.gui.context import AppContext
 from finddocs.gui.dialogs import show_error, show_info, show_warning
-from finddocs.gui.tables import configure_columns
+from finddocs.gui.tables import configure_columns, filter_table_rows
 from finddocs.gui.theme import SPACE_SM, accent_icon, theme_icon
 from finddocs.gui.widgets.page import PageHeader, page_layout
 from finddocs.gui.workers import CallableTask, thread_pool
@@ -28,8 +29,29 @@ from finddocs.logging_setup import get_logger
 log = get_logger(__name__)
 
 
+def _display_key(key: str) -> str:
+    """Klucz techniczny w postaci czytelnej: bez podkreslen, z separatorem galezi."""
+    return key.replace("_", " ").replace(".", " / ")
+
+
+def _display_value(key: str, value: Any) -> str:
+    """Wartosc w postaci czytelnej: tak/nie, brak, bajty w jednostkach."""
+    if isinstance(value, bool):
+        return "tak" if value else "nie"
+    if value is None:
+        return i18n.STAT_NONE
+    last = key.rsplit(".", 1)[-1]
+    if isinstance(value, int) and (last.endswith("bajty") or last.endswith("bytes")):
+        return i18n.format_bytes(value)
+    return str(value)
+
+
 def _flatten(data: dict[str, Any], prefix: str = "") -> list[tuple[str, str]]:
-    """Zamienia zagniezdzony slownik na pary klucz/wartosc do tabeli."""
+    """Zamienia zagniezdzony slownik na czytelne pary klucz/wartosc do tabeli.
+
+    Surowe klucze z podkresleniami i angielskie ``True``/``False`` wygladaly
+    jak zrzut z debuggera, a interfejs ma byc po polsku.
+    """
     rows: list[tuple[str, str]] = []
     for key, value in data.items():
         label = f"{prefix}{key}"
@@ -40,9 +62,11 @@ def _flatten(data: dict[str, Any], prefix: str = "") -> list[tuple[str, str]]:
                 for index, item in enumerate(value):
                     rows.extend(_flatten(item, prefix=f"{label}[{index}]."))
             else:
-                rows.append((label, ", ".join(str(v) for v in value) or "brak"))
+                rows.append(
+                    (_display_key(label), ", ".join(str(v) for v in value) or i18n.STAT_NONE)
+                )
         else:
-            rows.append((label, str(value)))
+            rows.append((_display_key(label), _display_value(label, value)))
     return rows
 
 
@@ -72,6 +96,13 @@ class DiagnosticsView(QWidget):
         self.tabs.addTab(self.components_table, i18n.DIAG_COMPONENTS)
         self.tabs.addTab(self.index_table, i18n.DIAG_INDEX)
         self.tabs.addTab(self.consistency_table, i18n.DIAG_CONSISTENCY)
+        # Filtr w rogu paska zakladek zaweza wszystkie tabele diagnostyki.
+        self.table_filter = QLineEdit()
+        self.table_filter.setPlaceholderText(i18n.TABLE_FILTER_PLACEHOLDER)
+        self.table_filter.setClearButtonEnabled(True)
+        self.table_filter.setFixedWidth(220)
+        self.table_filter.textChanged.connect(lambda _text: self._apply_table_filter())
+        self.tabs.setCornerWidget(self.table_filter, Qt.Corner.TopRightCorner)
         root.addWidget(self.tabs, stretch=1)
 
         self.log_queries = QCheckBox(i18n.DIAG_LOG_QUERIES)
@@ -147,6 +178,16 @@ class DiagnosticsView(QWidget):
             table.insertRow(position)
             table.setItem(position, 0, QTableWidgetItem(key))
             table.setItem(position, 1, QTableWidgetItem(value))
+        filter_table_rows(table, self.table_filter.text())
+
+    def _apply_table_filter(self) -> None:
+        for table in (
+            self.environment_table,
+            self.components_table,
+            self.index_table,
+            self.consistency_table,
+        ):
+            filter_table_rows(table, self.table_filter.text())
 
     # --- akcje ------------------------------------------------------------
 

@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
     QGroupBox,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
@@ -32,7 +33,7 @@ from PySide6.QtWidgets import (
 from finddocs.gui import i18n
 from finddocs.gui.context import AppContext
 from finddocs.gui.dialogs import show_error, show_info
-from finddocs.gui.tables import configure_columns, format_stamp
+from finddocs.gui.tables import configure_columns, filter_table_rows, format_stamp
 from finddocs.gui.theme import SPACE_SM, accent_icon, theme_icon
 from finddocs.gui.widgets.page import Banner, PageHeader, page_layout
 from finddocs.gui.widgets.stat_grid import StatGrid
@@ -44,9 +45,9 @@ log = get_logger(__name__)
 
 NON_SEARCHABLE_LIMIT = 2000
 
-#: Pary (klucz, podpis) siatki podsumowania. Struktura jest stala, wiec
-#: odswiezenie raportu podmienia same wartosci.
-SUMMARY_ENTRIES: tuple[tuple[str, str], ...] = (
+#: Pary (klucz, podpis) siatki pokrycia: liczby odpowiadajace na pytanie,
+#: co da sie wyszukac. Struktura jest stala, odswiezenie podmienia wartosci.
+SUMMARY_COVERAGE_ENTRIES: tuple[tuple[str, str], ...] = (
     ("discovered", "Wykryte pliki"),
     ("indexed", "Zaindeksowane"),
     ("partial", "Zaindeksowane częściowo"),
@@ -62,6 +63,11 @@ SUMMARY_ENTRIES: tuple[tuple[str, str], ...] = (
     ("other_errors", "Inne błędy"),
     ("total_chunks", "Fragmenty"),
     ("total_vectors", "Wektory"),
+)
+
+#: Metadane indeksu i aplikacji. Osobna karta, zeby nie rozmywaly odpowiedzi
+#: o pokrycie liczbami, ktore nie sa licznikami dokumentow.
+SUMMARY_TECH_ENTRIES: tuple[tuple[str, str], ...] = (
     ("index_size", "Rozmiar indeksu"),
     ("schema_version", "Wersja schematu"),
     ("app_version", "Wersja aplikacji"),
@@ -70,6 +76,9 @@ SUMMARY_ENTRIES: tuple[tuple[str, str], ...] = (
     ("last_scan", "Ostatnie skanowanie"),
     ("last_full_index", "Ostatnie pełne indeksowanie"),
 )
+
+#: Pelny zestaw pol podsumowania, uzywany przy walidacji wartosci.
+SUMMARY_ENTRIES: tuple[tuple[str, str], ...] = SUMMARY_COVERAGE_ENTRIES + SUMMARY_TECH_ENTRIES
 
 
 def summary_values(report: CoverageReport) -> dict[str, str]:
@@ -151,10 +160,19 @@ class ReportView(QWidget):
 
         self.summary_box = QGroupBox(i18n.REPORT_SUMMARY)
         summary_layout = QVBoxLayout(self.summary_box)
-        self.summary = StatGrid(SUMMARY_ENTRIES, columns=3)
-        self.summary.set_values({key: i18n.STAT_NONE for key, _ in SUMMARY_ENTRIES})
+        self.summary = StatGrid(SUMMARY_COVERAGE_ENTRIES, columns=5)
         summary_layout.addWidget(self.summary)
         root.addWidget(self.summary_box)
+
+        self.tech_box = QGroupBox(i18n.REPORT_TECH)
+        tech_layout = QVBoxLayout(self.tech_box)
+        self.tech_summary = StatGrid(SUMMARY_TECH_ENTRIES, columns=4)
+        tech_layout.addWidget(self.tech_summary)
+        root.addWidget(self.tech_box)
+
+        empty_values = {key: i18n.STAT_NONE for key, _ in SUMMARY_ENTRIES}
+        self.summary.set_values(empty_values)
+        self.tech_summary.set_values(empty_values)
 
         self.table = QTableWidget(0, 5)
         self.table.setHorizontalHeaderLabels(
@@ -165,9 +183,18 @@ class ReportView(QWidget):
         self.table.verticalHeader().setVisible(False)
         configure_columns(self.table, (1, 4))
 
+        title_row = QHBoxLayout()
         table_title = QLabel(i18n.REPORT_NON_SEARCHABLE)
         table_title.setObjectName("SectionTitle")
-        root.addWidget(table_title)
+        title_row.addWidget(table_title)
+        title_row.addStretch(1)
+        self.table_filter = QLineEdit()
+        self.table_filter.setPlaceholderText(i18n.TABLE_FILTER_PLACEHOLDER)
+        self.table_filter.setClearButtonEnabled(True)
+        self.table_filter.setFixedWidth(220)
+        self.table_filter.textChanged.connect(lambda text: filter_table_rows(self.table, text))
+        title_row.addWidget(self.table_filter)
+        root.addLayout(title_row)
         root.addWidget(self.table, stretch=1)
 
     # --- dane -------------------------------------------------------------
@@ -213,7 +240,9 @@ class ReportView(QWidget):
         self._stale = False
         self._report = report
         self._set_export_enabled(True)
-        self.summary.set_values(summary_values(report))
+        values = summary_values(report)
+        self.summary.set_values(values)
+        self.tech_summary.set_values(values)
         self._render_completeness(report)
         self._render_table(report)
         self.stamp_label.setText(
@@ -258,6 +287,7 @@ class ReportView(QWidget):
             ]
             for column, value in enumerate(values):
                 self.table.setItem(position, column, QTableWidgetItem(value))
+        filter_table_rows(self.table, self.table_filter.text())
 
     # --- eksport ----------------------------------------------------------
 
@@ -294,4 +324,11 @@ class ReportView(QWidget):
         thread_pool().start(task)
 
 
-__all__ = ["NON_SEARCHABLE_LIMIT", "SUMMARY_ENTRIES", "ReportView", "summary_values"]
+__all__ = [
+    "NON_SEARCHABLE_LIMIT",
+    "SUMMARY_COVERAGE_ENTRIES",
+    "SUMMARY_ENTRIES",
+    "SUMMARY_TECH_ENTRIES",
+    "ReportView",
+    "summary_values",
+]
