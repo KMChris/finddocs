@@ -94,6 +94,11 @@ na karcie. Proza jest sklejana z łamań wierszy pochodzących z ekstrakcji
 (fragmenty tabel zachowują wiersze), bo te łamania potrafiły potroić wysokość
 karty i w oknie mieścił się jeden wynik.
 
+Przy tytule leży glif rodziny pliku (tekst, tabela, obraz, poczta) w kolorze
+wyciszonym. Rodzaj dokumentu widać przed przeczytaniem nazwy, a lista zyskuje
+kotwicę wzrokową. Mapowanie rozszerzeń: `FILE_GLYPH_FAMILIES` w karcie wyniku,
+glify generuje `tools/make_theme_icons.py`.
+
 ### Kształt i kolor
 
 `RADIUS_SMALL` 6 px (wstawki), `RADIUS` 8 px (pola, przyciski),

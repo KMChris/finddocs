@@ -59,6 +59,9 @@ EMPTY_GLYPH_SIZE = 40
 #: wyzsze niz okno i zamienia przeglad listy w przewijanie jednej karty.
 VISIBLE_CHUNKS = 2
 
+#: Bok glifu rodziny pliku przy tytule karty.
+FILE_GLYPH_SIZE = 18
+
 
 def snippet_to_html(text: str, palette: Palette) -> str:
     """Zamienia znaczniki trafien na bezpieczny HTML z wyroznieniem."""
@@ -95,6 +98,46 @@ def score_role(score: float) -> str:
     if score >= SCORE_MID:
         return "score-mid"
     return "score-low"
+
+
+#: Rodziny plikow dla glifu przy tytule karty. Rozszerzenia spoza slownika
+#: dostaja kartke bez wnetrza. Zestaw odpowiada rozszerzeniom ekstraktorow.
+FILE_GLYPH_FAMILIES: dict[str, frozenset[str]] = {
+    "file-table": frozenset({"csv", "tsv", "xls", "xlt", "xlsx", "xlsm", "xltx"}),
+    "file-image": frozenset({"png", "jpg", "jpeg", "tif", "tiff", "bmp", "gif", "webp"}),
+    "file-mail": frozenset({"msg", "eml", "mht", "mhtml"}),
+    "file-text": frozenset(
+        {
+            "pdf",
+            "doc",
+            "dot",
+            "docx",
+            "docm",
+            "rtf",
+            "txt",
+            "log",
+            "md",
+            "html",
+            "htm",
+            "xhtml",
+            "json",
+            "xml",
+            "ini",
+            "cfg",
+            "yaml",
+            "yml",
+        }
+    ),
+}
+
+
+def file_glyph(extension: str) -> str:
+    """Nazwa glifu rodziny pliku dla rozszerzenia dokumentu."""
+    ext = extension.lower().lstrip(".")
+    for glyph, extensions in FILE_GLYPH_FAMILIES.items():
+        if ext in extensions:
+            return glyph
+    return "file-generic"
 
 
 class ResultCard(QFrame):
@@ -187,6 +230,18 @@ class ResultCard(QFrame):
         """Nazwa pliku jako odnosnik oraz akcje dokumentu przy prawej krawedzi."""
         row = QHBoxLayout()
         row.setSpacing(SPACE_XS)
+
+        # Glif rodziny pliku daje liscie kotwice wzrokowa: rodzaj dokumentu
+        # widac przed przeczytaniem nazwy. Kolor wyciszony, zeby nie konkurowal
+        # z tytulem.
+        glyph = QLabel()
+        glyph.setObjectName("FileGlyph")
+        glyph.setPixmap(
+            muted_icon(file_glyph(hit.extension), palette).pixmap(
+                QSize(FILE_GLYPH_SIZE, FILE_GLYPH_SIZE)
+            )
+        )
+        row.addWidget(glyph, 0, Qt.AlignmentFlag.AlignTop)
 
         title = QLabel(f'<a href="open" style="text-decoration: none;">{html.escape(hit.name)}</a>')
         title.setObjectName("ResultTitle")
@@ -374,12 +429,15 @@ class EmptyState(QWidget):
 
 __all__ = [
     "EMPTY_GLYPH_SIZE",
+    "FILE_GLYPH_FAMILIES",
+    "FILE_GLYPH_SIZE",
     "MAX_PATH_CHARS",
     "SCORE_HIGH",
     "SCORE_MID",
     "VISIBLE_CHUNKS",
     "EmptyState",
     "ResultCard",
+    "file_glyph",
     "flatten_snippet",
     "score_role",
     "shorten_path",

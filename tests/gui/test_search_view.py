@@ -17,6 +17,7 @@ from finddocs.gui.theme import Palette
 from finddocs.gui.widgets.result_card import (
     VISIBLE_CHUNKS,
     ResultCard,
+    file_glyph,
     flatten_snippet,
     score_role,
 )
@@ -521,6 +522,26 @@ def test_score_role_thresholds() -> None:
     assert score_role(0.9) == "score-high"
     assert score_role(0.5) == "score-mid"
     assert score_role(0.1) == "score-low"
+
+
+def test_file_glyph_mapuje_rozszerzenia_na_rodziny() -> None:
+    assert file_glyph(".XLSX") == "file-table"
+    assert file_glyph(".pdf") == "file-text"
+    assert file_glyph(".eml") == "file-mail"
+    assert file_glyph(".png") == "file-image"
+    assert file_glyph(".xyz") == "file-generic"
+
+
+@pytest.mark.gui
+def test_karta_ma_glif_rodziny_pliku(qtbot: object, gui_palette: Palette) -> None:
+    """Rodzaj dokumentu widac przed przeczytaniem nazwy."""
+    card = ResultCard(_sample_hit(), gui_palette)
+    qtbot.addWidget(card)  # type: ignore[attr-defined]
+
+    glyph = card.findChild(QLabel, "FileGlyph")
+    assert glyph is not None
+    pixmap = glyph.pixmap()
+    assert pixmap is not None and not pixmap.isNull()
 
 
 def _hit_with_chunks(count: int, *, total: int, sheet: str | None = None) -> DocumentHit:
