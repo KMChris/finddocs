@@ -46,6 +46,7 @@ from finddocs.gui.theme import (
     accent_icon,
     theme_icon,
 )
+from finddocs.gui.widgets.motion import apply_soft_shadow, expand_vertically
 from finddocs.gui.widgets.page import Banner, PageHeader, page_layout
 from finddocs.gui.widgets.result_card import EmptyState, ResultCard
 from finddocs.gui.widgets.segmented import SegmentedControl
@@ -160,6 +161,9 @@ class SearchView(QWidget):
         completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
         completer.setFilterMode(Qt.MatchFlag.MatchContains)
         self.query_edit.setCompleter(completer)
+        # Pole zapytania jest bohaterem ekranu, wiec jako jedyne pole dostaje
+        # miekki cien (tylko w motywie jasnym).
+        apply_soft_shadow(self.query_edit, self.palette_colors)
         row.addWidget(self.query_edit, stretch=1)
 
         # Jeden kwadratowy przycisk: lupa uruchamia wyszukiwanie, a w trakcie
@@ -426,6 +430,9 @@ class SearchView(QWidget):
         self._filters_panel.setVisible(visible)
         if visible:
             self.refresh_filter_values()
+            # Panel rozwija sie plynnie. Chowanie jest natychmiastowe: ruch
+            # przy znikaniu opoznialby dostep do wynikow pod panelem.
+            expand_vertically(self._filters_panel)
 
     def _update_filter_count(self) -> None:
         """Napis na przycisku Filtry mowi, ile filtrow dziala.
@@ -608,6 +615,7 @@ class SearchView(QWidget):
             card.open_document.connect(self._open_document)
             card.open_location.connect(self._open_location)
             card.copy_link.connect(self._copy_link)
+            apply_soft_shadow(card, self.palette_colors)
             self._results_layout.insertWidget(self._results_layout.count() - 1, card)
         self._scroll.verticalScrollBar().setValue(0)
         self._update_pagination()

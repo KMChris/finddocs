@@ -11,6 +11,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from finddocs.gui.theme import PAGE_MARGINS, SPACE_MD, SPACE_SM
+from finddocs.gui.widgets.motion import fade_in
 
 #: Dozwolone role banera. Kolory sa w ``theme.BANNER_COLORS``.
 BANNER_ROLES = ("success", "warning", "info")
@@ -103,7 +104,10 @@ class Banner(QFrame):
             return
         self._set_role(role)
         self._label.setText(text)
+        was_hidden = self.isHidden()
         self.setVisible(True)
+        if was_hidden:
+            fade_in(self)
 
     def hide_message(self) -> None:
         self._label.setText("")

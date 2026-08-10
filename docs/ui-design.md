@@ -167,6 +167,24 @@ z obramowaniem wygląda jak przycisk, czyli tak samo jak akcje nad nią, a przec
 nie jest akcją: nie robi nic poza zmianą widoku. Panel zakładek nie ma ramki
 (`setDocumentMode(True)`), bo tabele w środku mają własne obramowanie.
 
+## Ruch i cień
+
+Ruch jest oszczędny, wzorem Fluent: jedno przejście 150 ms na pojawienie
+(baner, rozwinięcie panelu filtrów), krzywa `OutCubic`, nic nie sprężynuje.
+Wszystko przez `widgets/motion.py`. Ruch wyłącza się w całości, gdy system
+zgłasza ograniczenie animacji, oraz na platformie `offscreen` (determinizm
+testów).
+
+Cień występuje wyłącznie w motywie jasnym i tylko na polu zapytania oraz
+kartach wyników (rozmycie 14 px, krycie około 8%). W ciemnym motywie cienia
+nie ma: na ciemnym tle byłby poświatą.
+
+Akcent pochodzi z ustawień personalizacji Windows (`system_accent_color`),
+z korektą jasności do kontrastu 4,5 wobec stałego koloru napisu na akcencie
+(`palette_with_accent`). Kolor napisu się nie zmienia, bo w tym kolorze są
+wygenerowane glify przycisków akcentowych. Pasek tytułu okna idzie za motywem
+aplikacji (`apply_title_bar_theme`), także w oknach dialogowych.
+
 ## Reguły, które łatwo złamać
 
 1. **Napis na przycisku ma być krótki, zdanie idzie do podpowiedzi.** Wiersz
