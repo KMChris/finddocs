@@ -26,7 +26,7 @@ from typing import Any
 # Ikony motywu sa w SVG. Sam import wystarcza, zeby PyInstaller dolaczyl
 # biblioteke Qt6Svg i wtyczki SVG do pakietu; w kodzie modul nie jest uzywany.
 import PySide6.QtSvg  # noqa: F401
-from PySide6.QtCore import QSize, Qt
+from PySide6.QtCore import QEvent, QObject, QSize, Qt
 from PySide6.QtGui import QColor, QFont, QFontDatabase, QIcon, QPalette
 from PySide6.QtWidgets import QApplication, QProxyStyle, QStyle, QStyleOption, QWidget
 
@@ -323,6 +323,56 @@ def palette_with_accent(palette: Palette, accent: QColor | None) -> Palette:
         accent_hover=hover.name(),
         accent_pressed=pressed.name(),
     )
+
+
+#: Atrybuty DWM wlaczajace ciemny pasek tytulu. Nowsze kompilacje Windows
+#: uzywaja wartosci 20, starsze (przed 20H1) wartosci 19.
+_DWMWA_USE_IMMERSIVE_DARK_MODE = (20, 19)
+
+
+def apply_title_bar_theme(window: QWidget, *, dark: bool | None = None) -> None:
+    """Dopasowuje kolor paska tytulu okna do motywu aplikacji.
+
+    Qt przelacza pasek tytulu za motywem systemu, ale nie za motywem
+    wymuszonym w aplikacji: przy jasnym systemie i ciemnym motywie pasek
+    zostawal bialy. Niepowodzenie wywolania jest ignorowane, pasek zostaje
+    wtedy systemowy (starsze kompilacje Windows, pulpit zdalny).
+    """
+    if sys.platform != "win32" or not window.isWindow():
+        return
+    handle = int(window.winId())
+    if not handle:
+        return
+    import ctypes
+
+    value = ctypes.c_int(
+        1 if (dark if dark is not None else _active_palette.variant == "dark") else 0
+    )
+    for attribute in _DWMWA_USE_IMMERSIVE_DARK_MODE:
+        try:
+            result = ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                ctypes.c_void_p(handle),
+                ctypes.c_uint(attribute),
+                ctypes.byref(value),
+                ctypes.sizeof(value),
+            )
+        except OSError:
+            return
+        if result == 0:
+            return
+
+
+class _TitleBarFilter(QObject):
+    """Nadaje motyw paska tytulu kazdemu pokazywanemu oknu, takze dialogom."""
+
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
+        if event.type() is QEvent.Type.Show and isinstance(watched, QWidget) and watched.isWindow():
+            apply_title_bar_theme(watched)
+        return False
+
+
+#: Filtr zainstalowany raz przez ``apply_theme``.
+_title_bar_filter: _TitleBarFilter | None = None
 
 
 def system_accent_color() -> QColor | None:
@@ -1003,9 +1053,16 @@ def apply_theme(app: QApplication, preference: str = "system") -> Palette:
     jak czesc tego komputera. Gdy odczyt sie nie uda, zostaje domyslny
     niebieski z palety.
     """
-    global _active_palette, _base_style_key
+    global _active_palette, _base_style_key, _title_bar_filter
     palette = palette_with_accent(resolve_palette(app, preference), system_accent_color())
     _active_palette = palette
+    if _title_bar_filter is None:
+        _title_bar_filter = _TitleBarFilter(app)
+        app.installEventFilter(_title_bar_filter)
+    # Okna juz widoczne (zmiana motywu w trakcie dzialania) dostaja pasek od razu.
+    for widget in app.topLevelWidgets():
+        if widget.isVisible():
+            apply_title_bar_theme(widget, dark=palette.variant == "dark")
     if _base_style_key is None:
         _base_style_key = app.style().objectName() or "windowsvista"
     app.setStyle(TabFocusStyle(_base_style_key))
@@ -1060,6 +1117,7 @@ __all__ = [
     "accent_icon",
     "active_palette",
     "apply_theme",
+    "apply_title_bar_theme",
     "build_qt_palette",
     "build_stylesheet",
     "contrast_ratio",

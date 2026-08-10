@@ -132,6 +132,20 @@ def test_brak_akcentu_systemowego_zostawia_palete_domyslna() -> None:
     assert theme.palette_with_accent(theme.LIGHT, None) is theme.LIGHT
 
 
+def test_motyw_paska_tytulu_nie_wybucha_na_platformie_offscreen(
+    qapp: QApplication,
+) -> None:
+    """Wywolanie na oknie bez prawdziwego uchwytu DWM ma byc bezpieczne."""
+    from PySide6.QtWidgets import QWidget
+
+    window = QWidget()
+    try:
+        theme.apply_title_bar_theme(window, dark=True)
+        theme.apply_title_bar_theme(window, dark=False)
+    finally:
+        window.deleteLater()
+
+
 def test_wylaczony_przycisk_danger_traci_czerwien() -> None:
     """Identyfikator wygrywa z pseudoklasa, wiec regula :disabled musi byc jawna."""
     for palette in (theme.LIGHT, theme.DARK):
