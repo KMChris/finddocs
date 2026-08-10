@@ -143,14 +143,14 @@ DARK = Palette(
 
 
 #: Kolory plakietek na karcie wyniku: rola -> (tlo, tekst), osobno dla palet.
-#: Tla sa pastelowe, a tekst ciemniejszy (jasna paleta) albo jasniejszy (ciemna),
-#: zeby kazda plakietka miala wyrazny kontrast.
+#: Kolor dostaja tylko role niosace znaczenie: rodzaj dopasowania, OCR i sila
+#: dopasowania. Metadane (typ pliku, data, autor) schodza do stylu domyslnego
+#: plakietki, czyli neutralnej szarosci. Data w kolorze sukcesu i autor
+#: w kolorze ostrzezenia sugerowaly stany, ktorych nie ma, a rzad pieciu
+#: barwnych pigulek na kazdej karcie dawal szum silniejszy niz tresc fragmentu.
 BADGE_COLORS: dict[str, dict[str, tuple[str, str]]] = {
     "light": {
         "match": ("#e8f1fb", "#0b5394"),
-        "type": ("#efe6fb", "#5b21a8"),
-        "date": ("#e3f2e9", "#0f6b2f"),
-        "author": ("#fdeee0", "#8a4b0f"),
         "ocr": ("#fff3bf", "#6b5300"),
         "score-high": ("#e3f4e3", "#0f7b0f"),
         "score-mid": ("#fdf2df", "#9d5d00"),
@@ -158,9 +158,6 @@ BADGE_COLORS: dict[str, dict[str, tuple[str, str]]] = {
     },
     "dark": {
         "match": ("#1d3a54", "#9ed0ff"),
-        "type": ("#372350", "#d4b8f9"),
-        "date": ("#1c3a28", "#93d7a7"),
-        "author": ("#46300f", "#f2c483"),
         "ocr": ("#5c4a00", "#ffeaa0"),
         "score-high": ("#1e3b1e", "#95dd95"),
         "score-mid": ("#453309", "#f2d67c"),

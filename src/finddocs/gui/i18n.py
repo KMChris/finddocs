@@ -58,10 +58,13 @@ MODE_HINTS: dict[SearchMode, str] = {
     SearchMode.SEMANTIC: "Ranking przybliżony. Nie gwarantuje kompletności wyników.",
 }
 
+# Plakietka rodzaju dopasowania jest widoczna tylko w trybie hybrydowym,
+# gdzie rodzaj faktycznie rozni sie miedzy wynikami. Sam przymiotnik wystarcza,
+# bo obok jest plakietka sily zaczynajaca sie od slowa ,,dopasowanie''.
 MATCH_LABELS: dict[MatchKind, str] = {
-    MatchKind.EXACT: "dopasowanie dokładne",
-    MatchKind.SEMANTIC: "dopasowanie semantyczne",
-    MatchKind.HYBRID: "dopasowanie hybrydowe",
+    MatchKind.EXACT: "dokładne",
+    MatchKind.SEMANTIC: "semantyczne",
+    MatchKind.HYBRID: "hybrydowe",
 }
 
 RESULT_OPEN = "Otwórz dokument"
@@ -79,6 +82,7 @@ RESULT_SCORE = "Siła dopasowania: {value}"
 
 # Plakietki na karcie wyniku niosa krotki napis, a pelne zdanie jest
 # w podpowiedzi. Cztery pelne zdania obok siebie zaslanialy tresc fragmentu.
+BADGE_MATCH_TOOLTIP = "Skąd pochodzi trafienie: część dokładna, semantyczna albo obie"
 BADGE_TYPE_TOOLTIP = "Typ pliku"
 BADGE_MODIFIED_TOOLTIP = "Data modyfikacji dokumentu"
 BADGE_AUTHOR_TOOLTIP = "Autor z metadanych dokumentu"

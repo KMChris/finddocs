@@ -109,9 +109,17 @@ class ResultCard(QFrame):
     open_location = Signal(object)
     copy_link = Signal(object)
 
-    def __init__(self, hit: DocumentHit, palette: Palette, *, show_score: bool = True) -> None:
+    def __init__(
+        self,
+        hit: DocumentHit,
+        palette: Palette,
+        *,
+        show_score: bool = True,
+        show_match_kind: bool = True,
+    ) -> None:
         super().__init__()
         self.hit = hit
+        self._show_match_kind = show_match_kind
         self.setObjectName("ResultCard")
         self.setFrameShape(QFrame.Shape.NoFrame)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
@@ -233,7 +241,15 @@ class ResultCard(QFrame):
             row.addWidget(label)
             return label
 
-        badge(i18n.MATCH_LABELS.get(hit.match_kind, hit.match_kind.value), "match")
+        # Rodzaj dopasowania ma sens tylko tam, gdzie rozni sie miedzy wynikami,
+        # czyli w trybie hybrydowym. W pozostalych trybach powtarzalby nazwe
+        # trybu na kazdej karcie.
+        if self._show_match_kind:
+            badge(
+                i18n.MATCH_LABELS.get(hit.match_kind, hit.match_kind.value),
+                "match",
+                i18n.BADGE_MATCH_TOOLTIP,
+            )
         if hit.extension:
             badge(hit.extension.lstrip(".").upper(), "type", i18n.BADGE_TYPE_TOOLTIP)
         if hit.modified_at:

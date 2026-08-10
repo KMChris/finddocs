@@ -107,6 +107,12 @@ Role kolorów niosących znaczenie są słownikami: `BADGE_COLORS` (plakietki),
 `BANNER_COLORS` (banery), `DOT_COLORS` (kropka stanu). Każda rola musi istnieć
 w obu wariantach, pilnują tego testy motywu.
 
+Plakietki metadanych na karcie wyniku (typ pliku, data, autor) celowo nie mają
+ról w `BADGE_COLORS` i schodzą do stylu domyślnego, czyli neutralnej szarości.
+Kolor mają tylko role niosące znaczenie: rodzaj dopasowania (widoczny wyłącznie
+w trybie hybrydowym, bo tylko tam różni się między wynikami), OCR i siła
+dopasowania. Data w kolorze sukcesu sugerowała stan, którego nie ma.
+
 ## Kontrolki wspólne
 
 Katalog `src/finddocs/gui/widgets`. Widok, który potrzebuje czegoś, co ma już

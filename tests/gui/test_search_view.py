@@ -483,6 +483,40 @@ def test_result_card_badges_maja_kolorowe_role(qtbot: object, gui_palette: Palet
     assert {"match", "type", "date", "author", "ocr", "score-high"} <= roles
 
 
+def _badge_roles(card: ResultCard) -> set[str]:
+    return {
+        str(label.property("badgeRole"))
+        for label in card.findChildren(QLabel)
+        if label.objectName() == "Badge"
+    }
+
+
+@pytest.mark.gui
+def test_karta_bez_rodzaju_dopasowania_na_zyczenie(qtbot: object, gui_palette: Palette) -> None:
+    """Poza trybem hybrydowym plakietka rodzaju powtarzalaby nazwe trybu."""
+    card = ResultCard(_sample_hit(), gui_palette, show_match_kind=False)
+    qtbot.addWidget(card)  # type: ignore[attr-defined]
+
+    assert "match" not in _badge_roles(card)
+
+
+@pytest.mark.gui
+def test_tryb_dokladny_ukrywa_plakietke_rodzaju_dopasowania(
+    qtbot: object,
+    make_search_view: Callable[..., SearchView],
+    result_cards: Callable[[QWidget], list[ResultCard]],
+) -> None:
+    """Wyniki trybu dokladnego nie nosza plakietki rodzaju dopasowania."""
+    view = make_search_view()
+    _mode_button(view, SearchMode.EXACT).setChecked(True)
+    view.query_edit.setText(QUERY)
+
+    view.run_search()
+
+    qtbot.waitUntil(lambda: bool(result_cards(view)), timeout=TIMEOUT_MS)  # type: ignore[attr-defined]
+    assert all("match" not in _badge_roles(card) for card in result_cards(view))
+
+
 def test_score_role_thresholds() -> None:
     assert score_role(0.9) == "score-high"
     assert score_role(0.5) == "score-mid"

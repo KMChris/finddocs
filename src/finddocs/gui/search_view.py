@@ -534,7 +534,10 @@ class SearchView(QWidget):
 
         for hit in response.hits:
             card = ResultCard(
-                hit, self.palette_colors, show_score=self.context.config.ui.show_scores
+                hit,
+                self.palette_colors,
+                show_score=self.context.config.ui.show_scores,
+                show_match_kind=response.mode is SearchMode.HYBRID,
             )
             card.open_document.connect(self._open_document)
             card.open_location.connect(self._open_location)
