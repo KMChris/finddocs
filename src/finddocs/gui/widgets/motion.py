@@ -40,7 +40,7 @@ def _read_system_setting() -> bool:
     odczytu traktujemy jako zgode, bo to stan domyslny systemu.
     """
     app = QGuiApplication.instance()
-    if app is not None and app.platformName() == "offscreen":
+    if isinstance(app, QGuiApplication) and app.platformName() == "offscreen":
         return False
     if sys.platform != "win32":
         return True
@@ -79,7 +79,9 @@ def fade_in(widget: QWidget, duration: int = DURATION_MS) -> None:
     animation.setEasingCurve(QEasingCurve.Type.OutCubic)
     # Efekt krycia zostawiony na stale przeszkadzalby efektowi cienia,
     # wiec po przejsciu jest zdejmowany.
-    animation.finished.connect(lambda: widget.setGraphicsEffect(None))
+    animation.finished.connect(
+        lambda: widget.setGraphicsEffect(None)  # type: ignore[arg-type]
+    )
     animation.start(QPropertyAnimation.DeletionPolicy.DeleteWhenStopped)
 
 
@@ -111,7 +113,7 @@ def apply_soft_shadow(widget: QWidget, palette: Palette) -> None:
     go rozjasnianiem daje poswiate, ktorej Fluent unika.
     """
     if palette.variant != "light":
-        widget.setGraphicsEffect(None)
+        widget.setGraphicsEffect(None)  # type: ignore[arg-type]
         return
     shadow = QGraphicsDropShadowEffect(widget)
     shadow.setBlurRadius(SHADOW_BLUR)
