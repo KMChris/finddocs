@@ -28,6 +28,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QPushButton,
     QScrollArea,
+    QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
@@ -212,6 +213,14 @@ class SearchView(QWidget):
         ):
             combo.addItem(FILTER_ANY, "")
             combo.currentIndexChanged.connect(self._update_filter_count)
+            # Pole wypelnia swoja kolumne siatki. Bez tego szerokosc listy idzie
+            # za najdluzsza wartoscia z indeksu i pola maja przypadkowe
+            # szerokosci: Autor na cala kolumne, Typ pliku waski.
+            combo.setSizeAdjustPolicy(
+                QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon
+            )
+            combo.setMinimumContentsLength(8)
+            combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
         self.filter_path = QLineEdit()
         self.filter_path.setPlaceholderText("np. transakcje/klientA")
@@ -221,6 +230,7 @@ class SearchView(QWidget):
         self.filter_date_from = QDateEdit()
         self.filter_date_to = QDateEdit()
         for editor in (self.filter_date_from, self.filter_date_to):
+            editor.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
             editor.setCalendarPopup(True)
             editor.setDisplayFormat("dd.MM.yyyy")
             editor.setSpecialValueText(FILTER_ANY)

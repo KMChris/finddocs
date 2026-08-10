@@ -367,6 +367,26 @@ def test_extension_filter_narrows_results(
 
 
 @pytest.mark.gui
+def test_pola_filtrow_wypelniaja_kolumny_siatki(
+    make_search_view: Callable[..., SearchView],
+) -> None:
+    """Szerokosc pola nie moze zalezec od najdluzszej wartosci z indeksu."""
+    from PySide6.QtWidgets import QSizePolicy
+
+    view = make_search_view()
+    fields = (
+        view.filter_extension,
+        view.filter_source,
+        view.filter_library,
+        view.filter_author,
+        view.filter_date_from,
+        view.filter_date_to,
+    )
+    for field in fields:
+        assert field.sizePolicy().horizontalPolicy() == QSizePolicy.Policy.Expanding
+
+
+@pytest.mark.gui
 def test_przycisk_filtrow_liczy_aktywne_filtry(
     make_search_view: Callable[..., SearchView],
 ) -> None:
