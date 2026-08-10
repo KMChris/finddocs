@@ -132,6 +132,31 @@ def test_brak_akcentu_systemowego_zostawia_palete_domyslna() -> None:
     assert theme.palette_with_accent(theme.LIGHT, None) is theme.LIGHT
 
 
+def test_mica_css_zostawia_tresc_nieprzezroczysta() -> None:
+    """Przezroczyste jest okno i pasek boczny, karty z trescia nie."""
+    for palette in (theme.LIGHT, theme.DARK):
+        css = theme.mica_window_css(palette)
+        assert "QMainWindow" in css
+        assert "background: transparent" in css
+        assert "rgba(" in css
+        assert "#Sidebar" in css
+        # Nadpisania nie moga dotykac kart ani pol formularzy.
+        assert "QFrame#Card" not in css
+        assert "QLineEdit" not in css
+
+
+def test_wlaczenie_mica_na_offscreen_konczy_sie_fallbackiem(
+    qapp: QApplication, main_window: object
+) -> None:
+    """Bez prawdziwego DWM okno nie moze zostac przezroczyste."""
+    from PySide6.QtCore import Qt
+    from PySide6.QtWidgets import QWidget
+
+    window = main_window
+    assert isinstance(window, QWidget)
+    assert not window.testAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+
+
 def test_motyw_paska_tytulu_nie_wybucha_na_platformie_offscreen(
     qapp: QApplication,
 ) -> None:

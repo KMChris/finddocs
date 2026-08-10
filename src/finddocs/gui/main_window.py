@@ -25,7 +25,16 @@ from finddocs.gui.report_view import ReportView
 from finddocs.gui.search_view import SearchView
 from finddocs.gui.settings_view import SettingsView
 from finddocs.gui.sources_view import SourcesView
-from finddocs.gui.theme import SPACE_LG, SPACE_MD, SPACE_SM, SPACE_XS, Palette, theme_icon
+from finddocs.gui.theme import (
+    SPACE_LG,
+    SPACE_MD,
+    SPACE_SM,
+    SPACE_XS,
+    Palette,
+    enable_mica,
+    mica_window_css,
+    theme_icon,
+)
 from finddocs.gui.widgets.nav import install_nav_delegate
 from finddocs.gui.widgets.page import StatusDot
 from finddocs.logging_setup import get_logger
@@ -127,6 +136,23 @@ class MainWindow(QMainWindow):
         self._build_shortcuts()
         self.nav.setCurrentRow(0)
         self.refresh_index_status()
+        self._apply_mica()
+
+    def _apply_mica(self) -> None:
+        """Tlo Mica okna glownego, z twardym fallbackiem do obecnych kolorow.
+
+        Kolejnosc ma znaczenie: atrybut przezroczystosci musi byc ustawiony
+        przed utworzeniem natywnego uchwytu, ktore wykonuje ``enable_mica``.
+        Gdy wlaczenie sie nie uda, atrybut jest zdejmowany i okno maluje sie
+        jak dotychczas.
+        """
+        if not self.context.config.ui.mica:
+            return
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        if enable_mica(self):
+            self.setStyleSheet(mica_window_css(self.palette_colors))
+        else:
+            self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
 
     # --- budowa -----------------------------------------------------------
 

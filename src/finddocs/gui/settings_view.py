@@ -29,7 +29,7 @@ from PySide6.QtWidgets import (
 
 from finddocs.gui import i18n
 from finddocs.gui.context import AppContext
-from finddocs.gui.theme import SPACE_LG, SPACE_MD, SPACE_SM, theme_icon
+from finddocs.gui.theme import SPACE_LG, SPACE_MD, SPACE_SM, mica_supported, theme_icon
 from finddocs.gui.widgets.page import PageHeader, page_layout
 from finddocs.gui.widgets.segmented import SegmentedControl
 from finddocs.logging_setup import get_logger
@@ -152,6 +152,14 @@ class SettingsView(QWidget):
         hint.setObjectName("Hint")
         hint.setWordWrap(True)
         layout.addWidget(hint)
+
+        # Przelacznik pokazuje sie tylko tam, gdzie Mica w ogole moze dzialac.
+        self.mica_check = QCheckBox(i18n.SETTINGS_MICA)
+        self.mica_check.setChecked(self.context.config.ui.mica)
+        self.mica_check.setToolTip(i18n.SETTINGS_MICA_HINT)
+        self.mica_check.toggled.connect(self._on_mica_toggled)
+        self.mica_check.setVisible(mica_supported())
+        layout.addWidget(self.mica_check)
         return box
 
     def _build_behavior_box(self) -> QWidget:
@@ -198,6 +206,13 @@ class SettingsView(QWidget):
         self.context.config.ui.theme = value
         self._save()
         self.theme_change_requested.emit(value)
+
+    def _on_mica_toggled(self, checked: bool) -> None:
+        self.context.config.ui.mica = bool(checked)
+        self._save()
+        # Tlo okna to atrybut natywnego uchwytu, wiec okno trzeba zbudowac
+        # od nowa. Uzywamy tej samej sciezki, co zmiana motywu.
+        self.theme_change_requested.emit(self.context.config.ui.theme)
 
     def _on_open_with_changed(self, _index: int) -> None:
         self.context.config.ui.open_documents_with = str(self.open_with_combo.currentData())

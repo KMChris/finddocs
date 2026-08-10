@@ -218,6 +218,8 @@ class UiSettings:
     window_width: int = 1280
     window_height: int = 820
     show_scores: bool = True
+    mica: bool = True
+    """Tlo Mica okna glownego na Windows 11. Starsze systemy ja pomijaja."""
 
 
 @dataclass(slots=True)

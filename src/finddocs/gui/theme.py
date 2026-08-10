@@ -362,6 +362,92 @@ def apply_title_bar_theme(window: QWidget, *, dark: bool | None = None) -> None:
             return
 
 
+#: Atrybut DWM typu tla okna oraz wartosc Mica dla okna glownego.
+_DWMWA_SYSTEMBACKDROP_TYPE = 38
+_DWMSBT_MAINWINDOW = 2
+
+#: Najstarsza kompilacja Windows 11 z publicznym API tla systemowego (22H2).
+_MICA_MIN_BUILD = 22621
+
+
+def mica_supported() -> bool:
+    """Czy system obsluguje tlo Mica okna."""
+    if sys.platform != "win32":
+        return False
+    try:
+        return sys.getwindowsversion().build >= _MICA_MIN_BUILD
+    except OSError:
+        return False
+
+
+def enable_mica(window: QWidget) -> bool:
+    """Wlacza tlo Mica dla okna. Zwraca, czy sie powiodlo.
+
+    Fallback jest twardy: kazde niepowodzenie zostawia okno w obecnym,
+    nieprzezroczystym wygladzie (starsze kompilacje Windows, pulpit zdalny,
+    wylaczona przezroczystosc systemu).
+    """
+    if not mica_supported() or not window.isWindow():
+        return False
+    import ctypes
+
+    class _Margins(ctypes.Structure):
+        _fields_ = [
+            ("left", ctypes.c_int),
+            ("right", ctypes.c_int),
+            ("top", ctypes.c_int),
+            ("bottom", ctypes.c_int),
+        ]
+
+    handle = ctypes.c_void_p(int(window.winId()))
+    value = ctypes.c_int(_DWMSBT_MAINWINDOW)
+    try:
+        result = ctypes.windll.dwmapi.DwmSetWindowAttribute(
+            handle,
+            ctypes.c_uint(_DWMWA_SYSTEMBACKDROP_TYPE),
+            ctypes.byref(value),
+            ctypes.sizeof(value),
+        )
+        if result != 0:
+            return False
+        margins = _Margins(-1, -1, -1, -1)
+        ctypes.windll.dwmapi.DwmExtendFrameIntoClientArea(handle, ctypes.byref(margins))
+    except OSError:
+        return False
+    return True
+
+
+def _rgba(color: str, alpha: float) -> str:
+    """Kolor szesnastkowy jako rgba() z zadanym kryciem."""
+    parsed = QColor(color)
+    return f"rgba({parsed.red()}, {parsed.green()}, {parsed.blue()}, {alpha:.2f})"
+
+
+#: Krycie powierzchni lezacych bezposrednio na tle Mica.
+MICA_SURFACE_ALPHA = 0.65
+
+
+def mica_window_css(palette: Palette) -> str:
+    """Nadpisania stylu okna glownego z wlaczonym tlem Mica.
+
+    Okno staje sie przezroczyste, a panel nawigacji i pasek stanu dostaja
+    polprzezroczyste tla, przez ktore przebija material systemowy. Karty
+    i pola pozostaja nieprzezroczyste: to na nich jest tresc.
+    """
+    p = palette
+    return f"""
+    QMainWindow {{
+        background: transparent;
+    }}
+    #Sidebar {{
+        background-color: {_rgba(p.surface_alt, MICA_SURFACE_ALPHA)};
+    }}
+    QStatusBar {{
+        background-color: {_rgba(p.surface_alt, MICA_SURFACE_ALPHA)};
+    }}
+    """
+
+
 class _TitleBarFilter(QObject):
     """Nadaje motyw paska tytulu kazdemu pokazywanemu oknu, takze dialogom."""
 
@@ -1135,9 +1221,12 @@ __all__ = [
     "build_qt_palette",
     "build_stylesheet",
     "contrast_ratio",
+    "enable_mica",
     "font_family",
     "highlight_css",
     "is_dark_mode",
+    "mica_supported",
+    "mica_window_css",
     "muted_icon",
     "palette_with_accent",
     "resolve_palette",

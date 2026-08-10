@@ -185,6 +185,13 @@ z korektą jasności do kontrastu 4,5 wobec stałego koloru napisu na akcencie
 wygenerowane glify przycisków akcentowych. Pasek tytułu okna idzie za motywem
 aplikacji (`apply_title_bar_theme`), także w oknach dialogowych.
 
+Okno główne ma tło Mica (`enable_mica`, Windows 11 22H2 wzwyż), z twardym
+fallbackiem do obecnych kolorów. Przezroczyste jest okno, panel nawigacji
+i pasek stanu; karty i pola pozostają nieprzezroczyste. Znane ograniczenie:
+przy motywie wymuszonym przeciwnie do systemowego pasek tytułu okna z Mica
+podąża za jasnością systemu. Domyślny motyw `system` nie ma tej niespójności.
+Wyłącznik jest w Ustawieniach i w `ui.mica`.
+
 ## Reguły, które łatwo złamać
 
 1. **Napis na przycisku ma być krótki, zdanie idzie do podpowiedzi.** Wiersz
