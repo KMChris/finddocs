@@ -527,6 +527,8 @@ def build_stylesheet(palette: Palette) -> str:
     p = palette
     check = _icon_url("check", p.variant)
     chevron = _icon_url("chevron", p.variant)
+    spin_up = _icon_url("spin-up", p.variant)
+    spin_down = _icon_url("spin-down", p.variant)
     light = p.variant == "light"
     # Wypelnienie kontrolek (przyciski, pola formularzy): w jasnym motywie
     # biala powierzchnia, w ciemnym odcien wyraznie jasniejszy od kart.
@@ -729,6 +731,39 @@ def build_stylesheet(palette: Palette) -> str:
         image: url("{chevron}");
         width: 16px;
         height: 16px;
+    }}
+    /* Przyciski pola liczby bez systemowych strzalek: przezroczyste pola
+       z chevronami motywu, najechanie jak na przycisku ikonowym. */
+    QSpinBox::up-button, QSpinBox::down-button {{
+        subcontrol-origin: border;
+        width: 24px;
+        border: none;
+        background: transparent;
+        margin: 1px 1px 1px 0;
+    }}
+    QSpinBox::up-button {{
+        subcontrol-position: top right;
+        border-top-right-radius: {RADIUS - 1}px;
+    }}
+    QSpinBox::down-button {{
+        subcontrol-position: bottom right;
+        border-bottom-right-radius: {RADIUS - 1}px;
+    }}
+    QSpinBox::up-button:hover, QSpinBox::down-button:hover {{
+        background-color: {icon_hover};
+    }}
+    QSpinBox::up-button:pressed, QSpinBox::down-button:pressed {{
+        background-color: {p.border};
+    }}
+    QSpinBox::up-arrow {{
+        image: url("{spin_up}");
+        width: 10px;
+        height: 10px;
+    }}
+    QSpinBox::down-arrow {{
+        image: url("{spin_down}");
+        width: 10px;
+        height: 10px;
     }}
     QComboBox QAbstractItemView {{
         background-color: {p.surface};

@@ -48,7 +48,7 @@ def test_uniwersalna_regula_qwidget_nie_ustawia_tla() -> None:
 def test_arkusz_stylow_wskazuje_istniejace_obrazki_motywu() -> None:
     for palette in (theme.LIGHT, theme.DARK):
         css = theme.build_stylesheet(palette)
-        for name in ("check", "chevron"):
+        for name in ("check", "chevron", "spin-up", "spin-down"):
             path = theme.ICON_DIR / f"{name}-{palette.variant}.png"
             assert path.exists(), f"brakuje obrazka {path}"
             assert path.as_posix() in css

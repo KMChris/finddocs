@@ -209,9 +209,13 @@ PLAIN_CLASS_OVERRIDES = {"trash": "danger"}
 GLYPH_SIZE = 16
 
 #: Obrazki wpisane w arkusz stylow: nazwa, rozmiar, grubosc, klasa koloru, operacje.
+#: Chevrony ``spin-*`` sa mniejsze, bo przyciski gora/dol pola liczby maja
+#: po polowie wysokosci pola i pelny chevron by sie w nich nie zmiescil.
 STYLESHEET_ICONS: tuple[tuple[str, int, float, str, tuple[Op, ...]], ...] = (
     ("check", 12, 1.7, "accent", (("line", ((2.6, 6.4), (4.9, 8.7), (9.4, 3.4))),)),
     ("chevron", 16, 1.6, "muted", (("line", ((4.2, 6.4), (8.0, 10.2), (11.8, 6.4))),)),
+    ("spin-up", 10, 1.4, "muted", (("line", ((2.4, 6.2), (5.0, 3.8), (7.6, 6.2))),)),
+    ("spin-down", 10, 1.4, "muted", (("line", ((2.4, 3.8), (5.0, 6.2), (7.6, 3.8))),)),
 )
 
 
