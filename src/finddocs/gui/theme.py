@@ -952,6 +952,24 @@ def build_stylesheet(palette: Palette) -> str:
         background-color: {p.accent};
         color: {p.accent_text};
     }}
+    /* Wskaznik pola wyboru w komorce tabeli (kolumna Aktywne na ekranie
+       zrodel). Bez tej reguly stan niezaznaczony jest pusta komorka bez
+       zadnej afordancji, a zaznaczony samotnym ptaszkiem bez pudelka. */
+    QTableWidget::indicator, QTableView::indicator {{
+        width: 16px;
+        height: 16px;
+        border: 1px solid {p.text_muted};
+        border-radius: 4px;
+        background-color: {control_bg};
+    }}
+    QTableWidget::indicator:hover, QTableView::indicator:hover {{
+        border-color: {p.accent};
+    }}
+    QTableWidget::indicator:checked, QTableView::indicator:checked {{
+        background-color: {p.accent};
+        border-color: {p.accent};
+        image: url("{check}");
+    }}
     QHeaderView::section {{
         background-color: {p.surface_alt};
         border: none;

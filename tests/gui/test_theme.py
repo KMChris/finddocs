@@ -188,6 +188,18 @@ def test_wylaczony_przycisk_ma_oslabione_obramowanie() -> None:
         assert "border: 1px solid" in block
 
 
+def test_wskaznik_wyboru_w_tabeli_ma_pudelko_i_stan_zaznaczony() -> None:
+    """Bez tych regul niezaznaczone pole w komorce tabeli jest niewidoczne."""
+    for palette in (theme.LIGHT, theme.DARK):
+        css = theme.build_stylesheet(palette)
+        assert "QTableWidget::indicator, QTableView::indicator" in css
+        base = css.split("QTableWidget::indicator, QTableView::indicator {", 1)[1].split("}", 1)[0]
+        assert "border: 1px solid" in base
+        checked = css.split("QTableWidget::indicator:checked", 1)[1].split("}", 1)[0]
+        assert f"background-color: {palette.accent}" in checked
+        assert "image: url(" in checked
+
+
 def test_podswietlenie_list_rozwijanych_i_tabel_ma_kontrast() -> None:
     """Ostylowany ::item nie dziedziczy selection-background-color z widoku.
 
