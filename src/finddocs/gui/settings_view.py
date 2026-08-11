@@ -50,6 +50,12 @@ THEME_VALUES: tuple[str, ...] = ("system", "light", "dark")
 PAGE_SIZE_MIN = 5
 PAGE_SIZE_MAX = 100
 
+#: Szerokosci zakladki Ogolne, wzorem ustawien Windows 11. Bez ograniczenia
+#: lista rozciagala sie na ~1300 px, a strzalki pola liczby ladowaly przy
+#: krawedzi okna, daleko od edytowanej wartosci.
+CONTENT_WIDTH = 720
+CONTROL_WIDTH = 360
+
 
 class AboutDialog(QDialog):
     """Okno O programie: wersja, katalogi danych i logow."""
@@ -131,8 +137,11 @@ class SettingsView(QWidget):
     # --- budowa -----------------------------------------------------------
 
     def _build_general_tab(self) -> QWidget:
-        page = QWidget()
-        layout = QVBoxLayout(page)
+        # Tresc w zwartej kolumnie przy lewej krawedzi: na duzym oknie
+        # formularz nie rozciaga sie na cala szerokosc strony.
+        column = QWidget()
+        column.setMaximumWidth(CONTENT_WIDTH)
+        layout = QVBoxLayout(column)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(SPACE_MD)
         layout.addWidget(self._build_appearance_box())
@@ -145,6 +154,13 @@ class SettingsView(QWidget):
         about_row.addStretch(1)
         layout.addLayout(about_row)
         layout.addStretch(1)
+
+        page = QWidget()
+        row = QHBoxLayout(page)
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(0)
+        row.addWidget(column)
+        row.addStretch(1)
         return page
 
     def _build_appearance_box(self) -> QWidget:
@@ -193,6 +209,7 @@ class SettingsView(QWidget):
         position = self.open_with_combo.findData(self.context.config.ui.open_documents_with)
         self.open_with_combo.setCurrentIndex(max(0, position))
         self.open_with_combo.currentIndexChanged.connect(self._on_open_with_changed)
+        self.open_with_combo.setFixedWidth(CONTROL_WIDTH)
         form.addRow(i18n.SETTINGS_OPEN_WITH, self.open_with_combo)
 
         self.page_size_spin = QSpinBox()
@@ -200,6 +217,7 @@ class SettingsView(QWidget):
         self.page_size_spin.setSingleStep(5)
         self.page_size_spin.setValue(self.context.config.search.page_size)
         self.page_size_spin.valueChanged.connect(self._on_page_size_changed)
+        self.page_size_spin.setFixedWidth(CONTROL_WIDTH)
         form.addRow(i18n.SETTINGS_PAGE_SIZE, self.page_size_spin)
 
         self.show_scores_check = QCheckBox(i18n.SETTINGS_SHOW_SCORES)
@@ -263,6 +281,8 @@ class SettingsView(QWidget):
 
 
 __all__ = [
+    "CONTENT_WIDTH",
+    "CONTROL_WIDTH",
     "PAGE_SIZE_MAX",
     "PAGE_SIZE_MIN",
     "THEME_VALUES",

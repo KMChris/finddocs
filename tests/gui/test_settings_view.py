@@ -92,6 +92,17 @@ def test_ustawienia_sa_przypiete_na_dole_i_wybor_jest_wylaczny(
 
 
 @pytest.mark.gui
+def test_formularz_ustawien_jest_zwarty(settings_view: SettingsView) -> None:
+    """Kontrolki nie moga rozciagac sie na cala szerokosc duzego okna."""
+    from finddocs.gui.settings_view import CONTENT_WIDTH, CONTROL_WIDTH
+
+    assert settings_view.open_with_combo.maximumWidth() == CONTROL_WIDTH
+    assert settings_view.page_size_spin.maximumWidth() == CONTROL_WIDTH
+    column = settings_view.open_with_combo.parentWidget().parentWidget()
+    assert column.maximumWidth() == CONTENT_WIDTH
+
+
+@pytest.mark.gui
 def test_diagnostyka_jest_zakladka_ustawien(main_window: MainWindow) -> None:
     """Diagnostyka nie ma pozycji nawigacji, jest druga zakladka Ustawien."""
     from finddocs.gui import i18n
