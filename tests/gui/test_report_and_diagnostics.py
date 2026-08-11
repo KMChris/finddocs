@@ -223,6 +223,10 @@ def test_diagnostics_refresh_fills_tables(qtbot: object, diagnostics_view: Diagn
         timeout=TIMEOUT_MS,
     )
     assert diagnostics_view.index_table.rowCount() > 0
+    # Przycieta kolumna nie pokaze pelnej tresci, wiec komorka ma podpowiedz.
+    first = diagnostics_view.environment_table.item(0, 1)
+    assert first is not None
+    assert first.toolTip() == first.text()
 
     parameters = {
         diagnostics_view.components_table.item(row, 0).text()

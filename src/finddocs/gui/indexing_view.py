@@ -29,7 +29,6 @@ from PySide6.QtWidgets import (
     QProgressBar,
     QPushButton,
     QTableWidget,
-    QTableWidgetItem,
     QVBoxLayout,
     QWidget,
 )
@@ -37,7 +36,7 @@ from PySide6.QtWidgets import (
 from finddocs.gui import i18n
 from finddocs.gui.context import AppContext
 from finddocs.gui.dialogs import ask_yes_no, show_error, show_info, show_warning
-from finddocs.gui.tables import configure_columns, filter_table_rows, format_stamp
+from finddocs.gui.tables import configure_columns, filter_table_rows, format_stamp, text_item
 from finddocs.gui.theme import SPACE_SM, accent_icon, theme_icon
 from finddocs.gui.widgets.page import PageHeader, page_layout
 from finddocs.gui.widgets.stat_grid import StatGrid
@@ -472,7 +471,7 @@ class IndexingView(QWidget):
                 format_stamp(str(row["created_at"] or "")),
             ]
             for column, value in enumerate(values):
-                self.error_table.setItem(position, column, QTableWidgetItem(value))
+                self.error_table.setItem(position, column, text_item(value))
 
         self.skipped_table.setRowCount(0)
         try:
@@ -493,7 +492,7 @@ class IndexingView(QWidget):
                 document.error_message or "",
             ]
             for column, value in enumerate(values):
-                self.skipped_table.setItem(position, column, QTableWidgetItem(value))
+                self.skipped_table.setItem(position, column, text_item(value))
         self._refresh_tab_labels()
         self._apply_table_filter()
 

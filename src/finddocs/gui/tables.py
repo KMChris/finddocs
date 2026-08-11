@@ -11,7 +11,7 @@ from __future__ import annotations
 import datetime as _dt
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QHeaderView, QTableWidget
+from PySide6.QtWidgets import QHeaderView, QTableWidget, QTableWidgetItem
 
 #: Minimalna szerokosc kolumny opisowej, zeby naglowek zawsze byl czytelny.
 MIN_STRETCH_WIDTH = 140
@@ -58,6 +58,18 @@ def filter_table_rows(table: QTableWidget, needle: str) -> None:
         table.setRowHidden(row, not match)
 
 
+def text_item(value: str) -> QTableWidgetItem:
+    """Komorka tekstowa z podpowiedzia rowna tresci.
+
+    Dlugie komunikaty i sciezki sa przycinane wielokropkiem, a tabela nie ma
+    innego sposobu pokazania pelnej tresci niz reczne poszerzanie kolumny.
+    """
+    item = QTableWidgetItem(value)
+    if value:
+        item.setToolTip(value)
+    return item
+
+
 def format_stamp(value: str) -> str:
     """Data i godzina w postaci czytelnej dla czlowieka.
 
@@ -80,4 +92,5 @@ __all__ = [
     "configure_columns",
     "filter_table_rows",
     "format_stamp",
+    "text_item",
 ]

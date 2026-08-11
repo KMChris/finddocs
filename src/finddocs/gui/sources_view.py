@@ -34,7 +34,7 @@ from finddocs.gui import i18n
 from finddocs.gui.context import AppContext
 from finddocs.gui.dialogs import ask_yes_no, show_error, show_info, show_warning
 from finddocs.gui.model_dialog import ModelSettingsDialog
-from finddocs.gui.tables import configure_columns
+from finddocs.gui.tables import configure_columns, text_item
 from finddocs.gui.theme import SPACE_LG, SPACE_SM, accent_icon, theme_icon
 from finddocs.gui.widgets.page import Banner, PageHeader, page_layout, repolish
 from finddocs.gui.workers import CallableTask, thread_pool
@@ -353,7 +353,7 @@ class SourcesView(QWidget):
                 source.describe_location(),
             ]
             for column, value in enumerate(values):
-                item = QTableWidgetItem(value)
+                item = text_item(value)
                 if column == 0:
                     item.setData(SOURCE_ID_ROLE, source.source_id)
                 self.table.setItem(position, column, item)

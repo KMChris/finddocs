@@ -18,7 +18,6 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QPushButton,
     QTableWidget,
-    QTableWidgetItem,
     QVBoxLayout,
     QWidget,
 )
@@ -26,7 +25,7 @@ from PySide6.QtWidgets import (
 from finddocs.gui import i18n
 from finddocs.gui.context import AppContext
 from finddocs.gui.dialogs import show_error, show_info, show_warning
-from finddocs.gui.tables import configure_columns, filter_table_rows
+from finddocs.gui.tables import configure_columns, filter_table_rows, text_item
 from finddocs.gui.theme import SPACE_MD, SPACE_SM, accent_icon, theme_icon
 from finddocs.gui.widgets.tabs import TabPanel
 from finddocs.gui.workers import CallableTask, thread_pool
@@ -179,8 +178,8 @@ class DiagnosticsView(QWidget):
         for key, value in rows:
             position = table.rowCount()
             table.insertRow(position)
-            table.setItem(position, 0, QTableWidgetItem(key))
-            table.setItem(position, 1, QTableWidgetItem(value))
+            table.setItem(position, 0, text_item(key))
+            table.setItem(position, 1, text_item(value))
         filter_table_rows(table, self.table_filter.text())
 
     def _apply_table_filter(self) -> None:
