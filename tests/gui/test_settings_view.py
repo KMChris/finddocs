@@ -92,6 +92,32 @@ def test_ustawienia_sa_przypiete_na_dole_i_wybor_jest_wylaczny(
 
 
 @pytest.mark.gui
+def test_diagnostyka_jest_zakladka_ustawien(main_window: MainWindow) -> None:
+    """Diagnostyka nie ma pozycji nawigacji, jest druga zakladka Ustawien."""
+    from finddocs.gui import i18n
+    from finddocs.gui.diagnostics_view import DiagnosticsView
+
+    labels = [main_window.nav.item(row).text() for row in range(main_window.nav.count())]
+    assert i18n.DIAG_TITLE not in labels
+
+    settings = main_window.settings_view
+    assert settings.tabs.count() == 2
+    assert settings.tabs.tabText(1) == i18n.DIAG_TITLE
+
+    settings.tabs.setCurrentIndex(1)
+    assert settings.tabs.currentWidget() is settings.diagnostics
+    assert isinstance(settings.diagnostics, DiagnosticsView)
+
+
+@pytest.mark.gui
+def test_komunikaty_diagnostyki_docieraja_do_paska_stanu(main_window: MainWindow) -> None:
+    """Sygnal status_message panelu diagnostyki przechodzi przez ustawienia."""
+    main_window.settings_view.diagnostics.status_message.emit("Komunikat diagnostyki")
+
+    assert main_window.status.currentMessage() == "Komunikat diagnostyki"
+
+
+@pytest.mark.gui
 def test_okno_o_programie_pokazuje_wersje_i_katalogi(
     qtbot: object, gui_context: AppContext
 ) -> None:

@@ -7,7 +7,6 @@ from PySide6.QtWidgets import QMessageBox
 
 from finddocs.gui import i18n
 from finddocs.gui.context import AppContext
-from finddocs.gui.diagnostics_view import DiagnosticsView
 from finddocs.gui.indexing_view import IndexingView
 from finddocs.gui.main_window import MainWindow
 from finddocs.gui.report_view import ReportView
@@ -27,9 +26,10 @@ def test_window_builds_on_empty_config(
     qtbot.addWidget(window)  # type: ignore[attr-defined]
 
     assert window.windowTitle().startswith(i18n.APP_TITLE)
-    # Piec ekranow nawigacji glownej plus Ustawienia przypiete na dole.
-    assert window.stack.count() == 6
-    assert window.nav.count() == 5
+    # Cztery ekrany nawigacji glownej plus Ustawienia przypiete na dole.
+    # Diagnostyka jest zakladka Ustawien, nie osobnym ekranem.
+    assert window.stack.count() == 5
+    assert window.nav.count() == 4
     assert window.bottom_nav.count() == 1
 
 
@@ -101,13 +101,12 @@ def test_status_bar_reports_indexed_documents(
 
 @pytest.mark.gui
 def test_navigation_switches_stack(main_window: MainWindow) -> None:
-    """Nawigacja przelacza wszystkie piec ekranow."""
+    """Nawigacja przelacza wszystkie cztery ekrany."""
     expected = [
         (i18n.NAV_SEARCH, SearchView),
         (i18n.NAV_SOURCES, SourcesView),
         (i18n.NAV_INDEXING, IndexingView),
         (i18n.NAV_REPORT, ReportView),
-        (i18n.NAV_DIAGNOSTICS, DiagnosticsView),
     ]
 
     for row, (label, view_type) in enumerate(expected):
@@ -122,7 +121,7 @@ def test_navigation_switches_stack(main_window: MainWindow) -> None:
 
 @pytest.mark.gui
 def test_skroty_przelaczaja_ekrany(main_window: MainWindow) -> None:
-    """Ctrl+1 do Ctrl+5 odpowiadaja pozycjom panelu nawigacji."""
+    """Ctrl+1 do Ctrl+4 odpowiadaja pozycjom nawigacji, Ctrl+5 ustawieniom."""
     from PySide6.QtGui import QKeySequence, QShortcut
 
     registered = {shortcut.key().toString() for shortcut in main_window.findChildren(QShortcut)}

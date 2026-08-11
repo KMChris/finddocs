@@ -178,6 +178,8 @@ kontrolki.
 Ustawienia są przypięte na dole panelu nawigacji jako osobna lista, wzorem
 nawigacji Windows 11. Wybór jest uzgadniany między listami tak, żeby zaznaczona
 była zawsze dokładnie jedna pozycja (`MainWindow._on_bottom_nav_changed`).
+Diagnostyka nie ma pozycji nawigacji: to narzędzie serwisowe, więc jest drugą
+zakładką ekranu Ustawienia i odświeża dane sama przy każdym pokazaniu.
 
 ## Ruch i cień
 

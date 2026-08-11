@@ -17,11 +17,11 @@ NAV_SEARCH = "Wyszukiwanie"
 NAV_SOURCES = "Źródła i konfiguracja"
 NAV_INDEXING = "Indeksowanie"
 NAV_REPORT = "Raport pokrycia"
-NAV_DIAGNOSTICS = "Diagnostyka"
 NAV_SETTINGS = "Ustawienia"
 
 # --- ekran ustawien ----------------------------------------------------------
 
+SETTINGS_TAB_GENERAL = "Ogólne"
 SETTINGS_APPEARANCE = "Wygląd"
 SETTINGS_THEME = "Motyw"
 THEME_LABELS: dict[str, str] = {"system": "Systemowy", "light": "Jasny", "dark": "Ciemny"}
@@ -358,13 +358,15 @@ REPORT_EMPTY = "Indeks jest pusty. Uruchom skanowanie na ekranie Indeksowanie."
 REPORT_STAMP = "Stan z {time}"
 REPORT_NEEDS_REFRESH = "Raport jest przeliczany..."
 
-# --- diagnostyka -------------------------------------------------------------
+# --- diagnostyka (zakladka ekranu Ustawienia) --------------------------------
 
 DIAG_TITLE = "Diagnostyka"
 DIAG_ENVIRONMENT = "Środowisko"
 DIAG_COMPONENTS = "Komponenty"
 DIAG_INDEX = "Indeks"
-DIAG_CONSISTENCY = "Spójność indeksu"
+# Krotka nazwa: obok sa jeszcze trzy zakladki i pole filtra, a caly wiersz
+# musi sie zmiescic takze w najwezszym dozwolonym oknie.
+DIAG_CONSISTENCY = "Spójność"
 DIAG_NETWORK = "Polityka połączeń sieciowych"
 DIAG_REFRESH = "Odśwież"
 # Krotkie napisy na przyciskach, pelne zdanie w podpowiedzi: caly wiersz

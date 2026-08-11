@@ -1,9 +1,12 @@
-"""Ekran ustawien interfejsu oraz okno O programie.
+"""Ekran ustawien: zakladki Ogolne i Diagnostyka oraz okno O programie.
 
 Uzytkownik koncowy nie dotyka terminala ani plikow konfiguracyjnych, wiec
 kazde ustawienie interfejsu musi miec kontrolke. Zmiany dzialaja od razu
 i zapisuja sie w chwili zmiany, bez osobnego przycisku Zastosuj: przycisk
 mialby sens tylko przy zmianach kosztownych, a te ustawienia takie nie sa.
+
+Diagnostyka jest zakladka tego ekranu, nie osobna pozycja nawigacji:
+to narzedzie serwisowe, a nie codzienna praca z dokumentami.
 
 Zmiana motywu wymaga przebudowy okna, bo ikony i palety kontrolek powstaja
 z paleta w konstruktorach widokow. Widok zglasza wiec zadanie sygnalem,
@@ -29,9 +32,11 @@ from PySide6.QtWidgets import (
 
 from finddocs.gui import i18n
 from finddocs.gui.context import AppContext
+from finddocs.gui.diagnostics_view import DiagnosticsView
 from finddocs.gui.theme import SPACE_LG, SPACE_MD, SPACE_SM, mica_supported, theme_icon
 from finddocs.gui.widgets.page import PageHeader, page_layout
 from finddocs.gui.widgets.segmented import SegmentedControl
+from finddocs.gui.widgets.tabs import TabPanel
 from finddocs.logging_setup import get_logger
 from finddocs.version import APP_NAME, APP_VERSION
 
@@ -115,18 +120,32 @@ class SettingsView(QWidget):
         self.header = PageHeader(i18n.NAV_SETTINGS)
         root.addWidget(self.header)
 
-        root.addWidget(self._build_appearance_box())
-        root.addWidget(self._build_behavior_box())
+        self.diagnostics = DiagnosticsView(context)
+        self.diagnostics.status_message.connect(self.status_message)
+
+        self.tabs = TabPanel()
+        self.tabs.addTab(self._build_general_tab(), i18n.SETTINGS_TAB_GENERAL)
+        self.tabs.addTab(self.diagnostics, i18n.DIAG_TITLE)
+        root.addWidget(self.tabs, stretch=1)
+
+    # --- budowa -----------------------------------------------------------
+
+    def _build_general_tab(self) -> QWidget:
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(SPACE_MD)
+        layout.addWidget(self._build_appearance_box())
+        layout.addWidget(self._build_behavior_box())
 
         about_row = QHBoxLayout()
         self.about_button = QPushButton(i18n.ABOUT_TITLE)
         self.about_button.clicked.connect(self.show_about)
         about_row.addWidget(self.about_button)
         about_row.addStretch(1)
-        root.addLayout(about_row)
-        root.addStretch(1)
-
-    # --- budowa -----------------------------------------------------------
+        layout.addLayout(about_row)
+        layout.addStretch(1)
+        return page
 
     def _build_appearance_box(self) -> QWidget:
         box = QGroupBox(i18n.SETTINGS_APPEARANCE)

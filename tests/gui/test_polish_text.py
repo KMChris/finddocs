@@ -134,13 +134,13 @@ def test_statusy_dokumentow_sa_po_polsku() -> None:
 
 
 def test_nawigacja_ma_poprawne_nazwy() -> None:
-    """Piec pozycji nawigacji, kazda po polsku."""
+    """Cztery pozycje nawigacji plus Ustawienia, kazda po polsku."""
     items = [
         i18n.NAV_SEARCH,
         i18n.NAV_SOURCES,
         i18n.NAV_INDEXING,
         i18n.NAV_REPORT,
-        i18n.NAV_DIAGNOSTICS,
+        i18n.NAV_SETTINGS,
     ]
 
     assert items == [
@@ -148,7 +148,7 @@ def test_nawigacja_ma_poprawne_nazwy() -> None:
         "Źródła i konfiguracja",
         "Indeksowanie",
         "Raport pokrycia",
-        "Diagnostyka",
+        "Ustawienia",
     ]
 
 

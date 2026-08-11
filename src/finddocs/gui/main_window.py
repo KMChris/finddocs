@@ -18,7 +18,6 @@ from PySide6.QtWidgets import (
 
 from finddocs.gui import i18n
 from finddocs.gui.context import AppContext
-from finddocs.gui.diagnostics_view import DiagnosticsView
 from finddocs.gui.dialogs import ask_yes_no, show_info
 from finddocs.gui.indexing_view import IndexingView
 from finddocs.gui.report_view import ReportView
@@ -48,13 +47,13 @@ SIDEBAR_WIDTH = 232
 BRAND_ICON_SIZE = 26
 
 #: Ekrany nawigacji: napis, nazwa glifu. Kolejnosc odpowiada kolejnosci widokow
-#: na stosie i numerom skrotow Ctrl+1 do Ctrl+5.
+#: na stosie i numerom skrotow Ctrl+1 do Ctrl+4. Diagnostyka nie jest osobnym
+#: ekranem: to zakladka Ustawien.
 NAV_ITEMS: tuple[tuple[str, str], ...] = (
     (i18n.NAV_SEARCH, "search"),
     (i18n.NAV_SOURCES, "folder"),
     (i18n.NAV_INDEXING, "database"),
     (i18n.NAV_REPORT, "chart"),
-    (i18n.NAV_DIAGNOSTICS, "pulse"),
 )
 
 #: Numer widoku ustawien na stosie: za ekranami z ``NAV_ITEMS``.
@@ -101,7 +100,6 @@ class MainWindow(QMainWindow):
         self.sources_view = SourcesView(context)
         self.indexing_view = IndexingView(context)
         self.report_view = ReportView(context)
-        self.diagnostics_view = DiagnosticsView(context)
         self.settings_view = SettingsView(context)
 
         for view in (
@@ -109,7 +107,6 @@ class MainWindow(QMainWindow):
             self.sources_view,
             self.indexing_view,
             self.report_view,
-            self.diagnostics_view,
             self.settings_view,
         ):
             self.stack.addWidget(view)
@@ -234,8 +231,8 @@ class MainWindow(QMainWindow):
         refresh.triggered.connect(self.refresh_index_status)
         self.addAction(refresh)
 
-        # Ctrl+1 do Ctrl+5 przelaczaja ekrany w kolejnosci panelu nawigacji,
-        # Ctrl+6 otwiera Ustawienia przypiete na dole.
+        # Ctrl+1 do Ctrl+4 przelaczaja ekrany w kolejnosci panelu nawigacji,
+        # Ctrl+5 otwiera Ustawienia przypiete na dole.
         for position in range(1, len(NAV_ITEMS) + 1):
             shortcut = QShortcut(QKeySequence(f"Ctrl+{position}"), self)
             shortcut.activated.connect(lambda row=position - 1: self.nav.setCurrentRow(row))
@@ -275,8 +272,6 @@ class MainWindow(QMainWindow):
             # Raport liczy sie sam przy wejsciu. Ekran proszacy o klikniecie
             # Odswiez byl jedynym, ktory tego wymagal.
             self.report_view.refresh_if_stale()
-        elif widget is self.diagnostics_view:
-            self.diagnostics_view.refresh()
         elif widget is self.sources_view:
             self.sources_view.refresh()
 

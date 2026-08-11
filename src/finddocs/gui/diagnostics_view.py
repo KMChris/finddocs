@@ -1,10 +1,16 @@
-"""Ekran diagnostyki: srodowisko, komponenty, spojnosc indeksu, eksport pakietu."""
+"""Panel diagnostyki: srodowisko, komponenty, spojnosc indeksu, eksport pakietu.
+
+Panel jest osadzany jako zakladka ekranu Ustawienia, wiec nie ma wlasnego
+naglowka ani marginesow strony. Odswieza sie sam przy kazdym pokazaniu,
+tak jak wczesniej przy wejsciu na osobny ekran nawigacji.
+"""
 
 from __future__ import annotations
 
 from typing import Any
 
 from PySide6.QtCore import Signal
+from PySide6.QtGui import QShowEvent
 from PySide6.QtWidgets import (
     QCheckBox,
     QHBoxLayout,
@@ -13,6 +19,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
+    QVBoxLayout,
     QWidget,
 )
 
@@ -20,8 +27,7 @@ from finddocs.gui import i18n
 from finddocs.gui.context import AppContext
 from finddocs.gui.dialogs import show_error, show_info, show_warning
 from finddocs.gui.tables import configure_columns, filter_table_rows
-from finddocs.gui.theme import SPACE_SM, accent_icon, theme_icon
-from finddocs.gui.widgets.page import PageHeader, page_layout
+from finddocs.gui.theme import SPACE_MD, SPACE_SM, accent_icon, theme_icon
 from finddocs.gui.widgets.tabs import TabPanel
 from finddocs.gui.workers import CallableTask, thread_pool
 from finddocs.logging_setup import get_logger
@@ -79,10 +85,9 @@ class DiagnosticsView(QWidget):
         super().__init__()
         self.context = context
 
-        root = page_layout(self)
-
-        self.header = PageHeader(i18n.DIAG_TITLE)
-        root.addWidget(self.header)
+        root = QVBoxLayout(self)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(SPACE_MD)
 
         root.addLayout(self._build_buttons())
 
@@ -188,6 +193,15 @@ class DiagnosticsView(QWidget):
             filter_table_rows(table, self.table_filter.text())
 
     # --- akcje ------------------------------------------------------------
+
+    def showEvent(self, event: QShowEvent) -> None:
+        """Odswieza dane przy kazdym pokazaniu panelu.
+
+        Wczesniej robilo to okno glowne przy wejsciu na osobny ekran
+        diagnostyki. Po osadzeniu w Ustawieniach panel pilnuje tego sam.
+        """
+        super().showEvent(event)
+        self.refresh()
 
     def refresh(self) -> None:
         def work() -> dict[str, Any]:

@@ -79,8 +79,8 @@ Skróty klawiszowe:
 | `Esc` | przerwij wyszukiwanie, a poza nim wyczyść pole zapytania |
 | `Ctrl+Shift+F` | pokaż albo ukryj panel filtrów |
 | `Alt+Left`, `Alt+Right` | poprzednia i następna strona wyników |
-| `Ctrl+1` do `Ctrl+5` | przełącz ekran |
-| `Ctrl+6` | otwórz Ustawienia |
+| `Ctrl+1` do `Ctrl+4` | przełącz ekran |
+| `Ctrl+5` | otwórz Ustawienia |
 | `F5` | odśwież stan indeksu |
 
 Pasek na dole okna pokazuje liczbę zaindeksowanych dokumentów i fragmentów,
@@ -323,8 +323,11 @@ Raport zapisują przyciski **Eksportuj do CSV** (do arkusza) albo
 
 ## Ustawienia
 
-Pozycja **Ustawienia** jest przypięta na dole panelu nawigacji (skrót `Ctrl+6`).
-Zmiany działają od razu i są zapamiętywane.
+Pozycja **Ustawienia** jest przypięta na dole panelu nawigacji (skrót `Ctrl+5`).
+Ekran ma dwie zakładki: **Ogólne** i **Diagnostyka**.
+
+Zakładka **Ogólne** zbiera ustawienia interfejsu. Zmiany działają od razu
+i są zapamiętywane.
 
 * **Motyw**: systemowy, jasny albo ciemny. Zmiana przebudowuje okno.
 * **Tło Mica okna**: przezroczysty materiał systemowy pod oknem, dostępny
@@ -336,6 +339,12 @@ Zmiany działają od razu i są zapamiętywane.
 * **Wyszukiwanie przyrostowe w trybie Dokładne**: wyniki w trakcie pisania.
 
 Przycisk **O programie** pokazuje wersję aplikacji oraz katalogi danych i logów.
+
+Zakładka **Diagnostyka** to narzędzia serwisowe: informacje o środowisku,
+komponentach i indeksie (odświeżane przy każdym otwarciu), sprawdzenie
+spójności indeksu, kompaktowanie indeksu wektorowego, kopia indeksu oraz
+eksport pakietu diagnostycznego dla pomocy technicznej. Pakiet nie zawiera
+treści dokumentów. Pole **Filtruj wiersze** zawęża tabele do wpisanego tekstu.
 
 ## Częste pytania
 
@@ -367,7 +376,7 @@ administrator, patrz [odbudowa indeksu](odbudowa-indeksu.md).
 Nie. Aplikacja nie zawiera telemetrii, a cały ruch wychodzący jest domyślnie
 zablokowany. Jedyne dozwolone połączenia to Microsoft Graph (gdy skonfigurujesz
 SharePoint) i jednorazowe pobranie modelu. Lista dozwolonych adresów jest widoczna
-na ekranie **Diagnostyka**.
+na zakładce **Diagnostyka** w Ustawieniach.
 
 **Gdzie są moje dane?**
 W katalogu `%LOCALAPPDATA%\FindDocs`. Indeks zawiera treść dokumentów, więc
