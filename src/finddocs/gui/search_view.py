@@ -52,6 +52,7 @@ from finddocs.gui.widgets.motion import apply_soft_shadow, expand_vertically
 from finddocs.gui.widgets.page import Banner, PageHeader, page_layout
 from finddocs.gui.widgets.result_card import EmptyState, ResultCard
 from finddocs.gui.widgets.segmented import SegmentedControl
+from finddocs.gui.widgets.skeleton import SkeletonCard
 from finddocs.gui.workers import CallableTask, CancellationFlag, SearchTask, thread_pool
 from finddocs.logging_setup import get_logger
 from finddocs.search.highlight import strip_highlight
@@ -76,6 +77,9 @@ NO_DATE = QDate(1900, 1, 1)
 #: Liczba kolumn panelu filtrow. Kolumny dziela szerokosc rowno, wiec pola
 #: sasiadujacych wierszy sa wyrownane niezaleznie od dlugosci podpisow.
 FILTER_COLUMNS = 4
+
+#: Liczba zarysow kart pokazywanych w czasie wyszukiwania.
+SKELETON_CARDS = 3
 
 #: Uwagi opisujace nature trybu, niezalezne od zapytania. Ich tresc niesie
 #: podpowiedz pod przelacznikiem trybow, wiec baner ich nie powtarza. Powtarzane
@@ -711,6 +715,10 @@ class SearchView(QWidget):
         self._task = task
         self._token = task.token
         self._set_busy(True)
+        # Zarysy kart tylko wtedy, gdy nie ma czego zostawic na ekranie.
+        # Przy zawezaniu zapytania stare wyniki zostaja do nadejscia nowych.
+        if not self._has_result_cards():
+            self._show_skeleton()
         self.status_message.emit(i18n.SEARCH_RUNNING)
         thread_pool().start(task)
 
@@ -810,6 +818,19 @@ class SearchView(QWidget):
             widget = item.widget() if item is not None else None
             if widget is not None:
                 widget.deleteLater()
+
+    def _has_result_cards(self) -> bool:
+        for position in range(self._results_layout.count()):
+            item = self._results_layout.itemAt(position)
+            if item is not None and isinstance(item.widget(), ResultCard):
+                return True
+        return False
+
+    def _show_skeleton(self) -> None:
+        """Statyczne zarysy kart w miejscu pustej listy na czas wyszukiwania."""
+        self._clear_results()
+        for position in range(SKELETON_CARDS):
+            self._results_layout.insertWidget(position, SkeletonCard())
 
     def _show_empty(
         self,

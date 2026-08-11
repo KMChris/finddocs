@@ -193,6 +193,11 @@ Cień występuje wyłącznie w motywie jasnym i tylko na polu zapytania oraz
 kartach wyników (rozmycie 14 px, krycie około 8%). W ciemnym motywie cienia
 nie ma: na ciemnym tle byłby poświatą.
 
+W czasie wyszukiwania pustą listę wypełniają trzy statyczne zarysy kart
+(`widgets/skeleton.py`): zapowiadają układ wyników bez migotania, więc
+działają tak samo przy systemowym ograniczeniu animacji. Gdy na ekranie
+są już wyniki, zostają do nadejścia nowych i zarysy się nie pojawiają.
+
 Akcent pochodzi z ustawień personalizacji Windows (`system_accent_color`),
 z korektą jasności do kontrastu 4,5 wobec stałego koloru napisu na akcencie
 (`palette_with_accent`). Kolor napisu się nie zmienia, bo w tym kolorze są

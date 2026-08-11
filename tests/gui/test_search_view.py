@@ -102,6 +102,37 @@ def _sample_hit() -> DocumentHit:
 
 
 @pytest.mark.gui
+def test_szkielety_wypelniaja_pusta_liste_i_znikaja_po_wynikach(
+    qtbot: object,
+    make_search_view: Callable[..., SearchView],
+    result_cards: Callable[[QWidget], list[ResultCard]],
+) -> None:
+    """Zarysy kart pokazuja sie tylko tam, gdzie nie ma czego zostawic."""
+    from finddocs.gui.search_view import SKELETON_CARDS
+    from finddocs.gui.widgets.skeleton import SkeletonCard
+
+    view = make_search_view()
+    assert not view._has_result_cards()
+
+    view._show_skeleton()
+
+    def layout_widgets() -> list[QWidget | None]:
+        return [
+            item.widget()
+            for position in range(view._results_layout.count())
+            if (item := view._results_layout.itemAt(position)) is not None
+        ]
+
+    assert sum(isinstance(w, SkeletonCard) for w in layout_widgets()) == SKELETON_CARDS
+
+    view.query_edit.setText(QUERY)
+    view.run_search()
+
+    qtbot.waitUntil(lambda: bool(result_cards(view)), timeout=TIMEOUT_MS)  # type: ignore[attr-defined]
+    assert not any(isinstance(w, SkeletonCard) for w in layout_widgets())
+
+
+@pytest.mark.gui
 def test_query_returns_result_cards(
     qtbot: object,
     make_search_view: Callable[..., SearchView],

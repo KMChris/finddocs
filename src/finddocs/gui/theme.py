@@ -893,6 +893,18 @@ def build_stylesheet(palette: Palette) -> str:
         border: 1px solid {p.border};
         border-radius: {RADIUS_LARGE}px;
     }}
+    /* Zarys karty pokazywany w czasie wyszukiwania: rama jak karta wyniku,
+       paski w kolorze na tyle cichym, zeby nie udawaly tresci. */
+    QFrame#SkeletonCard {{
+        background-color: {p.surface};
+        border: 1px solid {p.border};
+        border-radius: {RADIUS_LARGE}px;
+    }}
+    QFrame#SkeletonBar {{
+        background-color: {disabled_border};
+        border: none;
+        border-radius: 4px;
+    }}
     QFrame#ResultCard:hover {{
         border: 1px solid {card_hover};
     }}
