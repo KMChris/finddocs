@@ -534,7 +534,8 @@ def build_stylesheet(palette: Palette) -> str:
     # a stan wylaczony (surface_alt) byl jasniejszy od wlaczonego.
     if light:
         control_bg = p.surface
-        control_hover = p.surface_alt
+        # surface_alt (#fafafa) na bialym tle bylo na granicy percepcji.
+        control_hover = QColor(p.surface).darker(105).name()
         control_pressed = p.border
     else:
         surface = QColor(p.surface)
