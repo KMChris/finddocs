@@ -255,12 +255,16 @@ class MainWindow(QMainWindow):
         if row < 0:
             return
         self._clear_selection(self.nav)
+        # Komunikat dotyczy ekranu, na ktorym powstal. Na innym ekranie
+        # sugerowalby dzialanie, ktorego tam nie ma.
+        self.status.clearMessage()
         self.stack.setCurrentIndex(SETTINGS_STACK_INDEX)
 
     def _on_nav_changed(self, row: int) -> None:
         if row < 0:
             return
         self._clear_selection(self.bottom_nav)
+        self.status.clearMessage()
         self.stack.setCurrentIndex(row)
         widget = self.stack.currentWidget()
         if widget is self.search_view:

@@ -182,3 +182,14 @@ def test_status_message_reaches_status_bar(main_window: MainWindow) -> None:
     main_window.search_view.status_message.emit("Komunikat testowy")
 
     assert main_window.status.currentMessage() == "Komunikat testowy"
+
+
+@pytest.mark.gui
+def test_zmiana_ekranu_czysci_komunikat_paska_stanu(main_window: MainWindow) -> None:
+    """Komunikat z jednego ekranu nie moze wisiec nad innym."""
+    main_window.search_view.status_message.emit("Wyszukiwanie w toku...")
+    assert main_window.status.currentMessage()
+
+    main_window.nav.setCurrentRow(2)
+
+    assert main_window.status.currentMessage() == ""
