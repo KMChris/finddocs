@@ -243,15 +243,17 @@ class SearchView(QWidget):
         row.addStretch(1)
 
         # Porzadek wynikow. Tryby wektorowe zwracaja ranking podobienstwa,
-        # wiec sortowanie po dacie dziala tylko w trybie Dokladne.
+        # wiec sortowanie po dacie istnieje tylko w trybie Dokladne. Poza nim
+        # lista jest ukryta, nie wylaczona: szara lista ,,Trafnosc'' sugerowala,
+        # ze wyniki da sie sortowac, tylko cos jest zepsute.
         self.sort_combo = QComboBox()
         self.sort_combo.addItem(i18n.SORT_RELEVANCE, "relevance")
         self.sort_combo.addItem(i18n.SORT_NEWEST, "modified_desc")
         self.sort_combo.setToolTip(i18n.SORT_HINT)
         self.sort_combo.setAccessibleName(i18n.A11Y_SORT)
-        self.sort_combo.setEnabled(self.current_mode() is SearchMode.EXACT)
         self.sort_combo.currentIndexChanged.connect(self._on_sort_changed)
         row.addWidget(self.sort_combo)
+        self.sort_combo.setVisible(self.current_mode() is SearchMode.EXACT)
 
         self.filters_toggle = QPushButton(i18n.SEARCH_FILTERS)
         self.filters_toggle.setIcon(theme_icon("filter", self.palette_colors))
@@ -569,7 +571,7 @@ class SearchView(QWidget):
 
     def _update_mode_hint(self) -> None:
         self.mode_hint.setText(i18n.MODE_HINTS[self.current_mode()])
-        self.sort_combo.setEnabled(self.current_mode() is SearchMode.EXACT)
+        self.sort_combo.setVisible(self.current_mode() is SearchMode.EXACT)
 
     def current_order(self) -> str:
         """Porzadek wynikow. Poza trybem dokladnym zawsze trafnosc."""

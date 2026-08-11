@@ -940,21 +940,22 @@ def test_search_button_toggles_between_szukaj_and_przerwij(
 
 
 @pytest.mark.gui
-def test_sortowanie_dostepne_tylko_w_trybie_dokladnym(
+def test_sortowanie_widoczne_tylko_w_trybie_dokladnym(
     make_search_view: Callable[..., SearchView],
 ) -> None:
-    """Tryby wektorowe zwracaja ranking, wiec sortowanie po dacie tam nie dziala."""
+    """Poza trybem Dokladne lista sortowania znika. Szara lista sugerowala,
+    ze sortowanie istnieje, tylko cos jest zepsute."""
     view = make_search_view()
-    assert not view.sort_combo.isEnabled()
+    assert view.sort_combo.isHidden()
 
     _mode_button(view, SearchMode.EXACT).click()
-    assert view.sort_combo.isEnabled()
+    assert not view.sort_combo.isHidden()
 
     view.sort_combo.setCurrentIndex(view.sort_combo.findData("modified_desc"))
     assert view.current_order() == "modified_desc"
 
     _mode_button(view, SearchMode.HYBRID).click()
-    assert not view.sort_combo.isEnabled()
+    assert view.sort_combo.isHidden()
     assert view.current_order() == "relevance"
 
 

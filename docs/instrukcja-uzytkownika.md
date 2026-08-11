@@ -67,8 +67,8 @@ zapytania podpowiada ostatnie zapytania tej sesji; historia nie jest nigdzie
 zapisywana.
 
 Lista **Sortowanie** ma dwie pozycje: **Trafność** i **Najnowsze** (po dacie
-modyfikacji). Sortowanie po dacie działa w trybie **Dokładne**, bo tryby
-z udziałem modelu zwracają ranking podobieństwa.
+modyfikacji). Jest widoczna tylko w trybie **Dokładne**, bo tryby z udziałem
+modelu zwracają ranking podobieństwa i nie mają innego porządku.
 
 Skróty klawiszowe:
 
