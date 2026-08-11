@@ -690,9 +690,13 @@ def build_stylesheet(palette: Palette) -> str:
     QPlainTextEdit:focus, QTextEdit:focus {{
         border-bottom: 2px solid {p.accent};
     }}
+    /* Stan wylaczony pol jak w przyciskach: na bialej karcie roznica tla
+       jest niewidoczna, wiec stan musi oslabiac takze obramowanie. */
     QLineEdit:disabled, QComboBox:disabled, QDateEdit:disabled, QSpinBox:disabled {{
         color: {p.text_muted};
         background-color: {p.surface_alt};
+        border: 1px solid {disabled_border};
+        border-bottom: 2px solid {disabled_border};
     }}
     /* Pole oznaczone jako brakujace w walidacji formularza. Wlasciwosc ustawia
        formularz, a edycja pola ja zdejmuje. */

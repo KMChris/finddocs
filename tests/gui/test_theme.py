@@ -188,6 +188,15 @@ def test_wylaczony_przycisk_ma_oslabione_obramowanie() -> None:
         assert "border: 1px solid" in block
 
 
+def test_wylaczone_pola_maja_oslabione_obramowanie() -> None:
+    """Pola formularzy dostaja ten sam stan wylaczony co przyciski."""
+    for palette in (theme.LIGHT, theme.DARK):
+        css = theme.build_stylesheet(palette)
+        block = css.split("QLineEdit:disabled", 1)[1].split("}", 1)[0]
+        assert "border: 1px solid" in block
+        assert "border-bottom: 2px solid" in block
+
+
 def test_wskaznik_wyboru_w_tabeli_ma_pudelko_i_stan_zaznaczony() -> None:
     """Bez tych regul niezaznaczone pole w komorce tabeli jest niewidoczne."""
     for palette in (theme.LIGHT, theme.DARK):
