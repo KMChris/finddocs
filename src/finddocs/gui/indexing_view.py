@@ -30,7 +30,6 @@ from PySide6.QtWidgets import (
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
-    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -42,6 +41,7 @@ from finddocs.gui.tables import configure_columns, filter_table_rows, format_sta
 from finddocs.gui.theme import SPACE_SM, accent_icon, theme_icon
 from finddocs.gui.widgets.page import PageHeader, page_layout
 from finddocs.gui.widgets.stat_grid import StatGrid
+from finddocs.gui.widgets.tabs import TabPanel
 from finddocs.gui.workers import CallableTask, ProgressBridge, thread_pool
 from finddocs.jobs.indexing_job import JobOptions
 from finddocs.logging_setup import get_logger
@@ -255,27 +255,23 @@ class IndexingView(QWidget):
         return super().eventFilter(watched, event)
 
     def _build_tables(self) -> QWidget:
-        tabs = QTabWidget()
-        # Tryb dokumentowy zdejmuje ramke panelu i rozciaga pasek zakladek na cala
-        # szerokosc, dzieki czemu linia pod zakladkami biegnie przez caly ekran.
-        tabs.setDocumentMode(True)
         self.error_table = self._make_table(
             ["Plik", "Etap", "Kod", "Komunikat", "Czas"], stretch=(0, 3)
         )
         self.skipped_table = self._make_table(
             ["Plik", "Lokalizacja", "Status", "Powód"], stretch=(0, 1, 3)
         )
-        tabs.addTab(self.error_table, i18n.INDEXING_TAB_ERRORS)
-        tabs.addTab(self.skipped_table, i18n.INDEXING_TAB_SKIPPED)
-        tabs.currentChanged.connect(lambda _index: self.refresh_tables())
-        # Filtr w rogu paska zakladek zaweza obie tabele do wierszy
+        # Filtr po prawej stronie paska zakladek zaweza obie tabele do wierszy
         # zawierajacych wpisany tekst. Liczby w nazwach zakladek zostaja pelne.
         self.table_filter = QLineEdit()
         self.table_filter.setPlaceholderText(i18n.TABLE_FILTER_PLACEHOLDER)
         self.table_filter.setClearButtonEnabled(True)
         self.table_filter.setFixedWidth(220)
         self.table_filter.textChanged.connect(lambda _text: self._apply_table_filter())
-        tabs.setCornerWidget(self.table_filter, Qt.Corner.TopRightCorner)
+        tabs = TabPanel(side_widget=self.table_filter)
+        tabs.addTab(self.error_table, i18n.INDEXING_TAB_ERRORS)
+        tabs.addTab(self.skipped_table, i18n.INDEXING_TAB_SKIPPED)
+        tabs.currentChanged.connect(lambda _index: self.refresh_tables())
         self._tabs = tabs
         return tabs
 

@@ -163,10 +163,17 @@ zakrzywiony pasek, a nie jak wskaźnik. Kolor niesie wyłącznie pigułka, tło 
 neutralne w obu wariantach palety.
 
 **Zakładki: podkreślenie.** Zakładka jest samym napisem z podkreśleniem wybranej
-pozycji, na cienkiej linii biegnącej pod całym paskiem. Zakładka w pudełku
-z obramowaniem wygląda jak przycisk, czyli tak samo jak akcje nad nią, a przecież
-nie jest akcją: nie robi nic poza zmianą widoku. Panel zakładek nie ma ramki
-(`setDocumentMode(True)`), bo tabele w środku mają własne obramowanie.
+pozycji, bez linii toru pod całym paskiem: tor kończył się przed polem filtra
+i wyglądał jak urwana ramka. Zakładka w pudełku z obramowaniem wygląda jak
+przycisk, czyli tak samo jak akcje nad nią, a przecież nie jest akcją: nie robi
+nic poza zmianą widoku. Panel zakładek nie ma ramki, bo tabele w środku mają
+własne obramowanie.
+
+Ekrany z polem „Filtruj wiersze" obok zakładek używają `widgets/tabs.py`
+(`TabPanel`): osobny `QTabBar` w wierszu układu nad `QStackedWidget`.
+`QTabWidget.setCornerWidget` przycinał pole z prawej strony, także poza trybem
+dokumentowym, bo geometria rogu w stylu arkuszowym nie zgadza się z szerokością
+kontrolki.
 
 Ustawienia są przypięte na dole panelu nawigacji jako osobna lista, wzorem
 nawigacji Windows 11. Wybór jest uzgadniany między listami tak, żeby zaznaczona

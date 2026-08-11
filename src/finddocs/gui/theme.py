@@ -1078,7 +1078,8 @@ def build_stylesheet(palette: Palette) -> str:
     /* Zakladki w ukladzie pivot: sam napis z podkresleniem wybranej pozycji.
        Zakladka w pudelku z obramowaniem wyglada jak przycisk, wiec wyglada tak
        samo jak akcje nad nia, a przeciez nie jest akcja, tylko wyborem widoku.
-       Cienka linia pod calym paskiem jest torem, po ktorym biegnie podkreslenie. */
+       Pasek nie ma linii toru: tor konczyl sie przed polem filtra w rogu
+       i wygladal jak urwana ramka. */
     QTabWidget::pane {{
         border: none;
         background: transparent;
@@ -1087,7 +1088,7 @@ def build_stylesheet(palette: Palette) -> str:
     QTabBar {{
         background: transparent;
         outline: none;
-        border-bottom: 1px solid {p.border};
+        border: none;
     }}
     QTabBar::tab {{
         background: transparent;

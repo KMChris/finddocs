@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QHBoxLayout,
@@ -13,7 +13,6 @@ from PySide6.QtWidgets import (
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
-    QTabWidget,
     QWidget,
 )
 
@@ -23,6 +22,7 @@ from finddocs.gui.dialogs import show_error, show_info, show_warning
 from finddocs.gui.tables import configure_columns, filter_table_rows
 from finddocs.gui.theme import SPACE_SM, accent_icon, theme_icon
 from finddocs.gui.widgets.page import PageHeader, page_layout
+from finddocs.gui.widgets.tabs import TabPanel
 from finddocs.gui.workers import CallableTask, thread_pool
 from finddocs.logging_setup import get_logger
 
@@ -86,23 +86,21 @@ class DiagnosticsView(QWidget):
 
         root.addLayout(self._build_buttons())
 
-        self.tabs = QTabWidget()
-        self.tabs.setDocumentMode(True)
         self.environment_table = self._make_table()
         self.components_table = self._make_table()
         self.index_table = self._make_table()
         self.consistency_table = self._make_table()
-        self.tabs.addTab(self.environment_table, i18n.DIAG_ENVIRONMENT)
-        self.tabs.addTab(self.components_table, i18n.DIAG_COMPONENTS)
-        self.tabs.addTab(self.index_table, i18n.DIAG_INDEX)
-        self.tabs.addTab(self.consistency_table, i18n.DIAG_CONSISTENCY)
-        # Filtr w rogu paska zakladek zaweza wszystkie tabele diagnostyki.
+        # Filtr po prawej stronie paska zakladek zaweza wszystkie tabele.
         self.table_filter = QLineEdit()
         self.table_filter.setPlaceholderText(i18n.TABLE_FILTER_PLACEHOLDER)
         self.table_filter.setClearButtonEnabled(True)
         self.table_filter.setFixedWidth(220)
         self.table_filter.textChanged.connect(lambda _text: self._apply_table_filter())
-        self.tabs.setCornerWidget(self.table_filter, Qt.Corner.TopRightCorner)
+        self.tabs = TabPanel(side_widget=self.table_filter)
+        self.tabs.addTab(self.environment_table, i18n.DIAG_ENVIRONMENT)
+        self.tabs.addTab(self.components_table, i18n.DIAG_COMPONENTS)
+        self.tabs.addTab(self.index_table, i18n.DIAG_INDEX)
+        self.tabs.addTab(self.consistency_table, i18n.DIAG_CONSISTENCY)
         root.addWidget(self.tabs, stretch=1)
 
         self.log_queries = QCheckBox(i18n.DIAG_LOG_QUERIES)
