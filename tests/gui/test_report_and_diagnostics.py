@@ -272,7 +272,9 @@ def test_query_logging_switch_updates_config(
 def test_compact_vectors_without_store_informs(
     diagnostics_view: DiagnosticsView, message_boxes: list[object]
 ) -> None:
-    """Bez indeksu wektorowego kompaktowanie konczy sie komunikatem."""
+    """Bez indeksu wektorowego kompaktowanie konczy sie banerem, nie oknem."""
     diagnostics_view.compact_vectors()
 
-    assert len(message_boxes) == 1
+    assert message_boxes == []
+    assert not diagnostics_view.banner.isHidden()
+    assert "wektorowy" in diagnostics_view.banner.text()

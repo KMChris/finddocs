@@ -24,9 +24,10 @@ from PySide6.QtWidgets import (
 
 from finddocs.gui import i18n
 from finddocs.gui.context import AppContext
-from finddocs.gui.dialogs import show_error, show_info, show_warning
+from finddocs.gui.dialogs import show_error, show_warning
 from finddocs.gui.tables import configure_columns, filter_table_rows, text_item
 from finddocs.gui.theme import SPACE_MD, SPACE_SM, accent_icon, theme_icon
+from finddocs.gui.widgets.page import Banner
 from finddocs.gui.widgets.tabs import TabPanel
 from finddocs.gui.workers import CallableTask, thread_pool
 from finddocs.logging_setup import get_logger
@@ -89,6 +90,12 @@ class DiagnosticsView(QWidget):
         root.setSpacing(SPACE_MD)
 
         root.addLayout(self._build_buttons())
+
+        # Wyniki konserwacji laduja w banerze, nie w oknie modalnym: sukces
+        # to nie decyzja, wiec nie ma czego potwierdzac. Okna zostaja dla
+        # bledow i pytan.
+        self.banner = Banner()
+        root.addWidget(self.banner)
 
         self.environment_table = self._make_table()
         self.components_table = self._make_table()
@@ -248,6 +255,7 @@ class DiagnosticsView(QWidget):
                     "Wykryto problemy ze spójnością indeksu:\n" + "\n".join(map(str, problems)),
                 )
             else:
+                self.banner.show_message("Indeks jest spójny.", "success")
                 self.status_message.emit("Indeks jest spójny.")
 
         task.signals.finished.connect(done)
@@ -257,7 +265,7 @@ class DiagnosticsView(QWidget):
     def compact_vectors(self) -> None:
         index = self.context.index
         if index is None or index.vector_store is None:
-            show_info(self, "Indeks wektorowy nie jest dostępny.")
+            self.banner.show_message("Indeks wektorowy nie jest dostępny.", "info")
             return
 
         def work() -> str:
@@ -272,7 +280,9 @@ class DiagnosticsView(QWidget):
 
         self.status_message.emit("Kompaktowanie indeksu wektorowego...")
         task = CallableTask(work, label="kompaktacja")
-        task.signals.finished.connect(lambda message: show_info(self, str(message)))
+        task.signals.finished.connect(
+            lambda message: self.banner.show_message(str(message), "success")
+        )
         task.signals.failed.connect(self._show_error)
         thread_pool().start(task)
 
@@ -286,7 +296,9 @@ class DiagnosticsView(QWidget):
 
         self.status_message.emit("Tworzenie kopii indeksu...")
         task = CallableTask(work, label="kopia indeksu")
-        task.signals.finished.connect(lambda message: show_info(self, str(message)))
+        task.signals.finished.connect(
+            lambda message: self.banner.show_message(str(message), "success")
+        )
         task.signals.failed.connect(self._show_error)
         thread_pool().start(task)
 
@@ -300,10 +312,9 @@ class DiagnosticsView(QWidget):
         self.status_message.emit("Przygotowywanie pakietu diagnostycznego...")
         task = CallableTask(work, label="pakiet diagnostyczny")
         task.signals.finished.connect(
-            lambda result: show_info(
-                self,
-                f"Pakiet diagnostyczny zapisano w:\n{result}\n\n"
-                "Pakiet nie zawiera treści dokumentów.",
+            lambda result: self.banner.show_message(
+                f"Pakiet diagnostyczny zapisano w: {result}. Pakiet nie zawiera treści dokumentów.",
+                "success",
             )
         )
         task.signals.failed.connect(self._show_error)
