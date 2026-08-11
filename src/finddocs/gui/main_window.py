@@ -226,6 +226,11 @@ class MainWindow(QMainWindow):
         find.triggered.connect(self._focus_search)
         self.addAction(find)
 
+        # Drugi skrot do pola zapytania: przyzwyczajenie z aplikacji webowych
+        # i paskow polecen. Ctrl+F zostaje bez zmian.
+        palette_shortcut = QShortcut(QKeySequence("Ctrl+K"), self)
+        palette_shortcut.activated.connect(self._focus_search)
+
         refresh = QAction("Odśwież", self)
         refresh.setShortcut(QKeySequence.StandardKey.Refresh)
         refresh.triggered.connect(self.refresh_index_status)

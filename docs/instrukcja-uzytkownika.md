@@ -74,7 +74,7 @@ Skróty klawiszowe:
 
 | Skrót | Działanie |
 | --- | --- |
-| `Ctrl+F` | kursor do pola zapytania |
+| `Ctrl+F` albo `Ctrl+K` | kursor do pola zapytania |
 | `Enter` | wyszukaj |
 | `Esc` | przerwij wyszukiwanie, a poza nim wyczyść pole zapytania |
 | `Ctrl+Shift+F` | pokaż albo ukryj panel filtrów |

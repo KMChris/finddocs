@@ -126,6 +126,7 @@ def test_skroty_przelaczaja_ekrany(main_window: MainWindow) -> None:
 
     registered = {shortcut.key().toString() for shortcut in main_window.findChildren(QShortcut)}
     expected = {QKeySequence(f"Ctrl+{n}").toString() for n in range(1, 6)}
+    expected.add(QKeySequence("Ctrl+K").toString())
 
     assert expected <= registered
     for row in range(main_window.nav.count()):
