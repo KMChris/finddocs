@@ -78,6 +78,10 @@ class TabPanel(QWidget):
 
     def _on_current_changed(self, index: int) -> None:
         self.stack.setCurrentIndex(index)
+        # Wybrana zakladka jest pogrubiona, wiec pasek robi sie o pare pikseli
+        # szerszy. Bez przeliczenia geometrii uklad zostawia stara szerokosc,
+        # a pasek wlacza strzalki przewijania mimo wolnego miejsca obok.
+        self.bar.updateGeometry()
         self.currentChanged.emit(index)
 
 
