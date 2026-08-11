@@ -101,6 +101,15 @@ def test_report_reports_incomplete_set(
 
 
 @pytest.mark.gui
+def test_wartosci_techniczne_ida_zwyklym_stopniem(report_view: ReportView) -> None:
+    """Identyfikator modelu pisany stopniem liczb przytlaczal sekcje."""
+    for label in report_view.tech_summary.labels.values():
+        assert label.objectName() == "StatText"
+    for label in report_view.summary.labels.values():
+        assert label.objectName() == "StatValue"
+
+
+@pytest.mark.gui
 def test_report_on_empty_index(qtbot: object, gui_context: AppContext) -> None:
     """Pusty indeks nie jest opisywany jako kompletny zbior."""
     view = ReportView(gui_context)

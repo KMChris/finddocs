@@ -166,6 +166,10 @@ class ReportView(QWidget):
         self.tech_box = QGroupBox(i18n.REPORT_TECH)
         tech_layout = QVBoxLayout(self.tech_box)
         self.tech_summary = StatGrid(SUMMARY_TECH_ENTRIES, columns=4)
+        # Metadane to nie liczniki: identyfikator modelu pisany stopniem liczb
+        # dominowal cala sekcje. Wartosci techniczne ida zwyklym stopniem.
+        for label in self.tech_summary.labels.values():
+            label.setObjectName("StatText")
         tech_layout.addWidget(self.tech_summary)
         root.addWidget(self.tech_box)
 

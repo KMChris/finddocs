@@ -655,6 +655,13 @@ def build_stylesheet(palette: Palette) -> str:
     QLabel#StatValue[valueRole="danger"] {{
         color: {p.danger};
     }}
+    /* Wartosc siatki statystyk bez stopnia liczb: identyfikatory i daty
+       w karcie Informacje techniczne, ktore stopniem 15 pt przytlaczaly
+       sekcje. */
+    QLabel#StatText {{
+        font-size: {FONT_SIZE}pt;
+        font-weight: 400;
+    }}
     QFrame#Divider {{
         background-color: {p.border};
         border: none;
