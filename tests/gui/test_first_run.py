@@ -186,6 +186,22 @@ def test_status_message_reaches_status_bar(main_window: MainWindow) -> None:
 
 
 @pytest.mark.gui
+def test_kontrolki_bez_napisu_maja_nazwy_dostepnosci(main_window: MainWindow) -> None:
+    """Czytnik ekranu musi umiec nazwac kontrolki, ktore nie maja napisu."""
+    assert main_window.nav.accessibleName() == i18n.A11Y_NAV
+    assert main_window.bottom_nav.accessibleName() == i18n.NAV_SETTINGS
+    assert main_window.search_view.query_edit.accessibleName() == i18n.A11Y_QUERY
+    assert main_window.search_view.search_button.accessibleName() == i18n.SEARCH_BUTTON
+    assert main_window.search_view.sort_combo.accessibleName() == i18n.A11Y_SORT
+    for view in (
+        main_window.indexing_view,
+        main_window.report_view,
+        main_window.settings_view.diagnostics,
+    ):
+        assert view.table_filter.accessibleName() == i18n.TABLE_FILTER_PLACEHOLDER
+
+
+@pytest.mark.gui
 def test_zmiana_ekranu_czysci_komunikat_paska_stanu(main_window: MainWindow) -> None:
     """Komunikat z jednego ekranu nie moze wisiec nad innym."""
     main_window.search_view.status_message.emit("Wyszukiwanie w toku...")

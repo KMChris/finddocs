@@ -165,6 +165,7 @@ class MainWindow(QMainWindow):
 
         self.nav = QListWidget()
         self.nav.setObjectName("SidebarList")
+        self.nav.setAccessibleName(i18n.A11Y_NAV)
         self.nav.setFrameShape(QListWidget.Shape.NoFrame)
         self.nav.setIconSize(QSize(18, 18))
         install_nav_delegate(self.nav, self.palette_colors)
@@ -177,6 +178,7 @@ class MainWindow(QMainWindow):
         # Ustawienia sa przypiete na dole panelu, wzorem nawigacji Windows 11.
         self.bottom_nav = QListWidget()
         self.bottom_nav.setObjectName("SidebarList")
+        self.bottom_nav.setAccessibleName(i18n.NAV_SETTINGS)
         self.bottom_nav.setFrameShape(QListWidget.Shape.NoFrame)
         self.bottom_nav.setIconSize(QSize(18, 18))
         install_nav_delegate(self.bottom_nav, self.palette_colors)

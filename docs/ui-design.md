@@ -175,6 +175,14 @@ Ekrany z polem „Filtruj wiersze" obok zakładek używają `widgets/tabs.py`
 dokumentowym, bo geometria rogu w stylu arkuszowym nie zgadza się z szerokością
 kontrolki.
 
+## Dostępność
+
+Kontrolka bez własnego napisu dostaje `accessibleName`: przyciski ikonowe
+biorą nazwę z podpowiedzi, pola filtrów z tekstu zastępczego, a pole
+zapytania, porządek wyników i listy nawigacji mają nazwy z bloku dostępności
+w `i18n.py`. Okna dialogowe służą wyłącznie błędom i pytaniom; sukcesy
+operacji pokazuje baner na ekranie albo pasek stanu.
+
 Ustawienia są przypięte na dole panelu nawigacji jako osobna lista, wzorem
 nawigacji Windows 11. Wybór jest uzgadniany między listami tak, żeby zaznaczona
 była zawsze dokładnie jedna pozycja (`MainWindow._on_bottom_nav_changed`).

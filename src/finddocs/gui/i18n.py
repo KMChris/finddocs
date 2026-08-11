@@ -405,6 +405,13 @@ STATUS_LABELS: dict[DocumentStatus, str] = {
     DocumentStatus.DELETED: "usunięty ze źródła",
 }
 
+# --- dostepnosc --------------------------------------------------------------
+
+#: Nazwy dla czytnikow ekranu tam, gdzie kontrolka nie ma wlasnego napisu.
+A11Y_NAV = "Nawigacja główna"
+A11Y_QUERY = "Pole zapytania"
+A11Y_SORT = "Porządek wyników"
+
 # --- komunikaty ogolne -------------------------------------------------------
 
 #: Pasek stanu okna glownego.

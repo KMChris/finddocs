@@ -264,6 +264,7 @@ class IndexingView(QWidget):
         # zawierajacych wpisany tekst. Liczby w nazwach zakladek zostaja pelne.
         self.table_filter = QLineEdit()
         self.table_filter.setPlaceholderText(i18n.TABLE_FILTER_PLACEHOLDER)
+        self.table_filter.setAccessibleName(i18n.TABLE_FILTER_PLACEHOLDER)
         self.table_filter.setClearButtonEnabled(True)
         self.table_filter.setFixedWidth(220)
         self.table_filter.textChanged.connect(lambda _text: self._apply_table_filter())

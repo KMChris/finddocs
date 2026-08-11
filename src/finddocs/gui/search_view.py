@@ -194,6 +194,7 @@ class SearchView(QWidget):
         self.query_edit = QLineEdit()
         self.query_edit.setObjectName("SearchBox")
         self.query_edit.setPlaceholderText(i18n.SEARCH_PLACEHOLDER)
+        self.query_edit.setAccessibleName(i18n.A11Y_QUERY)
         self.query_edit.setClearButtonEnabled(True)
         self.query_edit.returnPressed.connect(self.run_search)
         # Podpowiedzi ostatnich zapytan tej sesji. Patrz QUERY_HISTORY_LIMIT.
@@ -247,6 +248,7 @@ class SearchView(QWidget):
         self.sort_combo.addItem(i18n.SORT_RELEVANCE, "relevance")
         self.sort_combo.addItem(i18n.SORT_NEWEST, "modified_desc")
         self.sort_combo.setToolTip(i18n.SORT_HINT)
+        self.sort_combo.setAccessibleName(i18n.A11Y_SORT)
         self.sort_combo.setEnabled(self.current_mode() is SearchMode.EXACT)
         self.sort_combo.currentIndexChanged.connect(self._on_sort_changed)
         row.addWidget(self.sort_combo)
