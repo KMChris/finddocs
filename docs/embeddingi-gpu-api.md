@@ -1,10 +1,12 @@
 # Embeddingi na GPU i zdalne API
 
-Dokument dla administratora. Opisuje trzy funkcje wprowadzone w wersji 0.2.x:
+Dokument dla administratora. Opisuje funkcje wprowadzone w wersji 0.2.x:
 
 1. obliczenia lokalnego modelu embeddingów na karcie graficznej (DirectML albo CUDA);
 2. batchowe osadzanie fragmentów wielu dokumentów naraz podczas indeksowania;
-3. zdalnego dostawcę embeddingów z uwierzytelnieniem kluczem API.
+3. zdalnego dostawcę embeddingów z uwierzytelnieniem kluczem API
+   (domyślnie kontrakt zgodny z OpenAI);
+4. nazwane profile dostawcy embeddingów do przełączania między konfiguracjami.
 
 Domyślne ustawienia pozostają bez zmian: model lokalny, obliczenia na CPU,
 zero ruchu wychodzącego. Każdą z opisanych funkcji trzeba włączyć świadomie.
@@ -182,14 +184,30 @@ wysyłania dokumentów do publicznych usług chmurowych.
 
 ### Kontrakty
 
+Domyślnym kontraktem jest `openai`, czyli standard OpenAI `/v1/embeddings`
+obsługiwany przez vLLM, TEI i typowe bramki API. Kontrakt `finddocs` to
+opcjonalne rozszerzenie dla serwera, który chce sam rozróżniać rodzaj tekstu.
+
 | Kontrakt | Żądanie | Zastosowanie |
 | --- | --- | --- |
-| `finddocs` | `POST {adres}/embeddings` z `{"input": [...], "kind": "query"/"passage", "model": "..."}` | wewnętrzny kontrakt z zespołem klastra GPU |
-| `openai` | `POST {adres}/embeddings` z `{"model": "...", "input": [...], "encoding_format": "float"}` | serwery zgodne z OpenAI: vLLM, TEI, bramki API |
+| `openai` (domyślny) | `POST {adres}/embeddings` z `{"model": "...", "input": [...], "encoding_format": "float"}` | serwery zgodne z OpenAI: vLLM, TEI, bramki API |
+| `finddocs` | jak `openai`, plus pole `"kind": "query"/"passage"` | serwer, który sam stosuje przedrostki według rodzaju tekstu |
 
-Obie odpowiedzi mają postać `{"data": [{"embedding": [...]}, ...]}`. Dla
-kontraktu `openai` adres powinien zawierać segment wersji, np.
+Obie odpowiedzi mają postać `{"data": [{"embedding": [...], "index": 0}, ...]}`;
+pole `index` jest opcjonalne i pozwala zwracać wiersze w dowolnej kolejności.
+Dla kontraktu `openai` adres powinien zawierać segment wersji, np.
 `https://embeddingi.example.com/v1`.
+
+Jedyna różnica między kontraktami to sposób rozróżniania zapytań od treści
+przy modelach asymetrycznych (na przykład MMLW wymaga przedrostka
+`zapytanie: ` wyłącznie dla zapytań):
+
+* przy kontrakcie `openai` przedrostki dokleja aplikacja przed wysyłką;
+  ustawia się je w polach przedrostków karty Obliczenia embeddingów i wchodzą
+  do skrótu zgodności wektorów;
+* przy kontrakcie `finddocs` żądanie niesie pole `kind`, a przedrostki stosuje
+  serwer; pola przedrostków w aplikacji zwykle zostają wtedy puste, żeby nie
+  doklejać ich podwójnie.
 
 Wektory są zawsze normalizowane L2 po stronie aplikacji. Wymiar odpowiedzi jest
 sprawdzany przy każdym żądaniu. Błędy przejściowe (408, 425, 429, 5xx, błędy
@@ -250,3 +268,41 @@ Gdy API nie odpowiada przy starcie aplikacji, wyszukiwanie semantyczne jest
 oznaczane jako niedostępne, a tryb dokładny działa normalnie. Gdy API zawiedzie
 w trakcie indeksowania, dokumenty są zapisywane bez wektorów ze statusem
 `partial` i uzupełniane przy następnym skanowaniu po przywróceniu usługi.
+
+## Profile dostawcy embeddingów
+
+Model lokalny i zdalne API wykluczają się: w danej chwili aktywny jest
+dokładnie jeden dostawca, a gdy aktywny jest zdalny, karta modelu lokalnego
+w GUI jest ukryta. Do szybkiego przełączania służą nazwane profile, czyli
+migawki kompletu ustawień dostawcy: model lokalny z urządzeniem obliczeń
+i wariantem, albo zdalne API z adresem, kontraktem, modelem i wymiarem.
+
+Zasady:
+
+* Aktywacja profilu przełącza całą konfigurację dostawcy naraz. Aktywacja
+  profilu lokalnego wyłącza zdalne API i zamyka jego kategorię ruchu
+  w polityce sieciowej.
+* Profil zmienia się wyłącznie jawnie: przez zapisanie bieżących ustawień pod
+  jego nazwą albo przez aktywację (która odświeża migawkę po synchronizacji
+  z manifestem modelu). Zwykła edycja ustawień nigdy nie nadpisuje profilu;
+  gdy ustawienia przestają się zgadzać z aktywnym profilem, znika samo
+  wskazanie profilu aktywnego, a nowe ustawienia można zapisać jako profil.
+* Przełączenie na profil o innym modelu, kontrakcie albo wymiarze unieważnia
+  część semantyczną indeksu, jak każda taka zmiana; aplikacja pokazuje wtedy
+  zalecenie przebudowy, a wyszukiwanie dokładne działa dalej.
+* Klucz API nie jest częścią profilu: leży w magazynie poświadczeń pod jedną
+  nazwą, wspólną dla całej konfiguracji zdalnego API.
+
+W GUI: karta **Profile dostawcy embeddingów** na zakładce Wyszukiwanie
+semantyczne (lista profili, Aktywuj, Zapisz bieżące jako profil, Usuń).
+Z wiersza poleceń:
+
+```bash
+finddocs model profile
+finddocs model profile save Klaster
+finddocs model profile use Klaster
+finddocs model profile remove Klaster
+```
+
+Konfiguracje zapisane przed wprowadzeniem profili dostają pierwszy profil
+automatycznie, zbudowany z bieżących ustawień.

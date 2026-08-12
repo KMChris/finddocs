@@ -112,7 +112,11 @@ providerem. Zmiana urządzenia nie unieważnia indeksu. Osobna grupa ustawień
 w sekcji `indexing` (`embed_batch_documents`, `embed_batch_chunks`) steruje
 wspólnym osadzaniem fragmentów wielu dokumentów podczas indeksowania.
 Aplikacja obsługuje też zdalne API embeddingów z kluczem API (pola
-`internal_api_*`). Szczegóły: [embeddingi na GPU i zdalne API](embeddingi-gpu-api.md).
+`internal_api_*`; domyślny kontrakt jest zgodny z OpenAI `/v1/embeddings`).
+Model lokalny i zdalne API wykluczają się; między kompletami ustawień
+dostawcy przełączają nazwane profile (`embedding.profiles`, karta Profile
+dostawcy embeddingów w GUI, polecenia `finddocs model profile`).
+Szczegóły: [embeddingi na GPU i zdalne API](embeddingi-gpu-api.md).
 
 Modele instaluje i przełącza grupa poleceń `finddocs model` (opis niżej).
 `finddocs model use` ustawia `model_key` i synchronizuje pozostałe pola
@@ -315,8 +319,10 @@ finddocs model import intfloat/multilingual-e5-small
 finddocs model use mmlw-retrieval-roberta-base
 finddocs model remove moj-model
 finddocs model device dml --batch 64
-finddocs model api --url https://embeddingi.example.com/v1 --protocol openai --enable
+finddocs model api --url https://embeddingi.example.com/v1 --enable
 finddocs model api-key
+finddocs model profile save Klaster
+finddocs model profile use mmlw-retrieval-roberta-base
 ```
 
 `import` bez argumentu pobiera domyślny model MMLW z Hugging Face; pobranie
@@ -327,8 +333,10 @@ eksportem ONNX, katalog z checkpointem HuggingFace (konwersja wymaga dodatku
 walidowany próbnym przebiegiem przed instalacją i od razu widoczny na liście
 modeli w GUI. Zmiana aktywnego modelu wymaga przebudowy części wektorowej
 (`finddocs maintenance rebuild --vectors-only`, potem `finddocs index`).
-`model device` przełącza obliczenia między CPU i GPU, a `model api`
-z `model api-key` konfigurują zdalne API embeddingów; opis w dokumencie
+`model device` przełącza obliczenia między CPU i GPU, `model api`
+z `model api-key` konfigurują zdalne API embeddingów (domyślny kontrakt
+zgodny z OpenAI), a `model profile` zapisuje i aktywuje nazwane profile
+dostawcy; opis w dokumencie
 [embeddingi na GPU i zdalne API](embeddingi-gpu-api.md).
 Szczegóły i opcje: [instalacja z PyPI](instalacja-pip.md).
 
