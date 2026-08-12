@@ -52,8 +52,10 @@ EXECUTION_PROVIDER_BY_DEVICE: dict[str, str] = {
     "cuda": "CUDAExecutionProvider",
 }
 
-#: Kolejnosc probowania urzadzen w trybie auto.
-AUTO_DEVICE_ORDER: tuple[str, ...] = ("dml", "cuda", "cpu")
+#: Kolejnosc probowania urzadzen w trybie auto. CUDA przed DirectML: wariant
+#: onnxruntime-gpu instaluje sie wylacznie swiadomie pod karte NVIDIA, wiec
+#: jego obecnosc w srodowisku jest mocniejsza deklaracja niz ogolny DirectML.
+AUTO_DEVICE_ORDER: tuple[str, ...] = ("cuda", "dml", "cpu")
 
 #: Etykiety urzadzen do opisu diagnostycznego i interfejsu.
 DEVICE_LABELS: dict[str, str] = {
@@ -76,6 +78,22 @@ def available_devices() -> dict[str, bool]:
     return {
         device: provider in present for device, provider in EXECUTION_PROVIDER_BY_DEVICE.items()
     }
+
+
+def preload_cuda_libraries() -> None:
+    """Laduje biblioteki CUDA i cuDNN z pakietow pip nvidia-*, jesli sa.
+
+    Dodatek instalacyjny przynosi biblioteki NVIDIA jako zwykle pakiety pip
+    (onnxruntime-gpu[cuda,cudnn]). ONNX Runtime nie znajduje ich sam: bez tego
+    wywolania ladowanie providera CUDA konczy sie bledem brakujacego
+    cublasLt (zmierzone). Gdy bibliotek nie ma, ORT tylko ostrzega, a sesja
+    wraca na CPU, wiec wywolanie jest bezpieczne w kazdym srodowisku.
+    """
+    import onnxruntime as ort
+
+    preload = getattr(ort, "preload_dlls", None)
+    if callable(preload):
+        preload()
 
 
 def resolve_execution_providers(device: str) -> tuple[list[str], str]:
@@ -154,7 +172,8 @@ class OnnxEmbeddingProvider(EmbeddingProvider):
 
         session_providers, resolved_device = resolve_execution_providers(device)
         self._requested_device = (device or "cpu").strip().lower()
-        self._device = resolved_device
+        if resolved_device == "cuda":
+            preload_cuda_libraries()
 
         options = ort.SessionOptions()
         threads = num_threads if num_threads > 0 else max(1, (os.cpu_count() or 4) - 1)
@@ -177,6 +196,17 @@ class OnnxEmbeddingProvider(EmbeddingProvider):
             raise ProviderError(
                 "ONNX Runtime uruchomił się z niedozwolonym providerem: " + ", ".join(active)
             )
+        if EXECUTION_PROVIDER_BY_DEVICE[resolved_device] not in active:
+            # ORT tworzy sesje takze wtedy, gdy bibliotek providera GPU nie da
+            # sie zaladowac (np. brak cuDNN): liczy wtedy na CPU. Opis
+            # i diagnostyka maja pokazywac stan faktyczny, nie zadany.
+            log.warning(
+                "provider.device_fallback",
+                requested=resolved_device,
+                active=active,
+            )
+            resolved_device = "cpu"
+        self._device = resolved_device
         self._input_names = {i.name for i in self._session.get_inputs()}
         self._quantized = model_path.name.endswith(".int8.onnx")
         self._model_path = model_path
@@ -365,5 +395,6 @@ __all__ = [
     "OnnxEmbeddingProvider",
     "available_devices",
     "create_local_provider",
+    "preload_cuda_libraries",
     "resolve_execution_providers",
 ]

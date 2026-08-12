@@ -45,36 +45,68 @@ a pip nie gwarantuje kolejności instalacji kół współdzielących pliki. W pr
 kontrolnej po jednym poleceniu aktywny pozostał wariant CPU z zależności
 bazowej; drugie polecenie przywraca wariant GPU niezależnie od kolejności.
 To samo polecenie naprawia środowisko, gdy późniejsza aktualizacja przywróci
-wariant CPU.
+wariant CPU. Gotowe zestawy z OCR instalują presety `preset-nvidia`
+i `preset-gpu`, opisane w [instalacji z PyPI](instalacja-pip.md).
 
-DirectML (`gpu-dml`) jest zalecany na Windows 11: działa na kartach AMD, Intel
-i NVIDIA i potrzebuje wyłącznie zwykłego sterownika graficznego (DirectX 12).
-CUDA (`gpu-cuda`) działa tylko na kartach NVIDIA i poza sterownikiem wymaga
-bibliotek CUDA oraz cuDNN w wersjach zgodnych z wydaniem onnxruntime.
+Wybór wariantu:
+
+* CUDA (`gpu-cuda`) działa tylko na kartach NVIDIA i jest najszybszym
+  zmierzonym wariantem (pomiar niżej). Dodatek instaluje biblioteki CUDA
+  i cuDNN jako zwykłe pakiety pip (`nvidia-*`, około 2 GB na dysku), więc
+  poza aktualnym sterownikiem NVIDIA nic nie trzeba instalować ręcznie.
+  ONNX Runtime nie znajduje tych bibliotek sam: aplikacja ładuje je tuż
+  przed utworzeniem sesji (`preload_cuda_libraries`). Z tego samego powodu
+  ręczna próba w interpreterze wymaga wywołania `onnxruntime.preload_dlls()`
+  przed utworzeniem sesji.
+* DirectML (`gpu-dml`) działa na kartach AMD, Intel i NVIDIA i potrzebuje
+  wyłącznie zwykłego sterownika graficznego (DirectX 12). To właściwy wariant
+  dla kart innych niż NVIDIA; na karcie NVIDIA jest wyraźnie wolniejszy
+  od CUDA.
+
 Uwaga na wersje: linia onnxruntime-directml kończy się obecnie na 1.24.4
 i nie idzie równo z linią CPU (1.28.0); interfejs używany przez aplikację jest
-zgodny w obu wersjach.
+zgodny w obu wersjach. Gdy biblioteki providera GPU nie dają się załadować,
+sesja powstaje na CPU: aplikacja wykrywa to po utworzeniu sesji, zapisuje
+ostrzeżenie w logu i pokazuje faktyczne urządzenie w diagnostyce.
 
 Stan środowiska pokazuje `finddocs model device` (pozycja
 `dostepne_w_srodowisku`) oraz ekran Diagnostyka.
 
-### Kwantyzacja a GPU
+### Kwantyzacja, urządzenie i rozmiar paczki
 
 Wariant INT8 modelu jest zoptymalizowany pod procesor. Na karcie graficznej
-działa wolniej od pełnego FP32 i może dawać wektory minimalnie różne od
-liczonych na CPU. Pomiar na stacji deweloperskiej (MMLW base, batch 32,
-64 fragmenty):
+działa wolniej od pełnego FP32 i daje wektory minimalnie różne od liczonych
+na CPU. Pomiar na stacji deweloperskiej z kartą NVIDIA GeForce RTX 3090
+(MMLW base, batch 32, identyczne fragmenty po 300-700 znaków na każdym
+urządzeniu; DirectML mierzony na tej samej karcie co CUDA):
 
-| Wariant | CPU | GPU (DirectML) |
-| --- | --- | --- |
-| INT8 | 375 fragm./s | 181 fragm./s |
-| FP32 | 172 fragm./s | 615 fragm./s |
+| Wariant | CPU | GPU (DirectML) | GPU (CUDA) |
+| --- | --- | --- | --- |
+| INT8 | 98 fragm./s | 197 fragm./s | 91 fragm./s |
+| FP32 | 52 fragm./s | 405 fragm./s | 727 fragm./s |
 
-Wektory FP32 z CPU i z GPU są identyczne (podobieństwo kosinusowe 1.0), więc
-zmiana samego urządzenia nie wymaga przebudowy indeksu. Zalecenie: na GPU
-wyłącz wariant INT8 (`quantized: false`); ta zmiana unieważnia część wektorową
-indeksu, jak każda zmiana wariantu modelu, więc wykonaj ją razem z planową
-przebudową.
+Wnioski z pomiaru:
+
+* Na karcie NVIDIA najszybszy jest CUDA z modelem FP32: 727 fragm./s wobec
+  52 na CPU, czyli 14 razy szybciej. DirectML na tej samej karcie osiąga 405.
+* Wariant INT8 na CUDA jest wolniejszy nawet od CPU, a na DirectML dwa razy
+  wolniejszy od FP32. Kwantyzacja pozostaje optymalizacją wyłącznie dla
+  procesora.
+* Karta graficzna potrzebuje dużych paczek (`batch_size`). CUDA FP32: 618
+  fragm./s przy batch 8, 774 przy 64, 791 przy 128. DirectML FP32: 170 przy 8,
+  367 przy 64, 383 przy 128. Zalecenie: na GPU ustaw batch 64; wartość 128
+  dodaje już tylko 2-5%.
+* Na CPU domyślny batch 8 pozostaje optymalny. Fragmenty w paczce są
+  dopełniane do najdłuższego, więc duże paczki mieszają długości i INT8
+  zwalnia: 104 fragm./s przy batch 8, 93 przy 128.
+
+Wektory FP32 z CPU, DirectML i CUDA są identyczne (podobieństwo kosinusowe
+1.000000 na wspólnej próbce), więc zmiana samego urządzenia nie wymaga
+przebudowy indeksu. Wektory INT8 różnią się między urządzeniami (najniższe
+zmierzone podobieństwo 0.9950), co jest dodatkowym powodem, żeby na karcie
+graficznej używać FP32. Zalecenie: na GPU wyłącz wariant INT8
+(`quantized: false`); ta zmiana unieważnia część wektorową indeksu, jak każda
+zmiana wariantu modelu, więc wykonaj ją razem z planową przebudową.
 
 ### Włączenie
 
@@ -91,9 +123,10 @@ finddocs model device auto
 finddocs model device cpu
 ```
 
-Wartość `auto` wybiera DirectML, potem CUDA, na końcu CPU. Przy przejściu na
-GPU warto podnieść `--batch` (fragmenty w jednym przebiegu modelu) z domyślnych
-8 do 64 lub więcej: małe paczki nie wykorzystują przepustowości karty.
+Wartość `auto` wybiera CUDA, potem DirectML, na końcu CPU. Przy przejściu na
+GPU podnieś `--batch` (fragmenty w jednym przebiegu modelu) z domyślnych 8
+do 64: małe paczki nie wykorzystują przepustowości karty, a wartości powyżej
+64 dodają już tylko kilka procent (pomiar wyżej).
 
 ## Batchowe osadzanie wielu dokumentów
 
