@@ -37,7 +37,7 @@ from packaging.utils import canonicalize_name
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 PYPROJECT = PROJECT_ROOT / "pyproject.toml"
 APP_NAME = "FindDocs"
-APP_VERSION = "0.2.4"
+APP_VERSION = "0.3.0"
 
 #: Zastosowanie pakietu w aplikacji. Klucz to znormalizowana nazwa pakietu.
 USAGE: dict[str, str] = {
@@ -47,9 +47,12 @@ USAGE: dict[str, str] = {
     "shiboken6": "warstwa wiazan Qt dla Pythona",
     "pypdfium2": "odczyt i rasteryzacja PDF",
     "python-docx": "odczyt plikow DOCX",
+    "python-pptx": "odczyt plikow PPTX",
     "openpyxl": "odczyt plikow XLSX",
     "xlrd": "odczyt starych plikow XLS",
     "olefile": "odczyt kontenerow OLE (DOC, MSG)",
+    "py7zr": "odczyt archiwow 7z",
+    "rarfile": "odczyt archiwow RAR",
     "pillow": "obsluga obrazow i przygotowanie stron do OCR",
     "charset-normalizer": "wykrywanie kodowania plikow tekstowych",
     "numpy": "operacje na wektorach",
