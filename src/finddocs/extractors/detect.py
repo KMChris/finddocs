@@ -233,11 +233,26 @@ def detect_file_type(
 
 
 def _looks_like_text(head: bytes) -> bool:
-    """Prosta heurystyka: brak bajtu zerowego i wysoki udzial znakow drukowalnych."""
+    """Prosta heurystyka: brak bajtu zerowego i niski udzial znakow sterujacych.
+
+    Bajty od 0x80 wzwyz licza sie jako tekstowe: to kontynuacje UTF-8 albo
+    litery stron kodowych cp1250 i iso-8859-2. Wykluczenie zakresu 0x80-0x9F
+    odrzucaloby polski tekst w UTF-8, bo tam trafiaja kontynuacje liter
+    takich jak a z ogonkiem.
+    """
     if b"\x00" in head:
         return False
-    printable = sum(1 for b in head if 9 <= b <= 13 or 32 <= b <= 126 or b >= 160)
+    printable = sum(1 for b in head if 9 <= b <= 13 or 32 <= b <= 126 or b >= 128)
     return bool(head) and printable / len(head) > 0.9
+
+
+def looks_like_text_file(path: Path) -> bool:
+    """Czy poczatek pliku wyglada na zwykly tekst, niezaleznie od rozszerzenia.
+
+    Heurystyka pozwala indeksowac kod zrodlowy, skrypty i pliki konfiguracyjne
+    o rozszerzeniach spoza listy znanych formatow.
+    """
+    return _looks_like_text(_read_head(path))
 
 
 def guess_mime_from_name(name: str) -> str | None:
@@ -254,4 +269,5 @@ __all__ = [
     "FileTypeInfo",
     "detect_file_type",
     "guess_mime_from_name",
+    "looks_like_text_file",
 ]

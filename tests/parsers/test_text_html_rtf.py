@@ -14,9 +14,10 @@ from pathlib import Path
 import pytest
 from parser_data import DISCLAIMER, POLISH_LETTERS, POLISH_SAMPLE, assert_polish
 
-from finddocs.errors import EmptyDocumentError
+from finddocs.errors import EmptyDocumentError, UnsupportedFormatError
 from finddocs.extractors.base import ExtractionContext
 from finddocs.extractors.html_text import HtmlExtractor, html_to_text
+from finddocs.extractors.registry import build_default_registry
 from finddocs.extractors.rtf import RtfExtractor, rtf_to_text
 from finddocs.extractors.text import PlainTextExtractor
 from finddocs.types import SupportLevel, TextOrigin
@@ -129,6 +130,52 @@ def test_txt_obsluguje_rozszerzenia_strukturalne() -> None:
     for suffix in (".txt", ".log", ".md", ".json", ".xml", ".ini", ".yaml"):
         assert extractor.supports(Path(f"plik{suffix}"), None) is True
     assert extractor.supports(Path("plik.docx"), None) is False
+
+
+def test_txt_przyjmuje_kazdy_typ_tekstowy() -> None:
+    """Kod zrodlowy zgloszony jako text/x-python trafia do parsera tekstu."""
+    extractor = PlainTextExtractor()
+
+    assert extractor.supports(Path("skrypt.py"), "text/x-python") is True
+    assert extractor.supports(Path("program.c"), "text/x-c") is True
+    assert extractor.supports(Path("dane.bin"), "application/octet-stream") is False
+
+
+def test_rejestr_indeksuje_kod_zrodlowy(
+    make_text: Callable[..., Path], context: ExtractionContext
+) -> None:
+    """Plik .py przechodzi przez rejestr mimo typu MIME spoza listy parserow."""
+    path = make_text("skrypt.py", f"def main() -> None:\n    print('{POLISH_SAMPLE}')\n")
+
+    result, info = build_default_registry().extract(path, context, declared_mime="text/x-python")
+
+    assert result.parser_name == "text"
+    assert info.mime_type == "text/x-python"
+    assert POLISH_SAMPLE in result.all_text()
+
+
+def test_rejestr_rozpoznaje_tekst_po_tresci(
+    make_text: Callable[..., Path], context: ExtractionContext
+) -> None:
+    """Tekstowy plik o nieznanym rozszerzeniu i typie MIME nie jest odrzucany."""
+    path = make_text("skrypt.ps1", f"Write-Host '{POLISH_SAMPLE}'\n")
+
+    result, _info = build_default_registry().extract(
+        path, context, declared_mime="application/octet-stream"
+    )
+
+    assert result.parser_name == "text"
+    assert POLISH_SAMPLE in result.all_text()
+
+
+def test_rejestr_odrzuca_nieznany_plik_binarny(
+    write_file: Callable[[str, bytes], Path], context: ExtractionContext
+) -> None:
+    """Plik binarny bez parsera nadal konczy sie bledem nieobslugiwanego formatu."""
+    path = write_file("dane.xyz", bytes(range(256)) * 4)
+
+    with pytest.raises(UnsupportedFormatError):
+        build_default_registry().extract(path, context)
 
 
 # --- HTML ------------------------------------------------------------------------

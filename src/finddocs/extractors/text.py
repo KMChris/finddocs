@@ -91,6 +91,16 @@ class PlainTextExtractor(Extractor):
     support_level = SupportLevel.FULL
     priority = 90
 
+    def supports(self, path: Path, mime_type: str | None) -> bool:
+        """Przyjmuje takze kazdy typ ``text/*``, np. text/x-python dla kodu zrodlowego.
+
+        Formaty tekstowe z wlasnym parserem (text/html, text/csv, text/rtf)
+        maja wyzszy priorytet, wiec ich nie przejmujemy.
+        """
+        if super().supports(path, mime_type):
+            return True
+        return bool(mime_type and mime_type.startswith("text/"))
+
     def extract(self, path: Path, context: ExtractionContext) -> ExtractionResult:
         """Odczytuje plik tekstowy i zwraca sekcje odpowiadajace akapitom."""
         context.checkpoint()

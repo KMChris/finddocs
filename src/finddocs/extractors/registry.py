@@ -10,7 +10,7 @@ from pathlib import Path
 
 from finddocs.errors import UnsupportedFormatError
 from finddocs.extractors.base import ExtractionContext, Extractor
-from finddocs.extractors.detect import FileTypeInfo, detect_file_type
+from finddocs.extractors.detect import FileTypeInfo, detect_file_type, looks_like_text_file
 from finddocs.logging_setup import get_logger
 from finddocs.types import ExtractionResult, SupportLevel
 
@@ -45,6 +45,11 @@ class ExtractorRegistry:
         matched = [e for e in self._extractors if e.supports(path, info.mime_type)]
         if not matched and info.extension:
             matched = [e for e in self._extractors if info.extension in e.extensions]
+        if not matched and looks_like_text_file(path):
+            # Plik nieznanego typu o tresci tekstowej obsluguje parser zwyklego
+            # tekstu. Dzieki temu kod zrodlowy, skrypty i pliki konfiguracyjne
+            # sa indeksowane niezaleznie od rozszerzenia i typu MIME.
+            matched = [e for e in self._extractors if "text/plain" in e.mime_types]
         return matched
 
     def find(self, path: Path, info: FileTypeInfo) -> Extractor | None:
