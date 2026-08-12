@@ -1,8 +1,15 @@
-"""Ekran zrodel i konfiguracji: SharePoint, katalogi lokalne, model, przechowywanie."""
+"""Ekran zrodel i konfiguracji: trzy zakladki tematyczne.
+
+Zakladka Zrodla trzyma liste zrodel dokumentow. Zakladka Wyszukiwanie
+semantyczne sklada karty konfiguracji z ``config_cards``: wlacznik,
+model i obliczenia. Zakladka Przechowywanie zbiera katalog danych
+i magazyn wektorow, czyli wszystko o tym, gdzie lezy indeks.
+"""
 
 from __future__ import annotations
 
 import uuid
+from collections.abc import Sequence
 from pathlib import Path
 
 from PySide6.QtCore import Qt, Signal
@@ -13,11 +20,13 @@ from PySide6.QtWidgets import (
     QDialogButtonBox,
     QFileDialog,
     QFormLayout,
+    QFrame,
     QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QPushButton,
+    QScrollArea,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -31,15 +40,15 @@ from finddocs.config import (
 )
 from finddocs.connectors.base import SourceConnector
 from finddocs.gui import i18n
+from finddocs.gui.config_cards import ComputeCard, ModelCard, SemanticCard, VectorStoreCard
 from finddocs.gui.context import AppContext
 from finddocs.gui.dialogs import ask_yes_no, show_error, show_info, show_warning
-from finddocs.gui.model_dialog import ModelSettingsDialog
 from finddocs.gui.tables import configure_columns, text_item
-from finddocs.gui.theme import SPACE_LG, SPACE_SM, accent_icon, theme_icon
+from finddocs.gui.theme import SPACE_MD, SPACE_SM, accent_icon, theme_icon
 from finddocs.gui.widgets.page import Banner, PageHeader, page_layout, repolish
+from finddocs.gui.widgets.tabs import TabPanel
 from finddocs.gui.workers import CallableTask, thread_pool
 from finddocs.logging_setup import get_logger
-from finddocs.providers.model_manifest import describe_models, sync_embedding_settings
 from finddocs.types import SourceKind
 
 log = get_logger(__name__)
@@ -51,6 +60,10 @@ SOURCE_ID_ROLE = Qt.ItemDataRole.UserRole
 #: zakresu tabela wyglada na uszkodzona, powyzej jest pustym prostokatem.
 TABLE_MIN_HEIGHT = 120
 TABLE_MAX_HEIGHT = 260
+
+#: Szerokosc kolumny kart konfiguracji, wzorem ekranu Ustawien. Bez tego
+#: ograniczenia formularze rozciagaja sie na cala szerokosc duzego okna.
+CONFIG_COLUMN_WIDTH = 760
 
 
 class SharePointDialog(QDialog):
@@ -171,7 +184,7 @@ class SharePointDialog(QDialog):
 
 
 class SourcesView(QWidget):
-    """Lista zrodel, ustawienia modelu i przechowywania."""
+    """Zakladki: lista zrodel, wyszukiwanie semantyczne, przechowywanie."""
 
     status_message = Signal(str)
     sources_changed = Signal()
@@ -185,20 +198,78 @@ class SourcesView(QWidget):
         self.header = PageHeader(i18n.NAV_SOURCES)
         root.addWidget(self.header)
 
-        # Ekran ustawien czyta sie od gory. Rozciagniecie listy zrodel na cala
-        # wysokosc dawalo pusta tabele na kilkaset pikseli, wiec karty maja
-        # wysokosc wynikajaca z tresci, a wolne miejsce zostaje na dole.
-        root.addWidget(self._build_sources_box())
-        row = QHBoxLayout()
-        row.setSpacing(SPACE_LG)
-        row.addWidget(self._build_storage_box(), stretch=1)
-        row.addWidget(self._build_model_box(), stretch=1)
-        root.addLayout(row)
-        root.addStretch(1)
+        self.tabs = TabPanel()
+        self.tabs.addTab(self._build_sources_tab(), i18n.SOURCES_TAB_SOURCES)
+        self.tabs.addTab(self._build_semantic_tab(), i18n.SOURCES_TAB_SEMANTIC)
+        self.tabs.addTab(self._build_storage_tab(), i18n.SOURCES_TAB_STORAGE)
+        root.addWidget(self.tabs, stretch=1)
 
         self.refresh()
 
     # --- budowa -----------------------------------------------------------
+
+    def _build_sources_tab(self) -> QWidget:
+        # Rozciagniecie listy zrodel na cala wysokosc dawalo pusta tabele na
+        # kilkaset pikseli, wiec karta ma wysokosc wynikajaca z tresci,
+        # a wolne miejsce zostaje na dole.
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(SPACE_MD)
+        layout.addWidget(self._build_sources_box())
+        layout.addStretch(1)
+        return page
+
+    def _build_semantic_tab(self) -> QWidget:
+        self.semantic_card = SemanticCard(self.context)
+        self.model_card = ModelCard(self.context)
+        self.compute_card = ComputeCard(self.context)
+        self.model_card.models_changed.connect(self.refresh)
+        for card in (self.semantic_card, self.model_card, self.compute_card):
+            card.status_message.connect(self.status_message)
+            card.applied.connect(self._after_config_applied)
+        return self._scrolling_column((self.semantic_card, self.model_card, self.compute_card))
+
+    def _build_storage_tab(self) -> QWidget:
+        self.vector_card = VectorStoreCard(self.context)
+        self.vector_card.status_message.connect(self.status_message)
+        self.vector_card.applied.connect(self._after_config_applied)
+        return self._scrolling_column((self._build_storage_box(), self.vector_card))
+
+    def _scrolling_column(self, widgets: Sequence[QWidget]) -> QWidget:
+        """Zwarta kolumna kart przy lewej krawedzi, przewijana w pionie.
+
+        Karty maja wysokosc wynikajaca z tresci. Na malym oknie kolumna
+        przewija sie w pionie, zamiast sciskac formularze.
+        """
+        column = QWidget()
+        column.setMaximumWidth(CONFIG_COLUMN_WIDTH)
+        layout = QVBoxLayout(column)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(SPACE_MD)
+        for widget in widgets:
+            layout.addWidget(widget)
+        layout.addStretch(1)
+
+        holder = QWidget()
+        row = QHBoxLayout(holder)
+        # Prawy margines robi miejsce na pasek przewijania, zeby nie nachodzil
+        # na kolumne kart, gdy sie pojawi.
+        row.setContentsMargins(0, 0, SPACE_MD, 0)
+        row.setSpacing(0)
+        # Kolumna ze stretchem i limitem szerokosci: wypelnia okno do limitu
+        # i ma stala szerokosc niezalezna od widocznych paneli warunkowych.
+        # Spacer o stretch 0 przejmuje reszte i trzyma kolumne przy lewej
+        # krawedzi; bez niego Qt centruje element po osiagnieciu limitu.
+        row.addWidget(column, 1)
+        row.addStretch(0)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setWidget(holder)
+        return scroll
 
     def _build_sources_box(self) -> QWidget:
         box = QGroupBox(i18n.SOURCES_TITLE)
@@ -302,40 +373,6 @@ class SourcesView(QWidget):
         row.addWidget(open_button)
         row.addStretch(1)
         layout.addLayout(row)
-        layout.addStretch(1)
-        return box
-
-    def _build_model_box(self) -> QWidget:
-        box = QGroupBox(i18n.MODEL_TITLE)
-        layout = QVBoxLayout(box)
-        layout.setSpacing(SPACE_SM)
-
-        combo_row = QHBoxLayout()
-        combo_row.setSpacing(SPACE_SM)
-        self.model_combo = QComboBox()
-        combo_row.addWidget(self.model_combo, stretch=1)
-        self.model_settings_button = QPushButton(i18n.MODEL_SETTINGS_BUTTON)
-        self.model_settings_button.setIcon(theme_icon("settings"))
-        self.model_settings_button.setToolTip(i18n.MODEL_SETTINGS_TITLE)
-        self.model_settings_button.clicked.connect(self.open_model_settings)
-        combo_row.addWidget(self.model_settings_button)
-        layout.addLayout(combo_row)
-
-        self.model_info = QLabel("")
-        self.model_info.setObjectName("Muted")
-        self.model_info.setWordWrap(True)
-        layout.addWidget(self.model_info)
-
-        self.quantized_check = QCheckBox("Użyj wersji skwantyzowanej (szybsza, mniejszy plik)")
-        self.quantized_check.setChecked(self.context.config.embedding.quantized)
-        layout.addWidget(self.quantized_check)
-
-        apply_button = QPushButton("Zastosuj ustawienia modelu")
-        apply_button.clicked.connect(self.apply_model)
-        # Wyrownanie do prawej trzyma naturalna szerokosc przycisku. Bez niego
-        # pionowy uklad rozciaga go na cala karte i wyglada jak pasek.
-        layout.addWidget(apply_button, 0, Qt.AlignmentFlag.AlignRight)
-        layout.addStretch(1)
         return box
 
     # --- odswiezanie ------------------------------------------------------
@@ -384,29 +421,10 @@ class SourcesView(QWidget):
             i18n.STORAGE_INDEX_SIZE.format(value=i18n.format_bytes(paths.index_size_bytes()))
         )
 
-        self.model_combo.blockSignals(True)
-        self.model_combo.clear()
-        installed_any = False
-        for model in describe_models():
-            suffix = " (zainstalowany)" if model["zainstalowany"] else " (brak plików)"
-            installed_any = installed_any or bool(model["zainstalowany"])
-            self.model_combo.addItem(str(model["nazwa"]) + suffix, model["klucz"])
-        position = self.model_combo.findData(self.context.config.embedding.model_key)
-        self.model_combo.setCurrentIndex(max(0, position))
-        self.model_combo.blockSignals(False)
-
-        index = self.context.index
-        if index is not None and index.provider is not None:
-            info = index.provider.info
-            self.model_info.setText(
-                f"{i18n.MODEL_CURRENT.format(value=info.model_key)}\n"
-                f"{i18n.MODEL_DIMENSION.format(value=info.dimension)}\n"
-                f"Licencja: {info.license_name}, środowisko: {info.runtime}"
-            )
-        elif not self.context.config.embedding.semantic_enabled:
-            self.model_info.setText(i18n.MODEL_SEMANTIC_DISABLED)
-        else:
-            self.model_info.setText(i18n.MODEL_MISSING)
+        # Karty konfiguracji trzymaja edytowane pola u siebie; odswiezamy
+        # wylacznie to, co zmienia sie poza nimi: stan indeksu i liste modeli.
+        self.semantic_card.refresh()
+        self.model_card.refresh_models()
 
     # --- akcje ------------------------------------------------------------
 
@@ -565,32 +583,8 @@ class SourcesView(QWidget):
         self.context.save()
         self.refresh()
 
-    def apply_model(self) -> None:
-        embedding = self.context.config.embedding
-        key = str(self.model_combo.currentData())
-        quantized = self.quantized_check.isChecked()
-        changed = key != embedding.model_key or quantized != embedding.quantized
-        if key != embedding.model_key:
-            # Przedrostki i dlugosc sekwencji ida za nowym modelem, tak jak
-            # w poleceniu finddocs model use. Bez tego skrot zgodnosci czesci
-            # wektorowej liczylby sie z parametrow poprzedniego modelu.
-            extra = Path(embedding.model_path) if embedding.model_path else None
-            sync_embedding_settings(embedding, key, extra=extra)
-        embedding.quantized = quantized
-        self.context.save()
-        if changed:
-            show_info(self, i18n.MODEL_REBUILD_REQUIRED)
-            self._reload_index_in_background()
-        self.refresh()
-
-    def open_model_settings(self) -> None:
-        key = str(self.model_combo.currentData() or self.context.config.embedding.model_key)
-        dialog = ModelSettingsDialog(self.context, self, model_key=key)
-        dialog.models_changed.connect(self.refresh)
-        dialog.config_applied.connect(self._after_model_settings)
-        dialog.exec()
-
-    def _after_model_settings(self, reload_needed: bool) -> None:
+    def _after_config_applied(self, reload_needed: bool) -> None:
+        """Reakcja na zapis karty konfiguracji: odswiezenie i otwarcie indeksu."""
         self.refresh()
         if reload_needed:
             self._reload_index_in_background()

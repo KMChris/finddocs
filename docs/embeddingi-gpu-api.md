@@ -78,8 +78,9 @@ przebudową.
 
 ### Włączenie
 
-W GUI: **Źródła i konfiguracja, Ustawienia modelu, Obliczenia modelu
-lokalnego**. Okno pokazuje urządzenia wykryte w bieżącym środowisku.
+W GUI: **Źródła i konfiguracja, zakładka Wyszukiwanie semantyczne, karta
+Obliczenia embeddingów** (dostawca: Model lokalny). Karta pokazuje
+urządzenia wykryte w bieżącym środowisku.
 
 Z wiersza poleceń:
 
@@ -164,7 +165,9 @@ nie jest ponawiana i od razu daje czytelny komunikat.
 
 ### Konfiguracja
 
-W GUI: **Ustawienia modelu, Zdalne API embeddingów**. Z wiersza poleceń:
+W GUI: **Źródła i konfiguracja, zakładka Wyszukiwanie semantyczne, karta
+Obliczenia embeddingów**, dostawca **Zdalne API organizacji**. Z wiersza
+poleceń:
 
 ```bash
 finddocs model api --url https://embeddingi.example.com/v1 --protocol openai --model mmlw-duzy --dimension 1024

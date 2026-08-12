@@ -84,9 +84,10 @@ dalej działa w trybie dokładnym.
 
 ## Konfiguracja
 
-W GUI: ekran Źródła i konfiguracja, przycisk `Ustawienia...` przy modelu,
-sekcja `Magazyn wektorów`. Formularz pozwala też zapisać hasło w magazynie
-poświadczeń i przetestować połączenie przed zapisaniem ustawień.
+W GUI: ekran Źródła i konfiguracja, zakładka `Przechowywanie`, karta
+`Magazyn wektorów`. Pola połączenia pojawiają się po wybraniu magazynu
+pgvector. Karta pozwala też zapisać hasło w magazynie poświadczeń
+i przetestować połączenie przed zapisaniem ustawień.
 
 Odpowiednia sekcja `settings.json`:
 

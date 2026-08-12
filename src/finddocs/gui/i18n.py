@@ -156,6 +156,12 @@ RESULTS_TOOK = "czas: {ms} ms"
 
 # --- ekran zrodel ------------------------------------------------------------
 
+# Ekran dzieli sie na trzy zakladki: zrodla dokumentow, konfiguracja
+# wyszukiwania semantycznego oraz przechowywanie danych indeksu.
+SOURCES_TAB_SOURCES = "Źródła"
+SOURCES_TAB_SEMANTIC = "Wyszukiwanie semantyczne"
+SOURCES_TAB_STORAGE = "Przechowywanie"
+
 SOURCES_TITLE = "Źródła dokumentów"
 # Napisy na przyciskach sa krotkie, bo caly wiersz musi sie zmiescic takze
 # w oknie o najmniejszym dozwolonym rozmiarze. Pelne zdanie jest w podpowiedzi.
@@ -189,7 +195,6 @@ STORAGE_OPEN = "Otwórz katalog"
 STORAGE_FREE = "Wolne miejsce: {value}"
 STORAGE_INDEX_SIZE = "Rozmiar indeksu: {value}"
 
-MODEL_TITLE = "Model wyszukiwania semantycznego"
 MODEL_CURRENT = "Model: {value}"
 MODEL_DIMENSION = "Wymiar wektora: {value}"
 MODEL_MISSING = (
@@ -200,10 +205,12 @@ MODEL_SEMANTIC_DISABLED = (
     "Indeksowanie semantyczne jest wyłączone w ustawieniach. Tryb dokładny działa normalnie."
 )
 
-# --- okno ustawien modelu ----------------------------------------------------
+# --- karty konfiguracji wyszukiwania semantycznego ----------------------------
 
-MODEL_SETTINGS_TITLE = "Ustawienia modelu"
-MODEL_SETTINGS_BUTTON = "Ustawienia..."
+MODEL_SEMANTIC_BOX = "Wyszukiwanie semantyczne"
+MODEL_BOX = "Model embeddingów"
+MODEL_COMBO_LABEL = "Model"
+MODEL_QUANTIZED = "Użyj wersji skwantyzowanej (szybsza, mniejszy plik)"
 MODEL_QUERY_PREFIX = "Przedrostek zapytania"
 MODEL_PASSAGE_PREFIX = "Przedrostek treści"
 MODEL_PREFIX_HINT = (
@@ -212,20 +219,20 @@ MODEL_PREFIX_HINT = (
     "wymaga „query: ” i „passage: ”. Zmiana przedrostków wymaga "
     "przebudowy części semantycznej indeksu."
 )
-MODEL_PREFIX_NOT_INSTALLED = (
-    "Model nie jest zainstalowany, więc przedrostki nie zostały zapisane. "
-    "Zainstaluj model albo wybierz go jako aktywny i spróbuj ponownie."
-)
 MODEL_SEMANTIC_TOGGLE = "Włącz indeksowanie i wyszukiwanie semantyczne"
 MODEL_SEMANTIC_HINT = (
     "Po wyłączeniu nowe dokumenty są indeksowane tylko pełnotekstowo, a tryby "
     "semantyczny i hybrydowy przestają działać. Po ponownym włączeniu wystarczy "
     "zwykłe skanowanie: brakujące wektory zostaną uzupełnione automatycznie."
 )
+MODEL_COMPUTE_BOX = "Obliczenia embeddingów"
 MODEL_PROVIDER_LABEL = "Dostawca embeddingów"
 MODEL_PROVIDER_LOCAL = "Model lokalny (ONNX)"
+MODEL_PROVIDER_LOCAL_HINT = "Embeddingi są liczone na tym komputerze, bez połączeń sieciowych"
 MODEL_PROVIDER_REMOTE = "Zdalne API organizacji"
-MODEL_DEVICE_BOX = "Obliczenia modelu lokalnego"
+MODEL_PROVIDER_REMOTE_HINT = (
+    "Embeddingi liczy API wskazane przez organizację. Treść fragmentów opuszcza ten komputer"
+)
 MODEL_DEVICE_LABEL = "Urządzenie"
 MODEL_DEVICE_CPU = "Procesor (CPU)"
 MODEL_DEVICE_AUTO = "Automatycznie (GPU, gdy dostępne)"
@@ -246,8 +253,6 @@ MODEL_BATCH_DOCS_HINT = (
     "Podczas indeksowania fragmenty kolejnych dokumentów są zbierane i osadzane "
     "jednym wywołaniem modelu. Wartość 1 wyłącza wspólne osadzanie."
 )
-MODEL_REMOTE_BOX = "Zdalne API embeddingów"
-MODEL_REMOTE_ENABLE = "Używaj zdalnego API embeddingów"
 MODEL_REMOTE_URL = "Adres API"
 MODEL_REMOTE_URL_PLACEHOLDER = "https://api.example.com/v1"
 MODEL_REMOTE_PROTOCOL = "Kontrakt"
@@ -519,6 +524,7 @@ BUTTON_OK = "OK"
 BUTTON_CANCEL = "Anuluj"
 BUTTON_CLOSE = "Zamknij"
 BUTTON_SAVE = "Zapisz"
+BUTTON_APPLY = "Zastosuj"
 BUTTON_BROWSE = "Przeglądaj..."
 
 ERROR_TITLE = "Wystąpił błąd"
