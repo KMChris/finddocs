@@ -40,13 +40,69 @@ CLASS_COLORS: dict[str, tuple[str, str]] = {
     "danger": ("#c42b1c", "#ff99a4"),
 }
 
-Op = tuple[str, tuple[float, ...] | tuple[tuple[float, float], ...]]
+Op = tuple[str, tuple[float, ...] | tuple[tuple[float, float], ...] | str]
+
+
+def fmt(value: float) -> str:
+    """Liczba w zapisie SVG, bez zbednych zer."""
+    text = f"{value:.3f}".rstrip("0").rstrip(".")
+    return text or "0"
+
+
+def rounded_path(points: tuple[tuple[float, float], ...], radius: float) -> str:
+    """Zamknieta sciezka z rogami zaokraglonymi krzywymi kwadratowymi.
+
+    Zwykly ``poly`` daje ostre rogi (zlagodzone tylko grubym zlaczem pedzla),
+    a Fluent rysuje kontury z wyraznym promieniem. Kazdy rog jest zastepowany
+    krzywa kwadratowa o punkcie kontrolnym w wierzcholku.
+    """
+    parts: list[str] = []
+    count = len(points)
+    for index, corner in enumerate(points):
+        previous = points[index - 1]
+        following = points[(index + 1) % count]
+        into = (corner[0] - previous[0], corner[1] - previous[1])
+        out_of = (following[0] - corner[0], following[1] - corner[1])
+        length_in = math.hypot(*into) or 1.0
+        length_out = math.hypot(*out_of) or 1.0
+        cut = min(radius, length_in / 2, length_out / 2)
+        start = (corner[0] - into[0] / length_in * cut, corner[1] - into[1] / length_in * cut)
+        end = (corner[0] + out_of[0] / length_out * cut, corner[1] + out_of[1] / length_out * cut)
+        parts.append(f"{'M' if index == 0 else 'L'} {fmt(start[0])} {fmt(start[1])}")
+        parts.append(f"Q {fmt(corner[0])} {fmt(corner[1])} {fmt(end[0])} {fmt(end[1])}")
+    parts.append("Z")
+    return " ".join(parts)
+
+
+def gear_points(
+    center: float, outer: float, root: float, teeth: int, tip_half: float, root_half: float
+) -> tuple[tuple[float, float], ...]:
+    """Obrys zebatki: na kazdy zab dwa punkty u podstawy i dwa na szczycie.
+
+    Katy w stopniach, polowa szerokosci zeba osobno na szczycie i u podstawy.
+    Pierwszy zab jest wysrodkowany na godzinie dwunastej.
+    """
+    points: list[tuple[float, float]] = []
+    step = 360.0 / teeth
+    for tooth in range(teeth):
+        base = 90.0 + tooth * step
+        for offset, radius in (
+            (-root_half, root),
+            (-tip_half, outer),
+            (tip_half, outer),
+            (root_half, root),
+        ):
+            angle = math.radians(base + offset)
+            points.append((center + radius * math.cos(angle), center - radius * math.sin(angle)))
+    return tuple(points)
+
 
 #: Definicje glifow w ukladzie logicznym 16 na 16 pikseli.
 #: Operacje: line (lamana), poly (zamkniety obrys), fill (wypelniony wielokat),
 #: ellipse (obrys elipsy), arc (luk: prostokat, kat startu, rozpietosc w stopniach,
 #: katy jak w Qt: 0 na godzinie trzeciej, dodatnie przeciwnie do wskazowek),
-#: rrect (obrys prostokata zaokraglonego), frrect (wypelniony prostokat zaokraglony).
+#: rrect (obrys prostokata zaokraglonego), frrect (wypelniony prostokat zaokraglony),
+#: path (gotowa sciezka SVG, np. z ``rounded_path``).
 GLYPHS: dict[str, tuple[float, tuple[Op, ...]]] = {
     "search": (
         1.7,
@@ -61,7 +117,15 @@ GLYPHS: dict[str, tuple[float, tuple[Op, ...]]] = {
     ),
     "folder": (
         1.6,
-        (("poly", ((2.2, 4.2), (6.4, 4.2), (7.8, 5.8), (13.8, 5.8), (13.8, 12.6), (2.2, 12.6))),),
+        (
+            (
+                "path",
+                rounded_path(
+                    ((2.2, 4.4), (6.5, 4.4), (8.1, 6.1), (13.8, 6.1), (13.8, 12.6), (2.2, 12.6)),
+                    1.2,
+                ),
+            ),
+        ),
     ),
     "copy": (
         1.6,
@@ -70,20 +134,34 @@ GLYPHS: dict[str, tuple[float, tuple[Op, ...]]] = {
             ("line", ((5.6, 2.8), (13.2, 2.8), (13.2, 10.4))),
         ),
     ),
+    # Odswiezenie jak w Fluent: luk zamkniety niemal w kolo, przerwa u gory
+    # po prawej, grot styczny do luku na jego koncu (na godzinie dwunastej).
     "refresh": (
         1.6,
         (
-            ("arc", (3.4, 3.4, 9.2, 9.2, 30.0, 300.0)),
-            ("fill", ((13.2, 8.2), (13.4, 11.1), (10.6, 9.5))),
+            ("arc", (3.4, 3.4, 9.2, 9.2, 30.0, -300.0)),
+            ("fill", ((8.0, 1.5), (8.0, 5.3), (11.4, 3.4))),
         ),
     ),
+    # Baza danych: walec z dwoma pasami. Sam gorny talerz i dno wygladaly
+    # jak beczka, dopiero pasy mowia ,,warstwy danych''.
     "database": (
         1.5,
         (
-            ("ellipse", (3.6, 2.8, 8.8, 3.4)),
-            ("line", ((3.6, 4.5), (3.6, 11.6))),
-            ("line", ((12.4, 4.5), (12.4, 11.6))),
-            ("arc", (3.6, 9.9, 8.8, 3.4, 180.0, 180.0)),
+            ("ellipse", (3.6, 2.6, 8.8, 3.2)),
+            ("line", ((3.6, 4.2), (3.6, 11.9))),
+            ("line", ((12.4, 4.2), (12.4, 11.9))),
+            ("arc", (3.6, 6.4, 8.8, 3.2, 180.0, 180.0)),
+            ("arc", (3.6, 10.3, 8.8, 3.2, 180.0, 180.0)),
+        ),
+    ),
+    # Zebatka ustawien: osiem zebow, otwor w srodku. Wczesniejsze suwaki
+    # z galkami zlewaly sie przy 18 pikselach w nieczytelny splot kresek.
+    "settings": (
+        1.5,
+        (
+            ("path", rounded_path(gear_points(8.0, 6.7, 4.9, 8, 11.0, 17.5), 0.6)),
+            ("ellipse", (5.8, 5.8, 4.4, 4.4)),
         ),
     ),
     "chart": (
@@ -219,12 +297,6 @@ STYLESHEET_ICONS: tuple[tuple[str, int, float, str, tuple[Op, ...]], ...] = (
 )
 
 
-def fmt(value: float) -> str:
-    """Liczba w zapisie SVG, bez zbednych zer."""
-    text = f"{value:.3f}".rstrip("0").rstrip(".")
-    return text or "0"
-
-
 def points_attr(data: tuple[tuple[float, float], ...]) -> str:
     return " ".join(f"{fmt(x)},{fmt(y)}" for x, y in data)
 
@@ -274,6 +346,8 @@ def svg_element(
             f'<rect x="{fmt(x)}" y="{fmt(y)}" width="{fmt(w)}" height="{fmt(h)}"'
             f' rx="{fmt(radius)}" fill="{color}" stroke="none"/>'
         )
+    if kind == "path":
+        return f'<path d="{data}"/>'
     raise ValueError(f"Nieznana operacja rysowania: {kind}")
 
 

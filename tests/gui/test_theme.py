@@ -65,6 +65,7 @@ GLYPH_NAMES = (
     "database",
     "chart",
     "pulse",
+    "settings",
     "play",
     "pause",
     "cross",
