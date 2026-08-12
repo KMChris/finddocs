@@ -68,6 +68,10 @@ ocr-easy = ["easyocr>=1.7.2"]
 # (1.28.0); interfejs ORT uzywany przez aplikacje jest zgodny w obu.
 gpu-dml = ["onnxruntime-directml==1.24.4"]
 gpu-cuda = ["onnxruntime-gpu==1.28.0"]
+# Zewnetrzny magazyn wektorow w PostgreSQL z rozszerzeniem pgvector.
+# Sterownik jest importowany dopiero po swiadomym wlaczeniu magazynu
+# (vector_store.backend = pgvector); bez dodatku aplikacja dziala jak dotad.
+pgvector = ["psycopg[binary]==3.3.4"]
 dev = [
     "pytest==9.1.1",
     "pytest-qt==4.5.0",
@@ -157,6 +161,9 @@ ignore = [
 # znakow zapytania. Wszystkie wartosci przekazujemy jako parametry zapytania.
 "src/finddocs/indexing/fts.py" = ["S608"]
 "src/finddocs/indexing/repository.py" = ["S608"]
+# Nazwy schematu i tabeli przechodza przez walidacje scislym wyrazeniem
+# regularnym, a wszystkie wartosci ida jako parametry zapytania.
+"src/finddocs/indexing/pgvector.py" = ["S608"]
 "src/finddocs/search/service.py" = ["S608"]
 "src/finddocs/diagnostics/*" = ["S608"]
 "tools/**" = ["S101", "ANN", "PTH", "S603", "S607"]
@@ -204,6 +211,8 @@ module = [
     "tokenizers",
     "onnxruntime",
     "onnxruntime.*",
+    "psycopg",
+    "psycopg.*",
     "torch",
     "transformers",
     "safetensors",

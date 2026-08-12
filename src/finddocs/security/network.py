@@ -32,6 +32,9 @@ class EgressCategory(StrEnum):
     INTERNAL_API = "internal_api"
     """Wewnetrzne API organizacji (przyszły provider embeddingów na GPU)."""
 
+    VECTOR_DB = "vector_db"
+    """Zewnetrzna baza wektorowa organizacji (PostgreSQL z rozszerzeniem pgvector)."""
+
 
 DEFAULT_ALLOWLIST: dict[EgressCategory, tuple[str, ...]] = {
     EgressCategory.MICROSOFT_GRAPH: (
@@ -49,6 +52,7 @@ DEFAULT_ALLOWLIST: dict[EgressCategory, tuple[str, ...]] = {
         "*.hf.co",
     ),
     EgressCategory.INTERNAL_API: (),
+    EgressCategory.VECTOR_DB: (),
 }
 
 ALLOWED_SCHEMES = frozenset({"https"})
@@ -125,6 +129,36 @@ class NetworkPolicy:
             )
         return host
 
+    def check_host(self, host: str, category: EgressCategory) -> str:
+        """Sprawdza polaczenie TCP inne niz HTTP, np. z baza danych.
+
+        Zwraca host, gdy polaczenie jest dozwolone. Hosty lokalne sa dozwolone
+        zawsze, bo takie polaczenie nie opuszcza komputera. Wymaganie szyfrowania
+        egzekwuje wywolujacy, bo zalezy ono od protokolu (dla PostgreSQL jest to
+        parametr sslmode).
+        """
+        cleaned = (host or "").strip().lower()
+        if not cleaned:
+            raise NetworkPolicyError("Nie podano nazwy hosta.")
+
+        if cleaned in LOCAL_HOSTS:
+            return cleaned
+
+        if category not in self.enabled_categories:
+            raise NetworkPolicyError(
+                f"Kategoria połączeń '{category.value}' jest wylaczona. "
+                "Wlacz ja w konfiguracji, jesli organizacja na to pozwala."
+            )
+
+        patterns = self.allowed_hosts(category)
+        if not any(fnmatch.fnmatch(cleaned, pattern) for pattern in patterns):
+            log.warning("network.blocked", host=cleaned, category=category.value)
+            raise NetworkPolicyError(
+                f"Host {cleaned} nie znajduje sie na liscie dozwolonych adresow "
+                f"dla kategorii '{category.value}'."
+            )
+        return cleaned
+
     def describe(self) -> dict[str, object]:
         """Opis polityki do ekranu diagnostyki."""
         return {
@@ -167,6 +201,13 @@ def policy_from_config(config: object) -> NetworkPolicy:
         if host:
             policy.enable(EgressCategory.INTERNAL_API)
             policy.extra_hosts[EgressCategory.INTERNAL_API] = (host,)
+
+    vector_store = getattr(config, "vector_store", None)
+    if vector_store is not None and getattr(vector_store, "backend", "") == "pgvector":
+        db_host = str(getattr(vector_store, "pgvector_host", "") or "").strip().lower()
+        if db_host:
+            policy.enable(EgressCategory.VECTOR_DB)
+            policy.extra_hosts[EgressCategory.VECTOR_DB] = (db_host,)
     return policy
 
 
@@ -191,6 +232,7 @@ def check_url(url: str, category: EgressCategory) -> str:
 __all__ = [
     "ALLOWED_SCHEMES",
     "DEFAULT_ALLOWLIST",
+    "LOCAL_HOSTS",
     "EgressCategory",
     "NetworkPolicy",
     "check_url",

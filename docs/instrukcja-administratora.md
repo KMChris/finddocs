@@ -118,6 +118,30 @@ Modele instaluje i przełącza grupa poleceń `finddocs model` (opis niżej).
 `finddocs model use` ustawia `model_key` i synchronizuje pozostałe pola
 z manifestem modelu, więc ręczna edycja tej sekcji zwykle nie jest potrzebna.
 
+### Magazyn wektorów
+
+```json
+"vector_store": {
+  "backend": "faiss",
+  "pgvector_host": "",
+  "pgvector_port": 5432,
+  "pgvector_database": "",
+  "pgvector_user": "",
+  "pgvector_schema": "public",
+  "pgvector_table": "finddocs_vectors",
+  "pgvector_sslmode": "require"
+}
+```
+
+`backend` wybiera miejsce przechowywania wektorów: `faiss` (plik lokalny,
+domyślne) albo `pgvector` (zewnętrzna baza PostgreSQL z rozszerzeniem
+pgvector, wymaga dodatku `finddocs[pgvector]`). Do bazy trafiają wyłącznie
+identyfikatory fragmentów i wektory liczbowe, nigdy tekst. Hasło użytkownika
+bazy przechowuje magazyn poświadczeń, nie ten plik. Zmiana magazynu albo
+wskazanie innej tabeli unieważnia część wektorową indeksu. Szczegóły,
+wymagania serwera i zasady bezpieczeństwa:
+[zewnętrzna baza wektorowa](baza-wektorowa.md).
+
 ### OCR
 
 ```json

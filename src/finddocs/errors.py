@@ -187,6 +187,15 @@ class MigrationError(IndexError_):
     default_message = "Migracja schematu indeksu nie powiodła się."
 
 
+class VectorBackendUnavailableError(IndexError_):
+    """Zewnetrzny magazyn wektorow (np. pgvector) chwilowo nie odpowiada."""
+
+    code = "FD-5004"
+    default_message = (
+        "Zewnętrzna baza wektorowa jest niedostępna. Wyszukiwanie dokładne działa bez zmian."
+    )
+
+
 # --- embeddingi ----------------------------------------------------------------
 
 
@@ -276,4 +285,5 @@ __all__ = [
     "TemporaryStorageError",
     "TransientConnectorError",
     "UnsupportedFormatError",
+    "VectorBackendUnavailableError",
 ]

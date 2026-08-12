@@ -231,6 +231,81 @@ def test_wylaczenie_zdalnego_api_wraca_do_modelu_lokalnego(
     assert zapisana.embedding.internal_api_enabled is False
 
 
+# --- magazyn wektorow --------------------------------------------------------------
+
+
+@pytest.mark.gui
+def test_zapis_ustawien_magazynu_pgvector(
+    qtbot: object, dialog_context: AppContext, message_boxes: list[QMessageBox]
+) -> None:
+    dialog = ModelSettingsDialog(dialog_context, model_key=FAKE_KEY)
+    qtbot.addWidget(dialog)  # type: ignore[attr-defined]
+    zgloszenia: list[bool] = []
+    dialog.config_applied.connect(zgloszenia.append)
+
+    position = dialog.vector_backend_combo.findData("pgvector")
+    assert position >= 0
+    dialog.vector_backend_combo.setCurrentIndex(position)
+    dialog.vector_host_edit.setText("baza.firma.local")
+    dialog.vector_port_spin.setValue(5433)
+    dialog.vector_database_edit.setText("wyszukiwarka")
+    dialog.vector_user_edit.setText("finddocs")
+    dialog.vector_table_edit.setText("wektory_zespolu")
+    dialog.apply_settings()
+
+    assert zgloszenia == [True]
+    zapisana = load_config(dialog_context.paths.config_file)
+    assert zapisana.vector_store.backend == "pgvector"
+    assert zapisana.vector_store.pgvector_host == "baza.firma.local"
+    assert zapisana.vector_store.pgvector_port == 5433
+    assert zapisana.vector_store.pgvector_database == "wyszukiwarka"
+    assert zapisana.vector_store.pgvector_user == "finddocs"
+    assert zapisana.vector_store.pgvector_table == "wektory_zespolu"
+    assert zapisana.vector_store.pgvector_sslmode == "require"
+    assert any(i18n.MODEL_REBUILD_REQUIRED in box.text() for box in message_boxes)
+
+
+@pytest.mark.gui
+def test_wlaczenie_pgvector_bez_kompletu_danych_daje_ostrzezenie(
+    qtbot: object, dialog_context: AppContext, message_boxes: list[QMessageBox]
+) -> None:
+    dialog = ModelSettingsDialog(dialog_context, model_key=FAKE_KEY)
+    qtbot.addWidget(dialog)  # type: ignore[attr-defined]
+
+    position = dialog.vector_backend_combo.findData("pgvector")
+    assert position >= 0
+    dialog.vector_backend_combo.setCurrentIndex(position)
+    dialog.vector_host_edit.setText("baza.firma.local")
+    dialog.apply_settings()
+
+    assert dialog.result() != int(QDialog.DialogCode.Accepted)
+    assert [box.text() for box in message_boxes] == [i18n.MODEL_VECTOR_FIELDS_REQUIRED]
+    assert dialog_context.config.vector_store.backend == "faiss"
+
+
+@pytest.mark.gui
+def test_powrot_do_faiss_nie_wymaga_danych_pgvector(
+    qtbot: object, dialog_context: AppContext, message_boxes: list[QMessageBox]
+) -> None:
+    vector = dialog_context.config.vector_store
+    vector.backend = "pgvector"
+    vector.pgvector_host = "baza.firma.local"
+    vector.pgvector_database = "wyszukiwarka"
+    vector.pgvector_user = "finddocs"
+
+    dialog = ModelSettingsDialog(dialog_context, model_key=FAKE_KEY)
+    qtbot.addWidget(dialog)  # type: ignore[attr-defined]
+    assert dialog.vector_backend_combo.currentData() == "pgvector"
+
+    position = dialog.vector_backend_combo.findData("faiss")
+    dialog.vector_backend_combo.setCurrentIndex(position)
+    dialog.apply_settings()
+
+    zapisana = load_config(dialog_context.paths.config_file)
+    assert zapisana.vector_store.backend == "faiss"
+    assert zapisana.vector_store.pgvector_host == "baza.firma.local"
+
+
 # --- aktywacja i import ----------------------------------------------------------
 
 

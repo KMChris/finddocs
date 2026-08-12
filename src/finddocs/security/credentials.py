@@ -223,9 +223,13 @@ def token_cache_key(source_id: str) -> str:
 #: Nazwa wpisu z kluczem API zdalnego dostawcy embeddingow.
 EMBEDDING_API_KEY_NAME: Final = "embedding-api-key"
 
+#: Nazwa wpisu z haslem uzytkownika zewnetrznej bazy wektorowej (pgvector).
+PGVECTOR_PASSWORD_NAME: Final = "pgvector-password"
+
 
 __all__ = [
     "EMBEDDING_API_KEY_NAME",
+    "PGVECTOR_PASSWORD_NAME",
     "SERVICE_NAME",
     "CredentialStore",
     "DpapiCredentialStore",

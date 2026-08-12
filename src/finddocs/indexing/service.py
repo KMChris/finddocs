@@ -14,10 +14,14 @@ from finddocs.app_paths import AppPaths
 from finddocs.config import AppConfig
 from finddocs.errors import (
     ConfigurationError,
+    CredentialStoreError,
+    DependencyUnavailableError,
     IndexIncompatibleError,
     NetworkPolicyError,
     ProviderError,
+    VectorBackendUnavailableError,
 )
+from finddocs.indexing.base import VectorIndex
 from finddocs.indexing.db import Database, check_fts5
 from finddocs.indexing.fts import FtsIndex
 from finddocs.indexing.maintenance import (
@@ -32,7 +36,7 @@ from finddocs.indexing.schema import (
     META_LAST_FULL_INDEX_AT,
     META_LAST_SCAN_AT,
 )
-from finddocs.indexing.vector import VectorStore
+from finddocs.indexing.vector_factory import create_vector_store
 from finddocs.indexing.writer import IndexWriter
 from finddocs.logging_setup import get_logger
 from finddocs.providers.base import EmbeddingProvider
@@ -92,7 +96,7 @@ class IndexService:
         self.db = Database(self.paths.database_file)
         self.repository = Repository(self.db)
         self.fts = FtsIndex(self.db)
-        self.vector_store: VectorStore | None = None
+        self.vector_store: VectorIndex | None = None
         self.provider: EmbeddingProvider | None = None
         self._writer: IndexWriter | None = None
         self._notes: list[str] = []
@@ -160,8 +164,8 @@ class IndexService:
             log.warning("index.provider_unavailable", error_code=exc.code)
             return
 
-        store = VectorStore(self.paths.vector_file, self.paths.vector_meta_file)
         try:
+            store = create_vector_store(self.config, self.paths)
             store.open(
                 dimension=self.provider.dimension,
                 model_key=self.provider.info.model_key,
@@ -174,6 +178,22 @@ class IndexService:
             )
             self._rebuild_required = True
             log.warning("index.vector_incompatible", error_code=exc.code)
+            self.vector_store = None
+            return
+        except (
+            ConfigurationError,
+            CredentialStoreError,
+            DependencyUnavailableError,
+            NetworkPolicyError,
+            VectorBackendUnavailableError,
+        ) as exc:
+            # Niedostepny magazyn wektorow wylacza tylko tryby semantyczne.
+            # Indeks pelnotekstowy i wyszukiwanie dokladne dzialaja bez zmian.
+            self._notes.append(
+                f"Wyszukiwanie semantyczne jest niedostępne: {exc.user_message} "
+                "Tryb dokładny działa normalnie."
+            )
+            log.warning("index.vector_store_unavailable", error_code=exc.code)
             self.vector_store = None
             return
         if not vector_compatible:

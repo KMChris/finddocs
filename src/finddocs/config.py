@@ -143,6 +143,46 @@ class EmbeddingSettings:
 
 
 @dataclass(slots=True)
+class VectorStoreSettings:
+    """Ustawienia magazynu wektorow fragmentow."""
+
+    backend: str = "faiss"
+    """Rodzaj magazynu: faiss (plik lokalny) albo pgvector (zewnętrzna baza PostgreSQL).
+
+    Magazyn pgvector wymaga świadomego włączenia i przechodzi przez politykę
+    sieciową: dozwolony jest wyłącznie host podany niżej. Hasło użytkownika bazy
+    trafia do magazynu poświadczeń, nigdy do tego pliku.
+    """
+
+    pgvector_host: str = ""
+    """Adres serwera PostgreSQL. Pusta wartość blokuje włączenie magazynu pgvector."""
+
+    pgvector_port: int = 5432
+    pgvector_database: str = ""
+    """Nazwa bazy danych po stronie serwera PostgreSQL."""
+
+    pgvector_user: str = ""
+    """Nazwa użytkownika bazy. Hasło jest przechowywane w magazynie poświadczeń."""
+
+    pgvector_schema: str = "public"
+    """Schemat bazy, w którym leżą tabele indeksu wektorowego."""
+
+    pgvector_table: str = "finddocs_vectors"
+    """Nazwa tabeli z wektorami. Każdy indeks FindDocs wymaga własnej tabeli."""
+
+    pgvector_sslmode: str = "require"
+    """Tryb TLS sterownika: require, verify-ca albo verify-full.
+
+    Wartość disable jest dopuszczalna wyłącznie dla połączeń z localhost,
+    bo takie połączenie nie opuszcza komputera.
+    """
+
+    pgvector_connect_timeout_seconds: float = 10.0
+    pgvector_statement_timeout_seconds: float = 60.0
+    """Limit czasu pojedynczego zapytania po stronie serwera bazy."""
+
+
+@dataclass(slots=True)
 class OcrSettings:
     """Ustawienia OCR."""
 
@@ -265,6 +305,7 @@ class AppConfig:
 
     sources: list[SourceConfig] = field(default_factory=list)
     embedding: EmbeddingSettings = field(default_factory=EmbeddingSettings)
+    vector_store: VectorStoreSettings = field(default_factory=VectorStoreSettings)
     ocr: OcrSettings = field(default_factory=OcrSettings)
     chunking: ChunkingSettings = field(default_factory=ChunkingSettings)
     search: SearchSettings = field(default_factory=SearchSettings)
@@ -301,8 +342,14 @@ class AppConfig:
 
         Urzadzenie obliczen (CPU albo GPU) celowo nie wchodzi do skrotu: ten sam
         model daje te same wektory niezaleznie od miejsca liczenia. Pola zdalnego
-        API sa dodawane tylko dla dostawcy internal_api, zeby skrot dotychczasowych
+        API sa dodawane tylko dla dostawcy internal_api, a pola magazynu pgvector
+        tylko dla backendu innego niz faiss, zeby skrot dotychczasowych
         konfiguracji lokalnych nie zmienil sie po aktualizacji aplikacji.
+
+        Tozsamosc magazynu pgvector (host, baza, schemat, tabela) wchodzi do
+        skrotu, bo wskazanie innej tabeli oznacza inny, zwykle pusty zbior
+        wektorow. Dane logowania i parametry polaczenia (uzytkownik, sslmode,
+        limity czasu) nie zmieniaja danych, wiec do skrotu nie wchodza.
         """
         payload = self.index_compat_payload()
         payload.update(
@@ -322,6 +369,17 @@ class AppConfig:
                     "internal_api_protocol": self.embedding.internal_api_protocol,
                     "internal_api_model": self.embedding.internal_api_model,
                     "internal_api_dimension": self.embedding.internal_api_dimension,
+                }
+            )
+        if self.vector_store.backend != "faiss":
+            payload.update(
+                {
+                    "vector_store_backend": self.vector_store.backend,
+                    "pgvector_host": self.vector_store.pgvector_host.strip().lower(),
+                    "pgvector_port": self.vector_store.pgvector_port,
+                    "pgvector_database": self.vector_store.pgvector_database.strip(),
+                    "pgvector_schema": self.vector_store.pgvector_schema.strip(),
+                    "pgvector_table": self.vector_store.pgvector_table.strip(),
                 }
             )
         return payload
@@ -396,6 +454,7 @@ _NESTED: dict[str, type] = {
     "LocalDirSourceSettings": LocalDirSourceSettings,
     "SharePointSourceSettings": SharePointSourceSettings,
     "EmbeddingSettings": EmbeddingSettings,
+    "VectorStoreSettings": VectorStoreSettings,
     "OcrSettings": OcrSettings,
     "ChunkingSettings": ChunkingSettings,
     "SearchSettings": SearchSettings,
@@ -464,6 +523,7 @@ __all__ = [
     "SharePointSourceSettings",
     "SourceConfig",
     "UiSettings",
+    "VectorStoreSettings",
     "config_from_dict",
     "config_to_dict",
     "load_config",

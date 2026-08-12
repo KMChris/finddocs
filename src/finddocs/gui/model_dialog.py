@@ -37,6 +37,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from finddocs.config import VectorStoreSettings
 from finddocs.errors import FindDocsError
 from finddocs.gui import i18n
 from finddocs.gui.context import AppContext
@@ -83,6 +84,20 @@ _DEVICE_CHOICES: tuple[tuple[str, str], ...] = (
 _PROTOCOL_CHOICES: tuple[tuple[str, str], ...] = (
     ("finddocs", i18n.MODEL_REMOTE_PROTOCOL_FINDDOCS),
     ("openai", i18n.MODEL_REMOTE_PROTOCOL_OPENAI),
+)
+
+#: Magazyny wektorow w kolejnosci pokazywanej w oknie.
+_VECTOR_BACKEND_CHOICES: tuple[tuple[str, str], ...] = (
+    ("faiss", i18n.MODEL_VECTOR_BACKEND_FAISS),
+    ("pgvector", i18n.MODEL_VECTOR_BACKEND_PGVECTOR),
+)
+
+#: Tryby sslmode do wyboru. Wartosc disable dziala wylacznie dla localhost.
+_SSLMODE_CHOICES: tuple[tuple[str, str], ...] = (
+    ("require", i18n.MODEL_VECTOR_SSL_REQUIRE),
+    ("verify-ca", i18n.MODEL_VECTOR_SSL_VERIFY_CA),
+    ("verify-full", i18n.MODEL_VECTOR_SSL_VERIFY_FULL),
+    ("disable", i18n.MODEL_VECTOR_SSL_DISABLE),
 )
 
 
@@ -216,6 +231,7 @@ class ModelSettingsDialog(QDialog):
         content_layout.addWidget(self._build_semantic_box())
         content_layout.addWidget(self._build_compute_box())
         content_layout.addWidget(self._build_remote_box())
+        content_layout.addWidget(self._build_vector_box())
         content_layout.addWidget(self._build_import_box())
         content_layout.addStretch(1)
 
@@ -379,6 +395,86 @@ class ModelSettingsDialog(QDialog):
         form.addRow(hint)
         return box
 
+    def _build_vector_box(self) -> QWidget:
+        box = QGroupBox(i18n.MODEL_VECTOR_BOX)
+        form = QFormLayout(box)
+        form.setHorizontalSpacing(16)
+        form.setVerticalSpacing(10)
+        vector = self.context.config.vector_store
+
+        self.vector_backend_combo = QComboBox()
+        for value, label in _VECTOR_BACKEND_CHOICES:
+            self.vector_backend_combo.addItem(label, value)
+        position = self.vector_backend_combo.findData(vector.backend)
+        self.vector_backend_combo.setCurrentIndex(max(0, position))
+        form.addRow(i18n.MODEL_VECTOR_BACKEND, self.vector_backend_combo)
+
+        self.vector_host_edit = QLineEdit(vector.pgvector_host)
+        self.vector_host_edit.setPlaceholderText(i18n.MODEL_VECTOR_HOST_PLACEHOLDER)
+        form.addRow(i18n.MODEL_VECTOR_HOST, self.vector_host_edit)
+
+        self.vector_port_spin = QSpinBox()
+        self.vector_port_spin.setRange(1, 65535)
+        self.vector_port_spin.setValue(vector.pgvector_port)
+        form.addRow(i18n.MODEL_VECTOR_PORT, self.vector_port_spin)
+
+        self.vector_database_edit = QLineEdit(vector.pgvector_database)
+        form.addRow(i18n.MODEL_VECTOR_DATABASE, self.vector_database_edit)
+
+        self.vector_user_edit = QLineEdit(vector.pgvector_user)
+        form.addRow(i18n.MODEL_VECTOR_USER, self.vector_user_edit)
+
+        self.vector_schema_edit = QLineEdit(vector.pgvector_schema)
+        form.addRow(i18n.MODEL_VECTOR_SCHEMA, self.vector_schema_edit)
+
+        self.vector_table_edit = QLineEdit(vector.pgvector_table)
+        form.addRow(i18n.MODEL_VECTOR_TABLE, self.vector_table_edit)
+
+        self.vector_ssl_combo = QComboBox()
+        for value, label in _SSLMODE_CHOICES:
+            self.vector_ssl_combo.addItem(label, value)
+        position = self.vector_ssl_combo.findData(vector.pgvector_sslmode)
+        self.vector_ssl_combo.setCurrentIndex(max(0, position))
+        form.addRow(i18n.MODEL_VECTOR_SSLMODE, self.vector_ssl_combo)
+
+        self.vector_password_edit = QLineEdit()
+        self.vector_password_edit.setEchoMode(QLineEdit.EchoMode.Password)
+        self.vector_password_edit.setPlaceholderText(i18n.MODEL_VECTOR_PASSWORD_PLACEHOLDER)
+        password_row = QHBoxLayout()
+        password_row.setSpacing(8)
+        password_row.addWidget(self.vector_password_edit, stretch=1)
+        self.vector_password_save_button = QPushButton(i18n.MODEL_VECTOR_PASSWORD_SAVE)
+        self.vector_password_save_button.clicked.connect(self.save_vector_password)
+        password_row.addWidget(self.vector_password_save_button)
+        self.vector_password_clear_button = QPushButton(i18n.MODEL_VECTOR_PASSWORD_CLEAR)
+        self.vector_password_clear_button.clicked.connect(self.clear_vector_password)
+        password_row.addWidget(self.vector_password_clear_button)
+        form.addRow(i18n.MODEL_VECTOR_PASSWORD, password_row)
+
+        self.vector_password_status = QLabel("")
+        self.vector_password_status.setObjectName("Muted")
+        form.addRow("", self.vector_password_status)
+        self._update_vector_password_status()
+
+        test_row = QHBoxLayout()
+        test_row.setSpacing(8)
+        self.vector_test_button = QPushButton(i18n.MODEL_VECTOR_TEST)
+        self.vector_test_button.clicked.connect(self.test_vector_connection)
+        test_row.addWidget(self.vector_test_button)
+        test_row.addStretch(1)
+        form.addRow("", test_row)
+
+        self.vector_test_label = QLabel("")
+        self.vector_test_label.setObjectName("Muted")
+        self.vector_test_label.setWordWrap(True)
+        form.addRow("", self.vector_test_label)
+
+        hint = QLabel(i18n.MODEL_VECTOR_HINT)
+        hint.setObjectName("Hint")
+        hint.setWordWrap(True)
+        form.addRow(hint)
+        return box
+
     def _build_import_box(self) -> QWidget:
         box = QGroupBox(i18n.MODEL_IMPORT_TITLE)
         layout = QVBoxLayout(box)
@@ -461,6 +557,14 @@ class ModelSettingsDialog(QDialog):
             show_warning(self, i18n.MODEL_REMOTE_URL_REQUIRED)
             return
 
+        vector_backend = str(self.vector_backend_combo.currentData())
+        vector_host = self.vector_host_edit.text().strip()
+        vector_database = self.vector_database_edit.text().strip()
+        vector_user = self.vector_user_edit.text().strip()
+        if vector_backend == "pgvector" and not (vector_host and vector_database and vector_user):
+            show_warning(self, i18n.MODEL_VECTOR_FIELDS_REQUIRED)
+            return
+
         target_provider = "internal_api" if remote_enabled else "local_onnx"
         provider_changed = target_provider != embedding.provider
         if provider_changed:
@@ -506,6 +610,37 @@ class ModelSettingsDialog(QDialog):
             reload_needed = True
 
         if provider_changed or (target_provider == "internal_api" and remote_identity_changed):
+            notes.append(i18n.MODEL_REBUILD_REQUIRED)
+
+        vector = config.vector_store
+        vector_port = int(self.vector_port_spin.value())
+        vector_schema = self.vector_schema_edit.text().strip() or "public"
+        vector_table = self.vector_table_edit.text().strip() or "finddocs_vectors"
+        vector_ssl = str(self.vector_ssl_combo.currentData())
+        vector_identity_changed = (
+            vector_backend != vector.backend
+            or vector_host != vector.pgvector_host
+            or vector_port != vector.pgvector_port
+            or vector_database != vector.pgvector_database
+            or vector_schema != vector.pgvector_schema
+            or vector_table != vector.pgvector_table
+        )
+        vector_changed = (
+            vector_identity_changed
+            or vector_user != vector.pgvector_user
+            or vector_ssl != vector.pgvector_sslmode
+        )
+        if vector_changed:
+            vector.backend = vector_backend
+            vector.pgvector_host = vector_host
+            vector.pgvector_port = vector_port
+            vector.pgvector_database = vector_database
+            vector.pgvector_user = vector_user
+            vector.pgvector_schema = vector_schema
+            vector.pgvector_table = vector_table
+            vector.pgvector_sslmode = vector_ssl
+            reload_needed = True
+        if vector_backend != "faiss" and vector_identity_changed:
             notes.append(i18n.MODEL_REBUILD_REQUIRED)
 
         prefixes = (self.query_edit.text(), self.passage_edit.text())
@@ -710,12 +845,132 @@ class ModelSettingsDialog(QDialog):
         self._update_key_status()
         show_info(self, i18n.MODEL_REMOTE_KEY_CLEARED)
 
+    # --- haslo i test bazy wektorowej --------------------------------------
+
+    def _update_vector_password_status(self) -> None:
+        from finddocs.security.credentials import PGVECTOR_PASSWORD_NAME
+
+        try:
+            present = self._credential_store().get_secret(PGVECTOR_PASSWORD_NAME) is not None
+        except Exception as exc:
+            log.warning("gui.vector_password_status_failed", error_type=type(exc).__name__)
+            present = False
+        self.vector_password_status.setText(
+            i18n.MODEL_VECTOR_PASSWORD_PRESENT if present else i18n.MODEL_VECTOR_PASSWORD_MISSING
+        )
+        self.vector_password_clear_button.setEnabled(present)
+
+    def save_vector_password(self) -> None:
+        """Zapisuje haslo bazy w magazynie poswiadczen. Haslo nie trafia do pliku."""
+        password = self.vector_password_edit.text()
+        if not password:
+            show_warning(self, i18n.MODEL_VECTOR_PASSWORD_EMPTY)
+            return
+        from finddocs.security.credentials import PGVECTOR_PASSWORD_NAME
+
+        try:
+            self._credential_store().set_secret(PGVECTOR_PASSWORD_NAME, password)
+        except FindDocsError as exc:
+            show_error(self, exc.user_message)
+            return
+        self.vector_password_edit.clear()
+        self._update_vector_password_status()
+        show_info(self, i18n.MODEL_VECTOR_PASSWORD_SAVED)
+
+    def clear_vector_password(self) -> None:
+        from finddocs.security.credentials import PGVECTOR_PASSWORD_NAME
+
+        try:
+            self._credential_store().delete_secret(PGVECTOR_PASSWORD_NAME)
+        except FindDocsError as exc:
+            show_error(self, exc.user_message)
+            return
+        self._update_vector_password_status()
+        show_info(self, i18n.MODEL_VECTOR_PASSWORD_CLEARED)
+
+    def _vector_settings_from_fields(self) -> VectorStoreSettings:
+        """Buduje ustawienia magazynu z biezacych pol okna, bez zapisywania ich."""
+        return VectorStoreSettings(
+            backend="pgvector",
+            pgvector_host=self.vector_host_edit.text().strip(),
+            pgvector_port=int(self.vector_port_spin.value()),
+            pgvector_database=self.vector_database_edit.text().strip(),
+            pgvector_user=self.vector_user_edit.text().strip(),
+            pgvector_schema=self.vector_schema_edit.text().strip() or "public",
+            pgvector_table=self.vector_table_edit.text().strip() or "finddocs_vectors",
+            pgvector_sslmode=str(self.vector_ssl_combo.currentData()),
+            pgvector_connect_timeout_seconds=(
+                self.context.config.vector_store.pgvector_connect_timeout_seconds
+            ),
+            pgvector_statement_timeout_seconds=(
+                self.context.config.vector_store.pgvector_statement_timeout_seconds
+            ),
+        )
+
+    def test_vector_connection(self) -> None:
+        """Probuje polaczyc sie z baza wektorowa na podstawie pol okna.
+
+        Test dziala na wartosciach z formularza, takze przed ich zapisaniem.
+        Polityka sieciowa dopuszcza na czas proby dokladnie ten jeden host.
+        """
+        settings = self._vector_settings_from_fields()
+        host = settings.pgvector_host
+        if not (host and settings.pgvector_database and settings.pgvector_user):
+            show_warning(self, i18n.MODEL_VECTOR_FIELDS_REQUIRED)
+            return
+        self._set_busy(True)
+        self.vector_test_label.setText(i18n.MODEL_VECTOR_TEST_RUNNING)
+        config_dir = self.context.paths.config_dir
+
+        def work() -> dict[str, object]:
+            from finddocs.indexing.pgvector import PgVectorStore
+            from finddocs.indexing.vector_factory import pgvector_password_provider
+            from finddocs.security.network import EgressCategory, NetworkPolicy
+
+            policy = NetworkPolicy(
+                enabled_categories={EgressCategory.VECTOR_DB},
+                extra_hosts={EgressCategory.VECTOR_DB: (host.lower(),)},
+            )
+            store = PgVectorStore(
+                settings,
+                password_provider=pgvector_password_provider(config_dir),
+                policy=policy,
+            )
+            return store.ping()
+
+        task = CallableTask(work, label="test bazy wektorowej")
+        task.signals.finished.connect(self._on_vector_test_finished)
+        task.signals.failed.connect(self._on_vector_test_failed)
+        thread_pool().start(task)
+
+    def _on_vector_test_finished(self, result: object) -> None:
+        self._set_busy(False)
+        if not isinstance(result, dict):
+            self.vector_test_label.setText("")
+            return
+        extension = result.get("pgvector")
+        if extension is None:
+            self.vector_test_label.setText(i18n.MODEL_VECTOR_TEST_NO_EXTENSION)
+            show_warning(self, i18n.MODEL_VECTOR_TEST_NO_EXTENSION)
+            return
+        message = i18n.MODEL_VECTOR_TEST_OK.format(
+            version=result.get("wersja_serwera", "?"), extension=extension
+        )
+        self.vector_test_label.setText(message)
+        show_info(self, message)
+
+    def _on_vector_test_failed(self, code: str, message: str) -> None:
+        self._set_busy(False)
+        self.vector_test_label.setText(message)
+        show_error(self, f"{message}\n\nKod błędu: {code}")
+
     # --- pomocnicze -------------------------------------------------------
 
     def _set_busy(self, busy: bool) -> None:
         self._busy = busy
         self.import_disk_button.setEnabled(not busy)
         self.import_repo_button.setEnabled(not busy)
+        self.vector_test_button.setEnabled(not busy)
         self.buttons.setEnabled(not busy)
 
 

@@ -16,7 +16,7 @@ import time
 from dataclasses import dataclass
 
 from finddocs.config import SearchSettings
-from finddocs.errors import SearchCancelledError
+from finddocs.errors import SearchCancelledError, VectorBackendUnavailableError
 from finddocs.indexing.fts import (
     FtsQuery,
     build_candidate_query,
@@ -177,7 +177,14 @@ class SearchService:
         filters: SearchFilters,
         cancel: CancellationToken | None,
     ) -> SearchResponse:
-        candidates = self._vector_candidates(analysis, filters, cancel)
+        try:
+            candidates = self._vector_candidates(analysis, filters, cancel)
+        except VectorBackendUnavailableError as exc:
+            # Zdalna baza wektorowa nie odpowiada. Zamiast bledu calego
+            # wyszukiwania zwracamy pusty wynik z jawna informacja.
+            return self._empty(
+                analysis, SearchMode.SEMANTIC, notes=[SEMANTIC_NOTE, exc.user_message]
+            )
         if not candidates:
             return self._empty(analysis, SearchMode.SEMANTIC, notes=[SEMANTIC_NOTE])
 
@@ -234,7 +241,13 @@ class SearchService:
             ]
         _raise_if_cancelled(cancel)
 
-        vector_entries = self._vector_candidates(analysis, filters, cancel)
+        try:
+            vector_entries = self._vector_candidates(analysis, filters, cancel)
+        except VectorBackendUnavailableError as exc:
+            # Czesc dokladna dziala dalej; wynik hybrydowy jest wtedy budowany
+            # wylacznie z dopasowan pelnotekstowych, z jawna informacja.
+            vector_entries = []
+            notes.append(exc.user_message)
         if not fts_entries and not vector_entries:
             return self._empty(analysis, SearchMode.HYBRID, notes=notes)
 

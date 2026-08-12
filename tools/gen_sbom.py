@@ -64,6 +64,8 @@ USAGE: dict[str, str] = {
     "rapidocr": "silnik OCR (opcjonalny)",
     "rapidocr-onnxruntime": "silnik OCR (opcjonalny, starsze wydania)",
     "easyocr": "silnik OCR (opcjonalny)",
+    "psycopg": "klient PostgreSQL dla magazynu wektorow pgvector (opcjonalny)",
+    "psycopg-binary": "biblioteka libpq dla klienta psycopg (opcjonalna)",
     "pyinstaller": "budowanie pakietu aplikacji (narzedzie deweloperskie)",
     "pytest": "testy (narzedzie deweloperskie)",
     "mypy": "kontrola typow (narzedzie deweloperskie)",

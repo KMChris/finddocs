@@ -71,6 +71,11 @@ Polecenie `finddocs model import` przyjmuje też katalog z własnym modelem albo
 dowolne repozytorium Hugging Face. Pełny opis instalacji, konfiguracji i modeli:
 [docs/instalacja-pip.md](https://github.com/KMChris/finddocs/blob/main/docs/instalacja-pip.md).
 
+Wektory fragmentów mogą opcjonalnie trafiać do bazy PostgreSQL z rozszerzeniem
+pgvector zamiast do pliku lokalnego (dodatek `finddocs[pgvector]`, włączany
+świadomie w ustawieniach). Opis i zasady bezpieczeństwa:
+[docs/baza-wektorowa.md](https://github.com/KMChris/finddocs/blob/main/docs/baza-wektorowa.md).
+
 ## Szybki start bez SharePointa
 
 Aplikacja ma wbudowany zbiór demonstracyjny z fikcyjnymi polskimi dokumentami.

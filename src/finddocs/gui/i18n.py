@@ -271,6 +271,51 @@ MODEL_REMOTE_HINT = (
     "Połączenia są ograniczone do hosta z podanego adresu i wyłącznie przez https."
 )
 MODEL_REMOTE_URL_REQUIRED = "Podaj adres zdalnego API, zanim je włączysz."
+MODEL_VECTOR_BOX = "Magazyn wektorów"
+MODEL_VECTOR_BACKEND = "Rodzaj magazynu"
+MODEL_VECTOR_BACKEND_FAISS = "Plik lokalny (FAISS)"
+MODEL_VECTOR_BACKEND_PGVECTOR = "Baza PostgreSQL (pgvector)"
+MODEL_VECTOR_HOST = "Serwer"
+MODEL_VECTOR_HOST_PLACEHOLDER = "np. baza.firma.local"
+MODEL_VECTOR_PORT = "Port"
+MODEL_VECTOR_DATABASE = "Baza danych"
+MODEL_VECTOR_USER = "Użytkownik"
+MODEL_VECTOR_SCHEMA = "Schemat"
+MODEL_VECTOR_TABLE = "Tabela"
+MODEL_VECTOR_SSLMODE = "Szyfrowanie (sslmode)"
+MODEL_VECTOR_SSL_REQUIRE = "require (TLS wymagany)"
+MODEL_VECTOR_SSL_VERIFY_CA = "verify-ca (TLS i weryfikacja CA)"
+MODEL_VECTOR_SSL_VERIFY_FULL = "verify-full (TLS i weryfikacja hosta)"
+MODEL_VECTOR_SSL_DISABLE = "disable (tylko localhost)"
+MODEL_VECTOR_PASSWORD = "Hasło"
+MODEL_VECTOR_PASSWORD_PLACEHOLDER = "wpisz hasło, aby je zapisać"
+MODEL_VECTOR_PASSWORD_SAVE = "Zapisz hasło"
+MODEL_VECTOR_PASSWORD_CLEAR = "Usuń hasło"
+MODEL_VECTOR_PASSWORD_SAVED = "Hasło do bazy zostało zapisane w magazynie poświadczeń."
+MODEL_VECTOR_PASSWORD_CLEARED = "Hasło do bazy zostało usunięte z magazynu poświadczeń."
+MODEL_VECTOR_PASSWORD_PRESENT = "Hasło: zapisane w magazynie poświadczeń"
+MODEL_VECTOR_PASSWORD_MISSING = "Hasło: brak"
+MODEL_VECTOR_PASSWORD_EMPTY = "Wpisz hasło w pole powyżej, zanim je zapiszesz."
+MODEL_VECTOR_TEST = "Przetestuj połączenie"
+MODEL_VECTOR_TEST_RUNNING = "Trwa próba połączenia z bazą..."
+MODEL_VECTOR_TEST_OK = (
+    "Połączenie działa. Serwer PostgreSQL {version}, rozszerzenie pgvector {extension}."
+)
+MODEL_VECTOR_TEST_NO_EXTENSION = (
+    "Połączenie działa, ale baza nie ma rozszerzenia pgvector. Poproś administratora "
+    "bazy o wykonanie polecenia CREATE EXTENSION vector."
+)
+MODEL_VECTOR_FIELDS_REQUIRED = (
+    "Podaj serwer, bazę danych i użytkownika, zanim włączysz magazyn pgvector."
+)
+MODEL_VECTOR_HINT = (
+    "Wektory fragmentów mogą być przechowywane w bazie PostgreSQL z rozszerzeniem "
+    "pgvector zamiast w pliku lokalnym. Do bazy trafiają wyłącznie wektory liczbowe "
+    "i identyfikatory fragmentów, nigdy tekst dokumentów. Indeks pełnotekstowy "
+    "i metadane pozostają na tym komputerze. Połączenia są ograniczone do podanego "
+    "serwera, a poza localhost wymagany jest TLS. Zmiana magazynu wymaga przebudowy "
+    "części semantycznej indeksu."
+)
 MODEL_IMPORT_DISK = "Importuj z dysku..."
 MODEL_IMPORT_HF = "Pobierz z Hugging Face..."
 MODEL_IMPORT_TITLE = "Import modelu"

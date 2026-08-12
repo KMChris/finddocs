@@ -17,6 +17,7 @@ import numpy as np
 
 from finddocs.app_paths import AppPaths
 from finddocs.errors import StorageSpaceError
+from finddocs.indexing.base import VectorIndex
 from finddocs.indexing.db import Database
 from finddocs.indexing.repository import Repository
 from finddocs.indexing.schema import (
@@ -27,7 +28,6 @@ from finddocs.indexing.schema import (
     META_SCHEMA_VERSION,
     META_VECTOR_COMPAT,
 )
-from finddocs.indexing.vector import VectorStore
 from finddocs.logging_setup import get_logger
 from finddocs.types import CancellationToken, DocumentStatus
 from finddocs.version import SCHEMA_VERSION
@@ -83,7 +83,7 @@ class ConsistencyReport:
 
 
 def check_consistency(
-    db: Database, repository: Repository, vector_store: VectorStore | None
+    db: Database, repository: Repository, vector_store: VectorIndex | None
 ) -> ConsistencyReport:
     """Sprawdza spojnosc bazy, indeksu FTS i indeksu wektorowego."""
     problems: list[str] = []
@@ -285,7 +285,7 @@ def restore_backup(paths: AppPaths, backup_name: str) -> Path:
 
 def compact_vectors(
     repository: Repository,
-    vector_store: VectorStore,
+    vector_store: VectorIndex,
     *,
     batch: int = 512,
     cancel: CancellationToken | None = None,

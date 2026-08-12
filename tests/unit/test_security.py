@@ -8,11 +8,13 @@ from __future__ import annotations
 
 import pytest
 
+from finddocs.config import AppConfig
 from finddocs.errors import NetworkPolicyError
 from finddocs.security.credentials import MemoryCredentialStore
 from finddocs.security.network import (
     EgressCategory,
     NetworkPolicy,
+    policy_from_config,
 )
 from finddocs.security.redaction import (
     REDACTED,
@@ -231,6 +233,62 @@ def test_localhost_po_http_wymaga_jawnej_zgody():
 
     polityka.allow_plain_http_localhost = True
     assert polityka.check("http://localhost:8080/x", EgressCategory.INTERNAL_API) == "localhost"
+
+
+def test_check_host_wymaga_wlaczonej_kategorii():
+    polityka = NetworkPolicy.offline()
+
+    with pytest.raises(NetworkPolicyError) as blad:
+        polityka.check_host("baza.firma.local", EgressCategory.VECTOR_DB)
+    assert blad.value.code == "FD-1005"
+
+
+def test_check_host_dopuszcza_wylacznie_host_z_konfiguracji():
+    polityka = NetworkPolicy(
+        enabled_categories={EgressCategory.VECTOR_DB},
+        extra_hosts={EgressCategory.VECTOR_DB: ("baza.firma.local",)},
+    )
+
+    wynik = polityka.check_host("BAZA.Firma.LOCAL", EgressCategory.VECTOR_DB)
+    assert wynik == "baza.firma.local"
+
+    with pytest.raises(NetworkPolicyError):
+        polityka.check_host("inna.baza.local", EgressCategory.VECTOR_DB)
+
+
+def test_check_host_zawsze_dopuszcza_hosty_lokalne():
+    polityka = NetworkPolicy.offline()
+
+    assert polityka.check_host("localhost", EgressCategory.VECTOR_DB) == "localhost"
+    assert polityka.check_host("127.0.0.1", EgressCategory.VECTOR_DB) == "127.0.0.1"
+
+
+def test_check_host_odrzuca_pusta_nazwe():
+    with pytest.raises(NetworkPolicyError):
+        NetworkPolicy.offline().check_host("  ", EgressCategory.VECTOR_DB)
+
+
+def test_polityka_z_konfiguracji_wlacza_baze_wektorowa():
+    config = AppConfig()
+    config.vector_store.backend = "pgvector"
+    config.vector_store.pgvector_host = "Baza.Firma.Local"
+
+    polityka = policy_from_config(config)
+
+    assert polityka.is_enabled(EgressCategory.VECTOR_DB)
+    assert polityka.check_host("baza.firma.local", EgressCategory.VECTOR_DB)
+    with pytest.raises(NetworkPolicyError):
+        polityka.check_host("inny.serwer.local", EgressCategory.VECTOR_DB)
+
+
+def test_polityka_z_konfiguracji_domyslnie_nie_wlacza_bazy_wektorowej():
+    polityka = policy_from_config(AppConfig())
+
+    assert not polityka.is_enabled(EgressCategory.VECTOR_DB)
+
+    z_hostem_bez_backendu = AppConfig()
+    z_hostem_bez_backendu.vector_store.pgvector_host = "baza.firma.local"
+    assert not policy_from_config(z_hostem_bez_backendu).is_enabled(EgressCategory.VECTOR_DB)
 
 
 def test_describe_wymienia_kategorie_wlaczone_i_wylaczone():

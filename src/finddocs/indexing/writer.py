@@ -18,8 +18,9 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
+from finddocs.errors import VectorBackendUnavailableError
+from finddocs.indexing.base import VectorIndex
 from finddocs.indexing.repository import Repository
-from finddocs.indexing.vector import VectorStore
 from finddocs.logging_setup import get_logger
 from finddocs.types import (
     Chunk,
@@ -71,7 +72,7 @@ class IndexWriter:
     def __init__(
         self,
         repository: Repository,
-        vector_store: VectorStore | None = None,
+        vector_store: VectorIndex | None = None,
     ) -> None:
         self.repository = repository
         self.vector_store = vector_store
@@ -120,11 +121,30 @@ class IndexWriter:
             )
 
         vectors_written = 0
-        if self.vector_store is not None and removed_vector_ids:
-            self.vector_store.remove(removed_vector_ids)
+        if removed_vector_ids:
+            self._remove_vectors(removed_vector_ids)
 
         if has_vectors and self.vector_store is not None and payload.embeddings is not None:
-            self.vector_store.add(new_chunk_ids, payload.embeddings)
+            try:
+                self.vector_store.add(new_chunk_ids, payload.embeddings)
+            except VectorBackendUnavailableError as exc:
+                # Dokument zostaje w stanie partial: tekst jest wyszukiwalny,
+                # a brakujace wektory uzupelni kolejne skanowanie, tak samo jak
+                # po bledzie dostawcy embeddingow.
+                log.warning(
+                    "writer.vector_backend_unavailable",
+                    doc_id=payload.doc_id,
+                    error_code=exc.code,
+                )
+                with db.transaction():
+                    self.repository.set_document_status(payload.doc_id, DocumentStatus.PARTIAL)
+                return WriteResult(
+                    doc_id=payload.doc_id,
+                    status=DocumentStatus.PARTIAL,
+                    chunk_count=len(payload.chunks),
+                    vectors_written=0,
+                    vectors_removed=len(removed_vector_ids),
+                )
             with db.transaction():
                 self.repository.mark_chunks_vectorized(new_chunk_ids)
                 self.repository.set_document_status(payload.doc_id, DocumentStatus.INDEXED)
@@ -192,17 +212,29 @@ class IndexWriter:
                 message=error_message,
                 retryable=retryable,
             )
-        if self.vector_store is not None and removed:
-            self.vector_store.remove(removed)
+        self._remove_vectors(removed)
 
     def delete_document(self, doc_id: int) -> None:
         """Usuwa dokument z indeksu."""
         db = self.repository.db
         with db.transaction():
             removed = self.repository.delete_document(doc_id)
-        if self.vector_store is not None and removed:
-            self.vector_store.remove(removed)
+        if removed:
+            self._remove_vectors(removed)
             self._pending_vector_saves += 1
+
+    def _remove_vectors(self, ids: list[int]) -> None:
+        """Usuwa wektory, nie przerywajac zapisu przy chwilowo niedostepnej bazie.
+
+        Osierocone wpisy nie psuja wynikow (wyszukiwanie odrzuca fragmenty,
+        ktorych nie ma w SQLite) i znikaja przy kompaktacji albo przebudowie.
+        """
+        if self.vector_store is None or not ids:
+            return
+        try:
+            self.vector_store.remove(ids)
+        except VectorBackendUnavailableError as exc:
+            log.warning("writer.vector_remove_deferred", count=len(ids), error_code=exc.code)
 
     # --- utrwalanie -------------------------------------------------------
 

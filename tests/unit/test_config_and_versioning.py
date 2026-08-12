@@ -195,6 +195,102 @@ def test_zmiana_fragmentacji_uniewaznia_takze_indeks_wektorowy():
     assert zmieniona.vector_compat_hash() != bazowa.vector_compat_hash()
 
 
+def _konfiguracja_pgvector() -> AppConfig:
+    config = AppConfig()
+    config.vector_store.backend = "pgvector"
+    config.vector_store.pgvector_host = "baza.firma.local"
+    config.vector_store.pgvector_database = "wyszukiwarka"
+    config.vector_store.pgvector_user = "finddocs"
+    return config
+
+
+def test_pola_pgvector_nie_zmieniaja_skrotu_przy_magazynie_faiss():
+    """Sama obecnosc wpisanych danych polaczenia nie moze uniewaznic indeksu."""
+    bazowa = AppConfig()
+    zmieniona = AppConfig()
+    zmieniona.vector_store.pgvector_host = "baza.firma.local"
+    zmieniona.vector_store.pgvector_table = "inna_tabela"
+
+    assert zmieniona.vector_compat_hash() == bazowa.vector_compat_hash()
+
+
+def test_wlaczenie_pgvector_uniewaznia_indeks_wektorowy():
+    bazowa = AppConfig()
+    zmieniona = _konfiguracja_pgvector()
+
+    assert zmieniona.vector_compat_hash() != bazowa.vector_compat_hash()
+    assert zmieniona.index_compat_hash() == bazowa.index_compat_hash()
+
+
+@pytest.mark.parametrize(
+    ("pole", "wartosc"),
+    [
+        ("pgvector_host", "inny.serwer.local"),
+        ("pgvector_port", 5433),
+        ("pgvector_database", "inna_baza"),
+        ("pgvector_schema", "inny_schemat"),
+        ("pgvector_table", "inne_wektory"),
+    ],
+)
+def test_tozsamosc_magazynu_pgvector_wchodzi_do_skrotu(pole, wartosc):
+    bazowa = _konfiguracja_pgvector()
+    zmieniona = _konfiguracja_pgvector()
+    setattr(zmieniona.vector_store, pole, wartosc)
+
+    assert zmieniona.vector_compat_hash() != bazowa.vector_compat_hash(), pole
+
+
+@pytest.mark.parametrize(
+    ("pole", "wartosc"),
+    [
+        ("pgvector_user", "inny_uzytkownik"),
+        ("pgvector_sslmode", "verify-full"),
+        ("pgvector_connect_timeout_seconds", 3.0),
+        ("pgvector_statement_timeout_seconds", 15.0),
+    ],
+)
+def test_parametry_polaczenia_pgvector_nie_wchodza_do_skrotu(pole, wartosc):
+    """Zmiana danych logowania albo limitow czasu nie zmienia danych w tabeli."""
+    bazowa = _konfiguracja_pgvector()
+    zmieniona = _konfiguracja_pgvector()
+    setattr(zmieniona.vector_store, pole, wartosc)
+
+    assert zmieniona.vector_compat_hash() == bazowa.vector_compat_hash(), pole
+
+
+def test_ustawienia_magazynu_wektorow_przezywaja_zapis_i_odczyt(tmp_home):
+    config = _konfiguracja_pgvector()
+    config.data_root = str(tmp_home.root)
+    config.vector_store.pgvector_table = "wektory_zespolu"
+
+    sciezka = save_config(config, tmp_home.config_file)
+    odczytana = load_config(sciezka)
+
+    assert odczytana.vector_store.backend == "pgvector"
+    assert odczytana.vector_store.pgvector_host == "baza.firma.local"
+    assert odczytana.vector_store.pgvector_table == "wektory_zespolu"
+    assert odczytana.vector_store.pgvector_sslmode == "require"
+
+
+def test_stara_konfiguracja_bez_sekcji_vector_store_dostaje_faiss():
+    dane = config_to_dict(AppConfig())
+    del dane["vector_store"]
+
+    config = config_from_dict(dane)
+
+    assert config.vector_store.backend == "faiss"
+
+
+def test_plik_konfiguracyjny_pgvector_nie_zawiera_hasla(tmp_home):
+    config = _konfiguracja_pgvector()
+    config.data_root = str(tmp_home.root)
+    sciezka = save_config(config, tmp_home.config_file)
+
+    tekst = sciezka.read_text(encoding="utf-8").lower()
+    assert "password" not in tekst
+    assert "haslo" not in tekst
+
+
 def test_wylaczenie_semantyki_nie_uniewaznia_zadnego_indeksu():
     """Przelacznik semantyki nie moze wymuszac przebudowy po ponownym wlaczeniu.
 

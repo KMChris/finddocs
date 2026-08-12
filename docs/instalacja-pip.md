@@ -30,6 +30,7 @@ Sam pakiet bez OCR instaluje się poleceniem `pip install finddocs`. Dodatki:
 | `export` | torch, transformers, onnx i onnxscript: konwersja checkpointów Hugging Face do ONNX oraz kwantyzacja INT8 |
 | `gpu-dml` | wariant DirectML pakietu onnxruntime: embeddingi na karcie graficznej AMD, Intel albo NVIDIA na Windows |
 | `gpu-cuda` | wariant CUDA pakietu onnxruntime: tylko NVIDIA, wymaga bibliotek CUDA i cuDNN |
+| `pgvector` | sterownik psycopg: magazyn wektorów w bazie PostgreSQL z rozszerzeniem pgvector |
 | `all` | komplet dla samodzielnego stanowiska, równoważny `finddocs[ocr-rapid,export]` |
 
 Dodatek `all` celowo nie zawiera `ocr-easy`: przy ustawieniu `ocr.engine`
