@@ -64,6 +64,17 @@ def test_pole_wyboru_w_wierszu_przelacza_zrodlo(sources_view: SourcesView) -> No
 
 
 @pytest.mark.gui
+def test_limit_stron_ocr_zapisuje_konfiguracje(sources_view: SourcesView) -> None:
+    """Pole liczby stron OCR pokazuje wartosc z konfiguracji i zapisuje zmiane."""
+    config = sources_view.context.config
+    assert sources_view.ocr_pages_spin.value() == config.ocr.max_pages_per_document
+
+    sources_view.ocr_pages_spin.setValue(250)
+
+    assert config.ocr.max_pages_per_document == 250
+
+
+@pytest.mark.gui
 def test_opcja_archiwow_zapisuje_konfiguracje(sources_view: SourcesView) -> None:
     """Pole wyboru archiwow ZIP przelacza opcje indeksowania i zapisuje ustawienia."""
     config = sources_view.context.config

@@ -157,6 +157,12 @@ class DiagnosticsView(QWidget):
         backup.clicked.connect(self.backup_index)
         row.addWidget(backup)
 
+        clear_ocr = QPushButton(i18n.DIAG_CLEAR_OCR_CACHE)
+        clear_ocr.setIcon(theme_icon("trash"))
+        clear_ocr.setToolTip(i18n.DIAG_CLEAR_OCR_CACHE_HINT)
+        clear_ocr.clicked.connect(self.clear_ocr_cache)
+        row.addWidget(clear_ocr)
+
         bundle = QPushButton(i18n.DIAG_EXPORT_BUNDLE)
         bundle.setIcon(theme_icon("export"))
         bundle.setToolTip(i18n.DIAG_EXPORT_BUNDLE_HINT)
@@ -282,6 +288,24 @@ class DiagnosticsView(QWidget):
 
         self.status_message.emit("Kompaktowanie indeksu wektorowego...")
         task = CallableTask(work, label="kompaktacja")
+        task.signals.finished.connect(
+            lambda message: self.banner.show_message(str(message), "success")
+        )
+        task.signals.failed.connect(self._show_error)
+        thread_pool().start(task)
+
+    def clear_ocr_cache(self) -> None:
+        """Usuwa zapamietane wyniki OCR, np. obciete starym limitem stron."""
+
+        def work() -> str:
+            count = self.context.require_index().repository.clear_ocr_cache()
+            return (
+                f"Usunięto {count} wpisów pamięci podręcznej OCR. "
+                "Pełne indeksowanie rozpozna skany od nowa."
+            )
+
+        self.status_message.emit("Czyszczenie pamięci podręcznej OCR...")
+        task = CallableTask(work, label="czyszczenie pamięci OCR")
         task.signals.finished.connect(
             lambda message: self.banner.show_message(str(message), "success")
         )

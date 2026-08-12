@@ -186,6 +186,11 @@ SOURCES_DEMO = "Utwórz zbiór demonstracyjny"
 SOURCES_DEMO_HINT = "Utwórz katalog z przykładowymi polskimi dokumentami i dodaj go jako źródło"
 
 SOURCES_OPTIONS_TITLE = "Opcje indeksowania"
+SOURCES_OCR_PAGE_LIMIT = "Limit stron OCR na dokument"
+SOURCES_OCR_PAGE_LIMIT_HINT = (
+    "Skan dłuższy niż limit jest rozpoznawany tylko do tej strony, a dokument dostaje "
+    "ostrzeżenie o niepełnej treści. Wyższa wartość wydłuża indeksowanie długich skanów."
+)
 SOURCES_INDEX_ARCHIVES = "Indeksuj zawartość archiwów ZIP"
 SOURCES_INDEX_ARCHIVES_HINT = (
     "Po włączeniu archiwum jest rozpakowywane, a każdy plik w środku trafia do indeksu "
@@ -534,6 +539,11 @@ DIAG_COMPACT = "Kompaktuj wektory"
 DIAG_COMPACT_HINT = "Usuń z indeksu wektorowego wpisy po skasowanych dokumentach"
 DIAG_BACKUP = "Kopia indeksu"
 DIAG_BACKUP_HINT = "Zapisz kopię plików indeksu w katalogu kopii zapasowych"
+DIAG_CLEAR_OCR_CACHE = "Wyczyść pamięć OCR"
+DIAG_CLEAR_OCR_CACHE_HINT = (
+    "Usuń zapamiętane wyniki OCR. Pełne indeksowanie rozpozna skany od nowa, "
+    "co ma sens po podniesieniu limitu stron albo zmianie silnika OCR."
+)
 DIAG_LOG_QUERIES = "Zapisuj zapytania w logu diagnostycznym"
 DIAG_LOG_QUERIES_HINT = (
     "Domyślnie wyłączone. Włącz tylko na czas diagnozy. Zapytania zostaną zapisane "

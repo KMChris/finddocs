@@ -427,6 +427,35 @@ def test_bez_skrotu_tresci_pamiec_podreczna_nie_dziala(
     assert len(engine.calls) == 2
 
 
+def test_wynik_obciety_limitem_nie_trafia_do_pamieci(
+    ocr_settings: OcrSettings,
+    monkeypatch: pytest.MonkeyPatch,
+    multipage_image: Path,
+    index_service: IndexService,
+) -> None:
+    """Podniesienie limitu stron dziala takze dla dokumentow juz rozpoznanych.
+
+    Klucz pamieci podrecznej nie zawiera limitu stron, wiec zapisany wynik
+    czesciowy maskowalby nowe ustawienie. Wynik obciety nie jest zapamietywany.
+    """
+    engine = FakeEngine()
+    monkeypatch.setattr(ocr_service, "build_engines", lambda settings, model_dir=None: [engine])
+    ocr_settings.max_pages_per_document = 2
+    service = OcrService(ocr_settings, repository=index_service.repository)
+
+    pierwszy = service.run(multipage_image, TIFF_INFO, content_sha256="c" * 64)
+    assert pierwszy.truncated is True
+    assert len(pierwszy.pages) == 2
+
+    ocr_settings.max_pages_per_document = 1000
+    ponowny = OcrService(ocr_settings, repository=index_service.repository).run(
+        multipage_image, TIFF_INFO, content_sha256="c" * 64
+    )
+
+    assert ponowny.from_cache is False
+    assert len(ponowny.pages) == 5
+
+
 def test_zamkniecie_zwalnia_silnik(
     service_with_fake: tuple[OcrService, FakeEngine], image_file: Path
 ) -> None:

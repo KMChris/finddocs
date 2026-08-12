@@ -303,6 +303,11 @@ class OcrService:
     def _store_cache(self, content_sha256: str | None, result: OcrDocumentResult) -> None:
         if not content_sha256 or self.repository is None or not result.pages:
             return
+        # Wynik obciety limitem stron nie trafia do pamieci podrecznej. Klucz
+        # wpisu nie zawiera limitu, wiec zapisany wynik czesciowy maskowalby
+        # pozniejsze podniesienie limitu w ustawieniach.
+        if result.truncated:
+            return
         payload = "\f".join(page.text for page in result.pages)
         self.repository.put_ocr_cache(
             content_sha256,

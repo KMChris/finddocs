@@ -72,7 +72,7 @@ mówi o tym na ekranie **Diagnostyka**, zamiast po cichu pomijać skany.
 | Parametr | Wartość domyślna | Znaczenie |
 | --- | --- | --- |
 | `ocr.render_dpi` | 220 | rozdzielczość renderowania strony PDF |
-| `ocr.max_pages_per_document` | 1000 | limit stron poddawanych OCR |
+| `ocr.max_pages_per_document` | 1000 | limit stron poddawanych OCR (w GUI: ekran Źródła i konfiguracja, Opcje indeksowania) |
 | `ocr.max_image_pixels` | 40 000 000 | ochrona pamięci przed obrazem-bombą |
 | `ocr.page_timeout_seconds` | 120 | limit czasu na jedną stronę |
 | `ocr.auto_rotate` | `true` | wykrywanie i korekta orientacji |
@@ -86,6 +86,10 @@ dokumentu jako obrazów, więc stustronicowy skan nie wywraca aplikacji.
 
 Przekroczenie `max_pages_per_document` kończy się ostrzeżeniem przy dokumencie:
 część treści nie została rozpoznana. To informacja, nie ciche obcięcie.
+Wynik obcięty limitem nie trafia do pamięci podręcznej OCR, więc po podniesieniu
+limitu pełne indeksowanie rozpoznaje taki dokument od nowa. Wpisy zapisane przez
+starsze wydania można usunąć przyciskiem „Wyczyść pamięć OCR" na ekranie
+Diagnostyka.
 
 ## Korekta orientacji
 

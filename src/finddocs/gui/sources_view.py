@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QPushButton,
     QScrollArea,
+    QSpinBox,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -70,6 +71,11 @@ TABLE_MAX_HEIGHT = 260
 #: Szerokosc kolumny kart konfiguracji, wzorem ekranu Ustawien. Bez tego
 #: ograniczenia formularze rozciagaja sie na cala szerokosc duzego okna.
 CONFIG_COLUMN_WIDTH = 760
+
+#: Zakres limitu stron OCR na dokument. Dolna granica zostawia choc jedna
+#: strone, gorna chroni przed zadaniem OCR liczonym w dniach.
+OCR_PAGES_MIN = 1
+OCR_PAGES_MAX = 10_000
 
 
 class SharePointDialog(QDialog):
@@ -243,7 +249,34 @@ class SourcesView(QWidget):
         hint.setObjectName("Hint")
         hint.setWordWrap(True)
         layout.addWidget(hint)
+
+        ocr_row = QHBoxLayout()
+        ocr_row.setSpacing(SPACE_SM)
+        ocr_caption = QLabel(i18n.SOURCES_OCR_PAGE_LIMIT)
+        ocr_row.addWidget(ocr_caption)
+        self.ocr_pages_spin = QSpinBox()
+        self.ocr_pages_spin.setRange(OCR_PAGES_MIN, OCR_PAGES_MAX)
+        self.ocr_pages_spin.setSingleStep(50)
+        self.ocr_pages_spin.setValue(self.context.config.ocr.max_pages_per_document)
+        self.ocr_pages_spin.setToolTip(i18n.SOURCES_OCR_PAGE_LIMIT_HINT)
+        self.ocr_pages_spin.valueChanged.connect(self._on_ocr_pages_changed)
+        ocr_row.addWidget(self.ocr_pages_spin)
+        ocr_row.addStretch(1)
+        layout.addLayout(ocr_row)
+
+        ocr_hint = QLabel(i18n.SOURCES_OCR_PAGE_LIMIT_HINT)
+        ocr_hint.setObjectName("Hint")
+        ocr_hint.setWordWrap(True)
+        layout.addWidget(ocr_hint)
         return box
+
+    def _on_ocr_pages_changed(self, value: int) -> None:
+        limit = int(value)
+        if self.context.config.ocr.max_pages_per_document == limit:
+            return
+        self.context.config.ocr.max_pages_per_document = limit
+        self.context.save()
+        self.status_message.emit(i18n.SETTINGS_SAVED)
 
     def _on_archives_toggled(self, checked: bool) -> None:
         enabled = bool(checked)
