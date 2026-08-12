@@ -28,6 +28,8 @@ Sam pakiet bez OCR instaluje się poleceniem `pip install finddocs`. Dodatki:
 | `ocr-rapid` | silnik RapidOCR na ONNX Runtime, z modelami wbudowanymi w pakiet, bez instalatora systemowego |
 | `ocr-easy` | silnik EasyOCR, cięższy i wymagający własnych modeli |
 | `export` | torch, transformers, onnx i onnxscript: konwersja checkpointów Hugging Face do ONNX oraz kwantyzacja INT8 |
+| `gpu-dml` | wariant DirectML pakietu onnxruntime: embeddingi na karcie graficznej AMD, Intel albo NVIDIA na Windows |
+| `gpu-cuda` | wariant CUDA pakietu onnxruntime: tylko NVIDIA, wymaga bibliotek CUDA i cuDNN |
 | `all` | komplet dla samodzielnego stanowiska, równoważny `finddocs[ocr-rapid,export]` |
 
 Dodatek `all` celowo nie zawiera `ocr-easy`: przy ustawieniu `ocr.engine`
@@ -35,6 +37,14 @@ na `auto` EasyOCR ma pierwszeństwo przed RapidOCR, więc jego doinstalowanie
 zmieniłoby używany silnik. Kto chce EasyOCR, instaluje `finddocs[all,ocr-easy]`.
 Wszystkie dodatki na Pythonach od 3.11 do 3.14 instalują się z gotowych kół,
 bez kompilacji ze źródeł.
+
+Dodatki `gpu-dml` i `gpu-cuda` instalują wariant GPU pakietu onnxruntime obok
+wariantu CPU z zależności bazowej. Oba wydania mają ten sam pakiet importowy,
+a pip nie gwarantuje, które koło zapisze pliki jako ostatnie, więc po dodatku
+zawsze wykonuje się drugie polecenie przywracające wariant GPU:
+`pip install --force-reinstall --no-deps onnxruntime-directml` (dla CUDA:
+`onnxruntime-gpu`). Stan sprawdza `finddocs model device`. Szczegóły, wersje
+i zalecenia wydajności: [embeddingi na GPU i zdalne API](embeddingi-gpu-api.md).
 
 Tesseract, jeżeli jest preferowany, instaluje się osobno według rozdziału [OCR](ocr.md).
 

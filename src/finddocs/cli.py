@@ -634,11 +634,18 @@ def cmd_model_device(args: argparse.Namespace) -> int:
     }
     _print(data, as_json=args.json)
     if args.value and args.value not in {"auto", "cpu"} and not devices.get(args.value, False):
+        extra, wheel = (
+            ("gpu-dml", "onnxruntime-directml")
+            if args.value == "dml"
+            else ("gpu-cuda", "onnxruntime-gpu")
+        )
         print()
         print("Uwaga: wybrane urządzenie nie jest dostępne w tym środowisku.")
-        print("Obliczenia będą wykonywane na CPU do czasu instalacji pakietu:")
-        print("  DirectML: pip uninstall onnxruntime && pip install onnxruntime-directml")
-        print("  CUDA:     pip uninstall onnxruntime && pip install onnxruntime-gpu")
+        print("Obliczenia będą wykonywane na CPU do czasu instalacji wariantu GPU:")
+        print(f'  pip install "finddocs[{extra}]"')
+        print(f"  pip install --force-reinstall --no-deps {wheel}")
+        print("Drugie polecenie jest konieczne: warianty pakietu onnxruntime")
+        print("współdzielą pliki, a pip nie gwarantuje kolejności instalacji.")
     return EXIT_OK
 
 

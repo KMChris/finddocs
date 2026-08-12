@@ -16,7 +16,8 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import QObject, Signal
+from PySide6.QtCore import QObject, Qt, Signal
+from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -24,11 +25,13 @@ from PySide6.QtWidgets import (
     QDialogButtonBox,
     QFileDialog,
     QFormLayout,
+    QFrame,
     QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QPushButton,
+    QScrollArea,
     QSpinBox,
     QVBoxLayout,
     QWidget,
@@ -199,14 +202,29 @@ class ModelSettingsDialog(QDialog):
         self.setWindowTitle(i18n.MODEL_SETTINGS_TITLE)
         self.setMinimumWidth(560)
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(20, 20, 20, 16)
+        layout.setContentsMargins(20, 20, 8, 16)
         layout.setSpacing(12)
 
-        layout.addWidget(self._build_prefix_box())
-        layout.addWidget(self._build_semantic_box())
-        layout.addWidget(self._build_compute_box())
-        layout.addWidget(self._build_remote_box())
-        layout.addWidget(self._build_import_box())
+        # Sekcje ustawien jada w obszarze przewijanym: okno ma piec grup i na
+        # mniejszych ekranach nie miesci sie w calosci. Przyciski Zapisz oraz
+        # Anuluj zostaja na stale na dole, poza przewijaniem.
+        content = QWidget()
+        content_layout = QVBoxLayout(content)
+        content_layout.setContentsMargins(0, 0, 12, 0)
+        content_layout.setSpacing(12)
+        content_layout.addWidget(self._build_prefix_box())
+        content_layout.addWidget(self._build_semantic_box())
+        content_layout.addWidget(self._build_compute_box())
+        content_layout.addWidget(self._build_remote_box())
+        content_layout.addWidget(self._build_import_box())
+        content_layout.addStretch(1)
+
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setFrameShape(QFrame.Shape.NoFrame)
+        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.scroll_area.setWidget(content)
+        layout.addWidget(self.scroll_area, stretch=1)
 
         self.buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel
@@ -215,7 +233,16 @@ class ModelSettingsDialog(QDialog):
         self.buttons.button(QDialogButtonBox.StandardButton.Cancel).setText(i18n.BUTTON_CANCEL)
         self.buttons.accepted.connect(self.apply_settings)
         self.buttons.rejected.connect(self.reject)
-        layout.addWidget(self.buttons)
+        button_row = QHBoxLayout()
+        button_row.setContentsMargins(0, 0, 12, 0)
+        button_row.addWidget(self.buttons)
+        layout.addLayout(button_row)
+
+        # Startowa wysokosc: tyle, ile trzeba na tresc, ale nie wiecej niz
+        # miesci sie na ekranie. Reszte zalatwia przewijanie.
+        screen = self.screen() or QGuiApplication.primaryScreen()
+        available = screen.availableGeometry().height() if screen else 900
+        self.resize(600, min(760, int(available * 0.9)))
 
     # --- budowa -----------------------------------------------------------
 

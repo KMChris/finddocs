@@ -56,6 +56,18 @@ dependencies = [
 # ktos ma go zainstalowanego z wczesniejszych wydan.
 ocr-rapid = ["rapidocr==3.9.2"]
 ocr-easy = ["easyocr>=1.7.2"]
+# Obliczenia embeddingow na GPU. Wszystkie warianty onnxruntime (CPU, DirectML,
+# CUDA) instaluja ten sam pakiet importowy "onnxruntime", a pip NIE gwarantuje
+# kolejnosci instalacji kol wspoldzielacych pliki (zmierzone: przy jednym
+# poleceniu wygral wariant CPU z zaleznosci bazowej). Dlatego po instalacji
+# dodatku zawsze wykonuje sie drugi krok, ktory przywraca wariant GPU:
+#   pip install "finddocs[gpu-dml]"
+#   pip install --force-reinstall --no-deps onnxruntime-directml
+# Kontrola stanu: `finddocs model device`. Uwaga na wersje: linia
+# onnxruntime-directml konczy sie na 1.24.4 i nie idzie rowno z linia CPU
+# (1.28.0); interfejs ORT uzywany przez aplikacje jest zgodny w obu.
+gpu-dml = ["onnxruntime-directml==1.24.4"]
+gpu-cuda = ["onnxruntime-gpu==1.28.0"]
 dev = [
     "pytest==9.1.1",
     "pytest-qt==4.5.0",

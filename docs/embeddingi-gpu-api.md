@@ -27,17 +27,54 @@ zero ruchu wychodzącego. Każdą z opisanych funkcji trzeba włączyć świadom
 
 ### Instalacja pakietu
 
-Standardowy pakiet `onnxruntime` zawiera wyłącznie provider CPU. Obliczenia na
-GPU wymagają zamiany pakietu w tym samym środowisku Pythona:
+Standardowy pakiet `onnxruntime` zawiera wyłącznie provider CPU. Sam sterownik
+karty graficznej nie wystarczy: kod providera GPU jest skompilowany w wariancie
+pakietu onnxruntime, a nie w sterowniku, więc bez odpowiedniego wariantu
+`onnxruntime.get_available_providers()` nie zwróci urządzenia GPU.
+
+Instalacja przez dodatek pakietu, dwoma poleceniami:
 
 ```bash
-pip uninstall onnxruntime
-pip install onnxruntime-directml
+pip install "finddocs[gpu-dml]"
+pip install --force-reinstall --no-deps onnxruntime-directml
 ```
 
-DirectML działa na kartach AMD, Intel i NVIDIA na Windows 11 i nie wymaga
-dodatkowych sterowników. Wariant CUDA (`onnxruntime-gpu`) działa tylko na
-kartach NVIDIA i wymaga zgodnych wersji CUDA oraz cuDNN.
+Dla CUDA odpowiednio `finddocs[gpu-cuda]` i `onnxruntime-gpu`. Drugi krok jest
+konieczny: wszystkie warianty pakietu onnxruntime mają ten sam pakiet importowy,
+a pip nie gwarantuje kolejności instalacji kół współdzielących pliki. W próbie
+kontrolnej po jednym poleceniu aktywny pozostał wariant CPU z zależności
+bazowej; drugie polecenie przywraca wariant GPU niezależnie od kolejności.
+To samo polecenie naprawia środowisko, gdy późniejsza aktualizacja przywróci
+wariant CPU.
+
+DirectML (`gpu-dml`) jest zalecany na Windows 11: działa na kartach AMD, Intel
+i NVIDIA i potrzebuje wyłącznie zwykłego sterownika graficznego (DirectX 12).
+CUDA (`gpu-cuda`) działa tylko na kartach NVIDIA i poza sterownikiem wymaga
+bibliotek CUDA oraz cuDNN w wersjach zgodnych z wydaniem onnxruntime.
+Uwaga na wersje: linia onnxruntime-directml kończy się obecnie na 1.24.4
+i nie idzie równo z linią CPU (1.28.0); interfejs używany przez aplikację jest
+zgodny w obu wersjach.
+
+Stan środowiska pokazuje `finddocs model device` (pozycja
+`dostepne_w_srodowisku`) oraz ekran Diagnostyka.
+
+### Kwantyzacja a GPU
+
+Wariant INT8 modelu jest zoptymalizowany pod procesor. Na karcie graficznej
+działa wolniej od pełnego FP32 i może dawać wektory minimalnie różne od
+liczonych na CPU. Pomiar na stacji deweloperskiej (MMLW base, batch 32,
+64 fragmenty):
+
+| Wariant | CPU | GPU (DirectML) |
+| --- | --- | --- |
+| INT8 | 375 fragm./s | 181 fragm./s |
+| FP32 | 172 fragm./s | 615 fragm./s |
+
+Wektory FP32 z CPU i z GPU są identyczne (podobieństwo kosinusowe 1.0), więc
+zmiana samego urządzenia nie wymaga przebudowy indeksu. Zalecenie: na GPU
+wyłącz wariant INT8 (`quantized: false`); ta zmiana unieważnia część wektorową
+indeksu, jak każda zmiana wariantu modelu, więc wykonaj ją razem z planową
+przebudową.
 
 ### Włączenie
 
