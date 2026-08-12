@@ -23,6 +23,7 @@ from finddocs.config import (
     SourceConfig,
     load_config,
     save_config,
+    update_active_profile_marker,
 )
 from finddocs.connectors.base import SourceConnector
 from finddocs.errors import FindDocsError
@@ -507,6 +508,7 @@ def _activate_model(args: argparse.Namespace, key: str) -> int:
     manifest = sync_embedding_settings(config.embedding, key, extra=extra)
     if manifest is not None:
         config.embedding.quantized = bool(manifest.quantized)
+    update_active_profile_marker(config.embedding)
     save_config(config, _paths(args).config_file)
     print(f"Aktywny model: {key} ({directory})")
     if changed:
@@ -622,6 +624,7 @@ def cmd_model_device(args: argparse.Namespace) -> int:
             config.embedding.batch_size = max(1, args.batch)
         if args.batch_documents is not None:
             config.indexing.embed_batch_documents = max(1, args.batch_documents)
+        update_active_profile_marker(config.embedding)
         save_config(config, _paths(args).config_file)
 
     data = {
@@ -692,6 +695,7 @@ def cmd_model_api(args: argparse.Namespace) -> int:
         embedding.internal_api_enabled = False
         embedding.provider = "local_onnx"
 
+    update_active_profile_marker(embedding)
     save_config(config, _paths(args).config_file)
     data = {
         "dostawca": embedding.provider,
@@ -714,6 +718,102 @@ def cmd_model_api(args: argparse.Namespace) -> int:
         print("  finddocs maintenance rebuild --vectors-only")
         print("  finddocs index")
     return EXIT_OK
+
+
+def cmd_model_profile(args: argparse.Namespace) -> int:
+    """Zarzadza nazwanymi profilami dostawcy embeddingow."""
+    from finddocs.config import (
+        EmbeddingProfile,
+        apply_profile,
+        ensure_profiles,
+        save_profile,
+    )
+    from finddocs.providers.model_manifest import find_model_dir, sync_embedding_settings
+
+    config = _load(args)
+    embedding = config.embedding
+    ensure_profiles(embedding)
+    action = getattr(args, "profile_command", None) or "list"
+
+    def describe(profile: EmbeddingProfile) -> dict[str, object]:
+        if profile.provider == "internal_api":
+            target = profile.internal_api_model or profile.internal_api_url
+            kind = f"zdalne API: {target or '(nie podano)'}"
+        else:
+            kind = f"model lokalny: {profile.model_key}"
+        return {
+            "nazwa": profile.name,
+            "opis": kind,
+            "aktywny": profile.name == embedding.active_profile,
+        }
+
+    if action == "list":
+        save_config(config, _paths(args).config_file)
+        _print({"profile": [describe(p) for p in embedding.profiles]}, as_json=args.json)
+        return EXIT_OK
+
+    if action == "save":
+        name = args.name.strip()
+        if not name:
+            print("Nazwa profilu nie może być pusta.", file=sys.stderr)
+            return EXIT_USAGE
+        save_profile(embedding, name)
+        save_config(config, _paths(args).config_file)
+        print(f"Zapisano profil '{name}' z bieżących ustawień.")
+        return EXIT_OK
+
+    if action == "use":
+        name = args.name.strip()
+        profile = next((p for p in embedding.profiles if p.name == name), None)
+        if profile is None:
+            print(
+                f"Nie ma profilu '{name}'. Lista: finddocs model profile",
+                file=sys.stderr,
+            )
+            return EXIT_ERROR
+        before = config.vector_compat_hash()
+        apply_profile(embedding, profile)
+        if profile.provider == "local_onnx":
+            extra = Path(profile.model_path) if profile.model_path else None
+            quantized = embedding.quantized
+            sync_embedding_settings(embedding, profile.model_key, extra=extra)
+            embedding.quantized = quantized
+            if find_model_dir(profile.model_key, extra) is None:
+                print(
+                    f"Uwaga: model '{profile.model_key}' nie jest zainstalowany. "
+                    "Wyszukiwanie semantyczne będzie niedostępne do czasu instalacji."
+                )
+        # Synchronizacja z manifestem mogla odswiezyc przedrostki, wiec migawka
+        # profilu jest zapisywana ponownie: aktywacja to jawne dzialanie na nim.
+        save_profile(embedding, name)
+        save_config(config, _paths(args).config_file)
+        print(f"Aktywowano profil '{name}'.")
+        if config.vector_compat_hash() != before:
+            print("Zmiana dostawcy albo modelu wymaga przebudowy części semantycznej:")
+            print("  finddocs maintenance rebuild --vectors-only")
+            print("  finddocs index")
+            print("Do tego czasu wyszukiwanie dokładne działa bez zmian.")
+        return EXIT_OK
+
+    if action == "remove":
+        name = args.name.strip()
+        if name == embedding.active_profile:
+            print(
+                "Nie można usunąć aktywnego profilu. Najpierw aktywuj inny "
+                "(finddocs model profile use <nazwa>).",
+                file=sys.stderr,
+            )
+            return EXIT_ERROR
+        if not any(p.name == name for p in embedding.profiles):
+            print(f"Nie ma profilu '{name}'.", file=sys.stderr)
+            return EXIT_ERROR
+        embedding.profiles = [p for p in embedding.profiles if p.name != name]
+        save_config(config, _paths(args).config_file)
+        print(f"Usunięto profil '{name}'.")
+        return EXIT_OK
+
+    print(f"Nieznane polecenie profili: {action}", file=sys.stderr)
+    return EXIT_USAGE
 
 
 def cmd_model_api_key(args: argparse.Namespace) -> int:
@@ -921,7 +1021,9 @@ def build_parser() -> argparse.ArgumentParser:
     model_api.add_argument("--disable", action="store_true", help="wroc do modelu lokalnego")
     model_api.add_argument("--url", help="adres API, np. https://embeddingi.example.com/v1")
     model_api.add_argument(
-        "--protocol", choices=["finddocs", "openai"], help="kontrakt zdalnego API"
+        "--protocol",
+        choices=["openai", "finddocs"],
+        help="kontrakt zdalnego API (openai jest domyślny)",
     )
     model_api.add_argument("--model", help="nazwa modelu po stronie API")
     model_api.add_argument("--dimension", type=int, help="wymiar zwracanych wektorów")
@@ -933,6 +1035,29 @@ def build_parser() -> argparse.ArgumentParser:
     model_api.add_argument("--timeout", type=float, help="limit czasu żądania w sekundach")
     model_api.add_argument("--retries", type=int, help="liczba prób przy błędach przejściowych")
     model_api.set_defaults(func=cmd_model_api)
+
+    model_profile = model_sub.add_parser(
+        "profile",
+        help="nazwane profile dostawcy embeddingów",
+        description=(
+            "Profil to nazwany zestaw ustawien dostawcy: model lokalny z jego "
+            "parametrami albo zdalne API z adresem i kontraktem. Bez podpolecenia "
+            "wyswietla liste profili. Aktywacja profilu o innym modelu wymaga "
+            "przebudowy czesci semantycznej indeksu."
+        ),
+    )
+    model_profile.set_defaults(func=cmd_model_profile, profile_command=None)
+    profile_sub = model_profile.add_subparsers(dest="profile_command")
+    profile_sub.add_parser("list", help="lista profili").set_defaults(func=cmd_model_profile)
+    profile_save = profile_sub.add_parser("save", help="zapisuje bieżące ustawienia jako profil")
+    profile_save.add_argument("name", help="nazwa profilu")
+    profile_save.set_defaults(func=cmd_model_profile)
+    profile_use = profile_sub.add_parser("use", help="aktywuje profil")
+    profile_use.add_argument("name", help="nazwa profilu")
+    profile_use.set_defaults(func=cmd_model_profile)
+    profile_remove = profile_sub.add_parser("remove", help="usuwa profil")
+    profile_remove.add_argument("name", help="nazwa profilu")
+    profile_remove.set_defaults(func=cmd_model_profile)
 
     model_api_key = model_sub.add_parser(
         "api-key",

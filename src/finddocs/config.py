@@ -90,6 +90,61 @@ class SourceConfig:
 
 
 @dataclass(slots=True)
+class EmbeddingProfile:
+    """Nazwany profil dostawcy embeddingow: zestaw ustawien do przelaczania.
+
+    Profil przenosi komplet pol opisujacych dostawce (model lokalny z jego
+    parametrami albo zdalne API z adresem i kontraktem). Aktywacja profilu
+    kopiuje te pola do biezacych ustawien ``EmbeddingSettings``; skrot
+    zgodnosci wektorow liczy sie wylacznie z ustawien biezacych, wiec sama
+    lista profili nie wplywa na zgodnosc indeksu.
+    """
+
+    name: str = ""
+    """Nazwa profilu pokazywana na liście wyboru."""
+
+    provider: str = "local_onnx"
+    """Dostawca profilu: local_onnx (model lokalny) albo internal_api (zdalne API)."""
+
+    model_key: str = "mmlw-retrieval-roberta-base"
+    model_path: str = ""
+    quantized: bool = True
+    device: str = "cpu"
+    batch_size: int = 8
+    query_prefix: str = "zapytanie: "
+    passage_prefix: str = ""
+    internal_api_url: str = ""
+    internal_api_protocol: str = "openai"
+    internal_api_model: str = ""
+    internal_api_dimension: int = 768
+    internal_api_batch_size: int = 64
+    internal_api_timeout_seconds: float = 30.0
+    internal_api_max_retries: int = 3
+    internal_api_key_header: str = ""
+
+
+#: Pola wspolne profilu i ustawien embeddingow, kopiowane przy przelaczaniu.
+PROFILE_FIELDS: tuple[str, ...] = (
+    "provider",
+    "model_key",
+    "model_path",
+    "quantized",
+    "device",
+    "batch_size",
+    "query_prefix",
+    "passage_prefix",
+    "internal_api_url",
+    "internal_api_protocol",
+    "internal_api_model",
+    "internal_api_dimension",
+    "internal_api_batch_size",
+    "internal_api_timeout_seconds",
+    "internal_api_max_retries",
+    "internal_api_key_header",
+)
+
+
+@dataclass(slots=True)
 class EmbeddingSettings:
     """Ustawienia dostawcy embeddingow."""
 
@@ -127,8 +182,8 @@ class EmbeddingSettings:
     normalize: bool = True
     internal_api_url: str = ""
     internal_api_enabled: bool = False
-    internal_api_protocol: str = "finddocs"
-    """Kontrakt zdalnego API: finddocs albo openai (zgodny z /v1/embeddings)."""
+    internal_api_protocol: str = "openai"
+    """Kontrakt zdalnego API: openai (domyślny, zgodny z /v1/embeddings) albo finddocs."""
 
     internal_api_model: str = ""
     """Nazwa modelu po stronie zdalnego API. Wchodzi do skrótu zgodności wektorów."""
@@ -140,6 +195,12 @@ class EmbeddingSettings:
     internal_api_key_header: str = ""
     """Pusta wartość oznacza nagłówek Authorization: Bearer <klucz>.
     Inna wartość to nazwa nagłówka, w którym zdalne API oczekuje klucza."""
+
+    profiles: list[EmbeddingProfile] = field(default_factory=list)
+    """Nazwane profile dostawcy do szybkiego przełączania (patrz apply_profile)."""
+
+    active_profile: str = ""
+    """Nazwa ostatnio aktywowanego profilu. Pusta przed pierwszym użyciem profili."""
 
 
 @dataclass(slots=True)
@@ -409,6 +470,94 @@ class AppConfig:
         return replace(self, sources=sources)
 
 
+# --- profile dostawcy embeddingow -----------------------------------------------
+
+
+def profile_from_embedding(embedding: EmbeddingSettings, name: str) -> EmbeddingProfile:
+    """Buduje profil (migawke) z biezacych ustawien dostawcy embeddingow."""
+    values = {field_name: getattr(embedding, field_name) for field_name in PROFILE_FIELDS}
+    return EmbeddingProfile(name=name, **values)
+
+
+def apply_profile(embedding: EmbeddingSettings, profile: EmbeddingProfile) -> None:
+    """Przelacza biezace ustawienia dostawcy na wartosci z profilu.
+
+    Dostawca zdalny wlacza sie wylacznie przez aktywacje profilu zdalnego.
+    Aktywacja profilu lokalnego go wylacza, co zamyka tez kategorie ruchu
+    ``internal_api`` w polityce sieciowej: konfiguracja lokalna nie zostawia
+    otwartego hosta po poprzednim profilu.
+    """
+    for field_name in PROFILE_FIELDS:
+        setattr(embedding, field_name, getattr(profile, field_name))
+    embedding.internal_api_enabled = profile.provider == "internal_api"
+    embedding.active_profile = profile.name
+
+
+def default_profile_name(embedding: EmbeddingSettings) -> str:
+    """Proponowana nazwa profilu opisujaca biezacego dostawce."""
+    if embedding.provider == "internal_api":
+        return embedding.internal_api_model or "Zdalne API"
+    return embedding.model_key or "Model lokalny"
+
+
+def ensure_profiles(embedding: EmbeddingSettings) -> bool:
+    """Uzupelnia liste profili przy pierwszym uzyciu. Zwraca, czy cos zmienila.
+
+    Konfiguracje zapisane przed wprowadzeniem profili nie maja zadnego wpisu:
+    pierwszy profil powstaje wtedy z biezacych ustawien, zeby lista wyboru
+    nigdy nie byla pusta. Wywolanie jest idempotentne. Wskazanie aktywnego
+    profilu, ktorego nie ma na liscie, jest czyszczone.
+    """
+    changed = False
+    if not embedding.profiles:
+        name = default_profile_name(embedding)
+        embedding.profiles = [profile_from_embedding(embedding, name)]
+        embedding.active_profile = name
+        changed = True
+    names = {profile.name for profile in embedding.profiles}
+    if embedding.active_profile and embedding.active_profile not in names:
+        embedding.active_profile = ""
+        changed = True
+    return changed
+
+
+def save_profile(embedding: EmbeddingSettings, name: str) -> EmbeddingProfile:
+    """Zapisuje biezace ustawienia jako profil o podanej nazwie i go aktywuje.
+
+    Profil o tej samej nazwie jest nadpisywany w miejscu, wiec kolejnosc listy
+    nie zmienia sie przy aktualizacji.
+    """
+    snapshot = profile_from_embedding(embedding, name)
+    for position, profile in enumerate(embedding.profiles):
+        if profile.name == name:
+            embedding.profiles[position] = snapshot
+            break
+    else:
+        embedding.profiles.append(snapshot)
+    embedding.active_profile = name
+    return snapshot
+
+
+def update_active_profile_marker(embedding: EmbeddingSettings) -> None:
+    """Czysci wskazanie aktywnego profilu, gdy ustawienia sie z nim rozjechaly.
+
+    Profil to nazwana migawka zmieniana wylacznie jawnym zapisem albo
+    aktywacja; zwykly zapis ustawien nigdy jej nie nadpisuje. Gdy biezace
+    ustawienia przestaja odpowiadac migawce aktywnego profilu, wskazanie
+    znika (ustawienia wlasne), a lista profili zostaje nietknieta.
+    """
+    if not embedding.active_profile:
+        return
+    profile = next((p for p in embedding.profiles if p.name == embedding.active_profile), None)
+    if profile is None:
+        embedding.active_profile = ""
+        return
+    for field_name in PROFILE_FIELDS:
+        if getattr(embedding, field_name) != getattr(profile, field_name):
+            embedding.active_profile = ""
+            return
+
+
 # --- serializacja ---------------------------------------------------------------
 
 
@@ -445,6 +594,8 @@ def _build(cls: type, data: dict[str, Any]) -> Any:
             kwargs[name] = _build(_NESTED[ftype_name], raw)
         elif name == "sources" and isinstance(raw, list):
             kwargs[name] = [_build(SourceConfig, item) for item in raw]
+        elif name == "profiles" and isinstance(raw, list):
+            kwargs[name] = [_build(EmbeddingProfile, item) for item in raw]
         else:
             kwargs[name] = raw
     return cls(**kwargs)
@@ -453,6 +604,7 @@ def _build(cls: type, data: dict[str, Any]) -> Any:
 _NESTED: dict[str, type] = {
     "LocalDirSourceSettings": LocalDirSourceSettings,
     "SharePointSourceSettings": SharePointSourceSettings,
+    "EmbeddingProfile": EmbeddingProfile,
     "EmbeddingSettings": EmbeddingSettings,
     "VectorStoreSettings": VectorStoreSettings,
     "OcrSettings": OcrSettings,
@@ -512,9 +664,11 @@ def save_config(config: AppConfig, path: Path | None = None) -> Path:
 
 __all__ = [
     "CONFIG_FORMAT_VERSION",
+    "PROFILE_FIELDS",
     "AppConfig",
     "ChunkingSettings",
     "DiagnosticsSettings",
+    "EmbeddingProfile",
     "EmbeddingSettings",
     "IndexingSettings",
     "LocalDirSourceSettings",
@@ -524,8 +678,14 @@ __all__ = [
     "SourceConfig",
     "UiSettings",
     "VectorStoreSettings",
+    "apply_profile",
     "config_from_dict",
     "config_to_dict",
+    "default_profile_name",
+    "ensure_profiles",
     "load_config",
+    "profile_from_embedding",
     "save_config",
+    "save_profile",
+    "update_active_profile_marker",
 ]

@@ -4,7 +4,17 @@ from __future__ import annotations
 
 import pytest
 
-from finddocs.config import AppConfig, config_from_dict, config_to_dict
+from finddocs.config import (
+    AppConfig,
+    EmbeddingProfile,
+    EmbeddingSettings,
+    apply_profile,
+    config_from_dict,
+    config_to_dict,
+    ensure_profiles,
+    save_profile,
+    update_active_profile_marker,
+)
 from finddocs.errors import NetworkPolicyError
 from finddocs.security.network import EgressCategory, policy_from_config
 
@@ -29,7 +39,7 @@ def test_przelaczenie_na_zdalne_api_zmienia_skrot_wektorow() -> None:
     after = config.vector_compat_hash()
     assert after != before
     payload = config.vector_compat_payload()
-    assert payload["internal_api_protocol"] == "finddocs"
+    assert payload["internal_api_protocol"] == "openai"
     assert payload["internal_api_dimension"] == 768
 
 
@@ -85,8 +95,125 @@ def test_stara_konfiguracja_bez_nowych_pol_dostaje_domyslne() -> None:
     loaded = config_from_dict(data)
 
     assert loaded.embedding.device == "cpu"
-    assert loaded.embedding.internal_api_protocol == "finddocs"
+    assert loaded.embedding.internal_api_protocol == "openai"
     assert loaded.indexing.embed_batch_documents == 8
+
+
+# --- profile dostawcy ------------------------------------------------------------
+
+
+def test_domyslny_kontrakt_zdalnego_api_to_openai() -> None:
+    assert EmbeddingSettings().internal_api_protocol == "openai"
+    assert EmbeddingProfile().internal_api_protocol == "openai"
+
+
+def test_ensure_profiles_tworzy_pierwszy_profil_z_ustawien() -> None:
+    embedding = EmbeddingSettings()
+    assert ensure_profiles(embedding)
+    assert len(embedding.profiles) == 1
+    assert embedding.profiles[0].name == "mmlw-retrieval-roberta-base"
+    assert embedding.active_profile == embedding.profiles[0].name
+    assert not ensure_profiles(embedding)
+
+
+def test_ensure_profiles_czysci_wskazanie_nieistniejacego_profilu() -> None:
+    embedding = EmbeddingSettings()
+    ensure_profiles(embedding)
+    embedding.active_profile = "nie-ma-takiego"
+    assert ensure_profiles(embedding)
+    assert embedding.active_profile == ""
+
+
+def test_apply_profile_przelacza_na_zdalne_api_i_wlacza_dostawce() -> None:
+    embedding = EmbeddingSettings()
+    remote = EmbeddingProfile(
+        name="Klaster GPU",
+        provider="internal_api",
+        internal_api_url="https://embeddingi.example.com/v1",
+        internal_api_model="mmlw-duzy",
+        internal_api_dimension=1024,
+    )
+    apply_profile(embedding, remote)
+    assert embedding.provider == "internal_api"
+    assert embedding.internal_api_enabled is True
+    assert embedding.active_profile == "Klaster GPU"
+    assert embedding.internal_api_dimension == 1024
+
+
+def test_apply_profile_lokalnego_wylacza_zdalne_api_i_zamyka_egress() -> None:
+    config = AppConfig()
+    embedding = config.embedding
+    remote = EmbeddingProfile(
+        name="api", provider="internal_api", internal_api_url="https://a.example.com"
+    )
+    local = EmbeddingProfile(name="lokalny", provider="local_onnx")
+    apply_profile(embedding, remote)
+    assert policy_from_config(config).is_enabled(EgressCategory.INTERNAL_API)
+    apply_profile(embedding, local)
+    assert embedding.provider == "local_onnx"
+    assert embedding.internal_api_enabled is False
+    assert not policy_from_config(config).is_enabled(EgressCategory.INTERNAL_API)
+
+
+def test_zmiana_ustawien_odlacza_wskazanie_profilu_bez_nadpisania() -> None:
+    """Zapis ustawien nie niszczy migawki: znika tylko wskazanie aktywnego."""
+    embedding = EmbeddingSettings()
+    ensure_profiles(embedding)
+    embedding.device = "cuda"
+    update_active_profile_marker(embedding)
+    assert embedding.active_profile == ""
+    assert embedding.profiles[0].device == "cpu"
+
+
+def test_zgodne_ustawienia_zachowuja_wskazanie_profilu() -> None:
+    embedding = EmbeddingSettings()
+    ensure_profiles(embedding)
+    update_active_profile_marker(embedding)
+    assert embedding.active_profile == embedding.profiles[0].name
+
+
+def test_save_profile_nadpisuje_w_miejscu_i_aktywuje() -> None:
+    embedding = EmbeddingSettings()
+    ensure_profiles(embedding)
+    name = embedding.profiles[0].name
+    embedding.profiles.append(EmbeddingProfile(name="drugi"))
+    embedding.device = "cuda"
+
+    save_profile(embedding, name)
+
+    assert [p.name for p in embedding.profiles] == [name, "drugi"]
+    assert embedding.profiles[0].device == "cuda"
+    assert embedding.active_profile == name
+
+
+def test_lista_profili_nie_wplywa_na_skrot_wektorow() -> None:
+    config = AppConfig()
+    before = config.vector_compat_hash()
+    ensure_profiles(config.embedding)
+    config.embedding.profiles.append(EmbeddingProfile(name="inny", provider="internal_api"))
+    assert config.vector_compat_hash() == before
+
+
+def test_round_trip_zachowuje_profile() -> None:
+    config = AppConfig()
+    ensure_profiles(config.embedding)
+    config.embedding.profiles.append(
+        EmbeddingProfile(
+            name="Klaster",
+            provider="internal_api",
+            internal_api_url="https://a.example.com/v1",
+            internal_api_dimension=1024,
+        )
+    )
+
+    loaded = config_from_dict(config_to_dict(config))
+
+    assert [p.name for p in loaded.embedding.profiles] == [
+        p.name for p in config.embedding.profiles
+    ]
+    assert isinstance(loaded.embedding.profiles[0], EmbeddingProfile)
+    assert loaded.embedding.profiles[1].internal_api_dimension == 1024
+    assert loaded.embedding.active_profile == config.embedding.active_profile
 
 
 # --- polityka sieciowa -----------------------------------------------------------

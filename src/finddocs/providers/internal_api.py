@@ -16,13 +16,16 @@ Domyslna sciezka wyszukiwania semantycznego dziala w calosci lokalnie przez
 
 Obslugiwane kontrakty HTTP:
 
-* ``finddocs``: ``POST {base_url}/embeddings`` z cialem
-  ``{"input": [...], "kind": "query"|"passage"}`` (oraz ``"model"``, gdy podano);
-* ``openai``: ``POST {base_url}/embeddings`` z cialem
-  ``{"model": "...", "input": [...], "encoding_format": "float"}``.
+* ``openai`` (domyslny): ``POST {base_url}/embeddings`` z cialem
+  ``{"model": "...", "input": [...], "encoding_format": "float"}``, czyli
+  standard OpenAI ``/v1/embeddings``. Obsluguja go tez typowe wdrozenia
+  wewnetrzne: vLLM, TEI, bramki API. Ewentualne przedrostki zapytania i tresci
+  dokleja aplikacja przed wysylka.
+* ``finddocs`` (opcjonalny): jak wyzej, ale cialo zawiera dodatkowo pole
+  ``"kind": "query"|"passage"``, dzieki ktoremu serwer sam rozroznia rodzaj
+  tekstu i moze zastosowac wlasne przedrostki.
 
-Obie odpowiedzi maja postac ``{"data": [{"embedding": [...]}, ...]}``. Kontrakt
-openai obsluguja tez typowe wdrozenia wewnetrzne (vLLM, TEI, bramki API).
+Obie odpowiedzi maja postac ``{"data": [{"embedding": [...]}, ...]}``.
 
 Klucz API nigdy nie trafia do logow ani do pliku konfiguracyjnego. Provider
 otrzymuje funkcje zwracajaca klucz i odczytuje go dopiero przy wysylce.
@@ -48,8 +51,8 @@ log = get_logger(__name__)
 PROVIDER_KEY = "internal_api"
 DEFAULT_TIMEOUT_SECONDS = 30.0
 
-#: Obslugiwane kontrakty zdalnego API.
-SUPPORTED_PROTOCOLS: tuple[str, ...] = ("finddocs", "openai")
+#: Obslugiwane kontrakty zdalnego API. Pierwszy jest domyslny.
+SUPPORTED_PROTOCOLS: tuple[str, ...] = ("openai", "finddocs")
 
 #: Kody HTTP traktowane jako przejsciowe: warto ponowic probe.
 RETRYABLE_STATUS_CODES = frozenset({408, 425, 429, 500, 502, 503, 504})
@@ -80,7 +83,7 @@ class InternalApiEmbeddingProvider(EmbeddingProvider):
         enabled: bool,
         model: str,
         dimension: int,
-        protocol: str = "finddocs",
+        protocol: str = "openai",
         query_prefix: str = "",
         passage_prefix: str = "",
         batch_size: int = 64,
@@ -102,7 +105,7 @@ class InternalApiEmbeddingProvider(EmbeddingProvider):
         if protocol not in SUPPORTED_PROTOCOLS:
             raise ConfigurationError(
                 f"Nieznany kontrakt zdalnego API: '{protocol}'. "
-                "Dozwolone wartości: finddocs, openai."
+                "Dozwolone wartości: openai, finddocs."
             )
         if dimension <= 0:
             raise ConfigurationError(
