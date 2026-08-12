@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import datetime as _dt
 from collections.abc import Callable
+from dataclasses import replace
 
 import pytest
 from PySide6.QtCore import QDate, QEvent, Qt
 from PySide6.QtGui import QKeyEvent
-from PySide6.QtWidgets import QApplication, QLabel, QPushButton, QWidget
+from PySide6.QtWidgets import QApplication, QLabel, QPushButton, QVBoxLayout, QWidget
 
 from finddocs.gui import i18n
 from finddocs.gui.context import AppContext
@@ -591,6 +592,44 @@ def test_clear_filters_resets_every_field(make_search_view: Callable[..., Search
 
 
 # --- karta wyniku ---------------------------------------------------------------
+
+
+def _long_snippet_hit() -> DocumentHit:
+    """Wynik z fragmentem na tyle dlugim, ze etykieta naprawde sie zawija."""
+    hit = _sample_hit()
+    text = (
+        "Umowa rachunku bieżącego zawarta pomiędzy bankiem a klientem określa "
+        "warunki prowadzenia rachunku, zasady naliczania odsetek, terminy "
+        "rozliczeń oraz tryb składania reklamacji wraz z terminami ich "
+        "rozpatrzenia przez bank i procedurą odwoławczą."
+    )
+    chunk = replace(hit.chunks[0], text=text, highlighted=text)
+    return replace(hit, chunks=[chunk])
+
+
+@pytest.mark.gui
+def test_kolumna_kart_nie_zawyza_minimalnej_wysokosci(qtbot: object, gui_palette: Palette) -> None:
+    """Zawyzone minimum pozwalalo przewijac liste daleko za ostatnia karte.
+
+    Obszar wynikow rozciaga hosta do minimalnej wysokosci ukladu. Gdy polityka
+    pionowa karty nie ma znacznika kurczenia, Qt bierze za jej minimum
+    ``sizeHint``, liczony dla etykiet z zawijaniem przy zgadywanej szerokosci,
+    czyli wyzszy niz karta potrzebuje przy szerokosci rzeczywistej. Minimum musi
+    zmiescic sie w wysokosci policzonej dla tej rzeczywistej szerokosci.
+    """
+    width = 900
+    host = QWidget()
+    qtbot.addWidget(host)  # type: ignore[attr-defined]
+    layout = QVBoxLayout(host)
+    layout.setContentsMargins(0, 0, 0, 0)
+    for _ in range(4):
+        layout.addWidget(ResultCard(_long_snippet_hit(), gui_palette))
+    layout.addStretch(1)
+    host.resize(width, 400)
+    layout.activate()
+
+    assert layout.hasHeightForWidth()
+    assert layout.minimumSize().height() <= layout.heightForWidth(width)
 
 
 @pytest.mark.gui

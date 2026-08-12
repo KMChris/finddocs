@@ -201,7 +201,13 @@ class ResultCard(QFrame):
         self._action_effects: list[QGraphicsOpacityEffect] = []
         self.setObjectName("ResultCard")
         self.setFrameShape(QFrame.Shape.NoFrame)
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        # Pion musi byc ,,Preferred'', nie ,,Minimum''. Bez znacznika kurczenia
+        # Qt liczy minimalna wysokosc karty jako jej ``sizeHint``, a ten dla
+        # etykiet z zawijaniem powstaje przy zgadywanej szerokosci, wiec wychodzi
+        # wyzszy niz karta naprawde potrzebuje. Obszar wynikow sumowal te zawyzone
+        # wysokosci i pozwalal przewijac o kilkaset pikseli za ostatnia karte.
+        # Rzeczywista wysokosc i tak bierze sie z ``heightForWidth``.
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setAccessibleName(hit.name)
         self.setAccessibleDescription(hit.logical_path)
