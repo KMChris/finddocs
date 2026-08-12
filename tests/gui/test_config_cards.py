@@ -13,9 +13,15 @@ from pathlib import Path
 import pytest
 from PySide6.QtWidgets import QDialog, QFileDialog, QMessageBox
 
-from finddocs.config import load_config
+from finddocs.config import EmbeddingProfile, ensure_profiles, load_config
 from finddocs.gui import i18n
-from finddocs.gui.config_cards import ComputeCard, ModelCard, SemanticCard, VectorStoreCard
+from finddocs.gui.config_cards import (
+    ComputeCard,
+    ModelCard,
+    ProfileCard,
+    SemanticCard,
+    VectorStoreCard,
+)
 from finddocs.gui.context import AppContext
 from finddocs.gui.model_dialog import ModelImportDialog
 from finddocs.gui.sources_view import SourcesView
@@ -305,6 +311,171 @@ def test_wylaczenie_zdalnego_api_wraca_do_modelu_lokalnego(
     assert zapisana.embedding.internal_api_enabled is False
 
 
+@pytest.mark.gui
+def test_przedrostki_zdalnego_api_zapisuja_sie_i_wymagaja_przebudowy(
+    qtbot: object, card_context: AppContext, message_boxes: list[QMessageBox]
+) -> None:
+    """Przy kontrakcie OpenAI przedrostki dokleja aplikacja, wiec sa czescia tozsamosci."""
+    card = ComputeCard(card_context)
+    qtbot.addWidget(card)  # type: ignore[attr-defined]
+
+    card.set_provider(True)
+    card.remote_url_edit.setText("https://embeddingi.example.com/v1")
+    card.remote_query_prefix_edit.setText("query: ")
+    card.remote_passage_prefix_edit.setText("passage: ")
+    card.apply_settings()
+
+    embedding = card_context.config.embedding
+    assert embedding.query_prefix == "query: "
+    assert embedding.passage_prefix == "passage: "
+    assert any(i18n.MODEL_REBUILD_REQUIRED in box.text() for box in message_boxes)
+
+
+# --- karta profili ----------------------------------------------------------------
+
+
+@pytest.mark.gui
+def test_karta_profili_tworzy_pierwszy_profil_z_ustawien(
+    qtbot: object, card_context: AppContext
+) -> None:
+    """Stare konfiguracje bez profili dostaja profil zbudowany z biezacych ustawien."""
+    card = ProfileCard(card_context)
+    qtbot.addWidget(card)  # type: ignore[attr-defined]
+
+    embedding = card_context.config.embedding
+    assert len(embedding.profiles) == 1
+    assert embedding.active_profile == embedding.profiles[0].name
+    assert card.profile_combo.count() == 1
+    # Zaznaczony jest profil aktywny, wiec aktywacja i usuwanie sa wylaczone.
+    assert not card.activate_button.isEnabled()
+    assert not card.remove_button.isEnabled()
+
+
+@pytest.mark.gui
+def test_zapis_biezacych_ustawien_jako_profil(
+    qtbot: object, card_context: AppContext, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from PySide6.QtWidgets import QInputDialog
+
+    monkeypatch.setattr(
+        QInputDialog, "getText", staticmethod(lambda *args, **kwargs: ("Klaster GPU", True))
+    )
+    card = ProfileCard(card_context)
+    qtbot.addWidget(card)  # type: ignore[attr-defined]
+
+    card.save_current_as()
+
+    embedding = card_context.config.embedding
+    assert "Klaster GPU" in [p.name for p in embedding.profiles]
+    assert embedding.active_profile == "Klaster GPU"
+    zapisana = load_config(card_context.paths.config_file)
+    assert "Klaster GPU" in [p.name for p in zapisana.embedding.profiles]
+
+
+@pytest.mark.gui
+def test_aktywacja_profilu_zdalnego_przelacza_dostawce(
+    qtbot: object, card_context: AppContext, message_boxes: list[QMessageBox]
+) -> None:
+    embedding = card_context.config.embedding
+    ensure_profiles(embedding)
+    embedding.profiles.append(
+        EmbeddingProfile(
+            name="Klaster",
+            provider="internal_api",
+            internal_api_url="https://embeddingi.example.com/v1",
+            internal_api_model="mmlw-duzy",
+            internal_api_dimension=1024,
+        )
+    )
+    card = ProfileCard(card_context)
+    qtbot.addWidget(card)  # type: ignore[attr-defined]
+    zgloszenia: list[bool] = []
+    card.applied.connect(zgloszenia.append)
+
+    position = card.profile_combo.findData("Klaster")
+    assert position >= 0
+    card.profile_combo.setCurrentIndex(position)
+    card.activate_selected()
+
+    assert zgloszenia == [True]
+    assert embedding.provider == "internal_api"
+    assert embedding.internal_api_enabled is True
+    assert embedding.internal_api_dimension == 1024
+    assert embedding.active_profile == "Klaster"
+    zapisana = load_config(card_context.paths.config_file)
+    assert zapisana.embedding.provider == "internal_api"
+    assert zapisana.embedding.active_profile == "Klaster"
+    assert any(i18n.MODEL_REBUILD_REQUIRED in box.text() for box in message_boxes)
+
+
+@pytest.mark.gui
+def test_aktywacja_profilu_lokalnego_wraca_ze_zdalnego_api(
+    qtbot: object, card_context: AppContext
+) -> None:
+    embedding = card_context.config.embedding
+    embedding.provider = "internal_api"
+    embedding.internal_api_enabled = True
+    embedding.internal_api_url = "https://embeddingi.example.com/v1"
+    embedding.internal_api_model = "mmlw-duzy"
+    ensure_profiles(embedding)
+    embedding.profiles.append(
+        EmbeddingProfile(
+            name="Lokalny MMLW",
+            provider="local_onnx",
+            model_key="mmlw-retrieval-roberta-base",
+        )
+    )
+    card = ProfileCard(card_context)
+    qtbot.addWidget(card)  # type: ignore[attr-defined]
+
+    position = card.profile_combo.findData("Lokalny MMLW")
+    assert position >= 0
+    card.profile_combo.setCurrentIndex(position)
+    card.activate_selected()
+
+    assert embedding.provider == "local_onnx"
+    assert embedding.internal_api_enabled is False
+    assert embedding.active_profile == "Lokalny MMLW"
+    # Parametry modelu ida z wbudowanego rejestru, jak przy finddocs model use.
+    assert embedding.query_prefix == "zapytanie: "
+
+
+@pytest.mark.gui
+def test_usuniecie_aktywnego_profilu_jest_blokowane(
+    qtbot: object, card_context: AppContext, message_boxes: list[QMessageBox]
+) -> None:
+    card = ProfileCard(card_context)
+    qtbot.addWidget(card)  # type: ignore[attr-defined]
+
+    card.remove_selected()
+
+    assert [box.text() for box in message_boxes] == [i18n.MODEL_PROFILE_REMOVE_ACTIVE]
+    assert len(card_context.config.embedding.profiles) == 1
+
+
+@pytest.mark.gui
+def test_usuniecie_nieaktywnego_profilu(
+    qtbot: object, card_context: AppContext, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import finddocs.gui.config_cards as config_cards_module
+
+    monkeypatch.setattr(config_cards_module, "ask_yes_no", lambda *args, **kwargs: True)
+    embedding = card_context.config.embedding
+    ensure_profiles(embedding)
+    embedding.profiles.append(EmbeddingProfile(name="Zbedny", provider="local_onnx"))
+    card = ProfileCard(card_context)
+    qtbot.addWidget(card)  # type: ignore[attr-defined]
+
+    position = card.profile_combo.findData("Zbedny")
+    assert position >= 0
+    card.profile_combo.setCurrentIndex(position)
+    card.remove_selected()
+
+    assert "Zbedny" not in [p.name for p in embedding.profiles]
+    zapisana = load_config(card_context.paths.config_file)
+    assert "Zbedny" not in [p.name for p in zapisana.embedding.profiles]
+
+
 # --- karta magazynu wektorow ---------------------------------------------------
 
 
@@ -491,9 +662,28 @@ def test_widok_zrodel_sklada_karty_w_trzy_zakladki(qtbot: object, card_context: 
     ]
     assert view.tabs.currentIndex() == 0
     assert isinstance(view.semantic_card, SemanticCard)
+    assert isinstance(view.profile_card, ProfileCard)
     assert isinstance(view.model_card, ModelCard)
     assert isinstance(view.compute_card, ComputeCard)
     assert isinstance(view.vector_card, VectorStoreCard)
+
+
+@pytest.mark.gui
+def test_karta_modelu_lokalnego_znika_przy_zdalnym_api(
+    qtbot: object, card_context: AppContext
+) -> None:
+    """Model lokalny i zdalne API wykluczaja sie: widok pokazuje jeden z nich."""
+    view = SourcesView(card_context)
+    qtbot.addWidget(view)  # type: ignore[attr-defined]
+    assert not view.model_card.isHidden()
+
+    card_context.config.embedding.provider = "internal_api"
+    view.refresh()
+    assert view.model_card.isHidden()
+
+    card_context.config.embedding.provider = "local_onnx"
+    view.refresh()
+    assert not view.model_card.isHidden()
 
 
 @pytest.mark.gui

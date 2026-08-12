@@ -40,7 +40,13 @@ from finddocs.config import (
 )
 from finddocs.connectors.base import SourceConnector
 from finddocs.gui import i18n
-from finddocs.gui.config_cards import ComputeCard, ModelCard, SemanticCard, VectorStoreCard
+from finddocs.gui.config_cards import (
+    ComputeCard,
+    ModelCard,
+    ProfileCard,
+    SemanticCard,
+    VectorStoreCard,
+)
 from finddocs.gui.context import AppContext
 from finddocs.gui.dialogs import ask_yes_no, show_error, show_info, show_warning
 from finddocs.gui.tables import configure_columns, text_item
@@ -222,13 +228,20 @@ class SourcesView(QWidget):
 
     def _build_semantic_tab(self) -> QWidget:
         self.semantic_card = SemanticCard(self.context)
+        self.profile_card = ProfileCard(self.context)
         self.model_card = ModelCard(self.context)
         self.compute_card = ComputeCard(self.context)
         self.model_card.models_changed.connect(self.refresh)
         for card in (self.semantic_card, self.model_card, self.compute_card):
             card.status_message.connect(self.status_message)
             card.applied.connect(self._after_config_applied)
-        return self._scrolling_column((self.semantic_card, self.model_card, self.compute_card))
+        # Aktywacja profilu podmienia cala konfiguracje dostawcy, wiec karty
+        # modelu i obliczen musza przeladowac swoje pola przed odswiezeniem.
+        self.profile_card.status_message.connect(self.status_message)
+        self.profile_card.applied.connect(self._after_profile_applied)
+        return self._scrolling_column(
+            (self.semantic_card, self.profile_card, self.model_card, self.compute_card)
+        )
 
     def _build_storage_tab(self) -> QWidget:
         self.vector_card = VectorStoreCard(self.context)
@@ -422,9 +435,13 @@ class SourcesView(QWidget):
         )
 
         # Karty konfiguracji trzymaja edytowane pola u siebie; odswiezamy
-        # wylacznie to, co zmienia sie poza nimi: stan indeksu i liste modeli.
+        # wylacznie to, co zmienia sie poza nimi: stan indeksu, liste modeli
+        # i liste profili. Karta modelu lokalnego znika, gdy aktywny jest
+        # dostawca zdalny: oba warianty wykluczaja sie.
         self.semantic_card.refresh()
+        self.profile_card.refresh()
         self.model_card.refresh_models()
+        self.model_card.setVisible(self.context.config.embedding.provider == "local_onnx")
 
     # --- akcje ------------------------------------------------------------
 
@@ -590,6 +607,12 @@ class SourcesView(QWidget):
             self._reload_index_in_background()
         else:
             self.sources_changed.emit()
+
+    def _after_profile_applied(self, reload_needed: bool) -> None:
+        """Po aktywacji profilu karty przeladowuja pola z nowej konfiguracji."""
+        self.compute_card.refresh_from_config()
+        self.model_card.refresh_after_profile()
+        self._after_config_applied(reload_needed)
 
     def _reload_index_in_background(self) -> None:
         """Zamyka i otwiera indeks, zeby nowy model albo flaga semantyki zadzialaly."""

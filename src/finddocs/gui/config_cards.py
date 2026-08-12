@@ -3,11 +3,14 @@
 Dawne okno ustawien modelu mieszalo w jednym przewijanym formularzu szesc
 grup: przedrostki, semantyke, obliczenia, zdalne API, magazyn wektorow
 i import. Tutaj kazdy temat ma osobna karte osadzona wprost na ekranie
-Zrodla i konfiguracja: wlacznik semantyki ze stanem dostawcy, model
-z przedrostkami i importem, obliczenia (dostawca lokalny albo zdalne API)
-oraz magazyn wektorow. Panele dostawcy zdalnego i bazy pgvector sa widoczne
-tylko wtedy, gdy ten wariant jest wybrany, wiec domyslna konfiguracja
-lokalna nie pokazuje ani jednego pola sieciowego.
+Zrodla i konfiguracja: wlacznik semantyki ze stanem dostawcy, profile
+dostawcy, model z przedrostkami i importem, obliczenia (dostawca lokalny
+albo zdalne API) oraz magazyn wektorow. Panele dostawcy zdalnego i bazy
+pgvector sa widoczne tylko wtedy, gdy ten wariant jest wybrany, wiec
+domyslna konfiguracja lokalna nie pokazuje ani jednego pola sieciowego.
+Karta modelu lokalnego jest ukrywana przez widok zrodel, gdy aktywnym
+dostawca jest zdalne API: oba warianty wykluczaja sie, wiec lista modeli
+lokalnych nie moze sugerowac rownoleglego wyboru.
 
 Zmiany kosztowne (model, dostawca, magazyn) zapisuje przycisk Zastosuj
 danej karty; sam wlacznik semantyki dziala od razu. Karta zglasza sygnalem
@@ -23,6 +26,8 @@ embeddingow, i w wykrywaniu niezgodnosci indeksu.
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import fields as dataclass_fields
+from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -35,6 +40,7 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QGroupBox,
     QHBoxLayout,
+    QInputDialog,
     QLabel,
     QLineEdit,
     QPushButton,
@@ -43,7 +49,15 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from finddocs.config import VectorStoreSettings
+from finddocs.config import (
+    EmbeddingProfile,
+    VectorStoreSettings,
+    apply_profile,
+    default_profile_name,
+    ensure_profiles,
+    save_profile,
+    update_active_profile_marker,
+)
 from finddocs.errors import FindDocsError
 from finddocs.gui import i18n
 from finddocs.gui.context import AppContext
@@ -84,10 +98,11 @@ _DEVICE_CHOICES: tuple[tuple[str, str], ...] = (
     ("cuda", i18n.MODEL_DEVICE_CUDA),
 )
 
-#: Kontrakty zdalnego API w kolejnosci pokazywanej na karcie.
+#: Kontrakty zdalnego API w kolejnosci pokazywanej na karcie. OpenAI pierwszy,
+#: bo jest kontraktem domyslnym.
 _PROTOCOL_CHOICES: tuple[tuple[str, str], ...] = (
-    ("finddocs", i18n.MODEL_REMOTE_PROTOCOL_FINDDOCS),
     ("openai", i18n.MODEL_REMOTE_PROTOCOL_OPENAI),
+    ("finddocs", i18n.MODEL_REMOTE_PROTOCOL_FINDDOCS),
 )
 
 #: Magazyny wektorow w kolejnosci pokazywanej na karcie.
@@ -156,7 +171,13 @@ class ConfigCard(QGroupBox):
         return row
 
     def _finish_apply(self, notes: list[str], reload_needed: bool) -> None:
-        """Zapisuje konfiguracje, pokazuje uwagi i zglasza wynik widokowi."""
+        """Zapisuje konfiguracje, pokazuje uwagi i zglasza wynik widokowi.
+
+        Profil to migawka zmieniana wylacznie jawnie, wiec zapis ustawien
+        nigdy jej nie nadpisuje. Gdy edycja rozjedzie ustawienia z aktywnym
+        profilem, znika samo wskazanie profilu, a jego zawartosc zostaje.
+        """
+        update_active_profile_marker(self.context.config.embedding)
         self.context.save()
         unique_notes = list(dict.fromkeys(notes))
         if unique_notes:
@@ -211,6 +232,176 @@ class SemanticCard(ConfigCard):
         embedding.semantic_enabled = bool(checked)
         self.context.save()
         self.applied.emit(True)
+
+
+class ProfileCard(ConfigCard):
+    """Nazwane profile dostawcy embeddingow i przelaczanie miedzy nimi.
+
+    Profil przenosi komplet ustawien dostawcy: model lokalny z urzadzeniem
+    obliczen albo zdalne API z adresem, kontraktem i wymiarem. Aktywacja
+    kopiuje profil do biezacej konfiguracji i otwiera indeks ponownie,
+    a zapis na pozostalych kartach odswieza migawke aktywnego profilu
+    (patrz ``ConfigCard._finish_apply``).
+    """
+
+    def __init__(self, context: AppContext, parent: QWidget | None = None) -> None:
+        super().__init__(i18n.MODEL_PROFILE_BOX, context, parent)
+        ensure_profiles(context.config.embedding)
+
+        layout = QVBoxLayout(self)
+        layout.setSpacing(10)
+
+        form = QFormLayout()
+        form.setHorizontalSpacing(16)
+        form.setVerticalSpacing(10)
+        # Opisy profili bywaja dlugie (nazwa plus model albo adres), wiec lista
+        # rozciaga sie na szerokosc formularza, tak jak lista modeli.
+        self.profile_combo = QComboBox()
+        form.addRow(i18n.MODEL_PROFILE_LABEL, self.profile_combo)
+        layout.addLayout(form)
+
+        self.active_label = _muted_label()
+        layout.addWidget(self.active_label)
+
+        buttons = QHBoxLayout()
+        buttons.setSpacing(8)
+        self.activate_button = QPushButton(i18n.MODEL_PROFILE_ACTIVATE)
+        self.activate_button.setObjectName("Primary")
+        self.activate_button.clicked.connect(self.activate_selected)
+        buttons.addWidget(self.activate_button)
+        self.save_as_button = QPushButton(i18n.MODEL_PROFILE_SAVE_AS)
+        self.save_as_button.clicked.connect(self.save_current_as)
+        buttons.addWidget(self.save_as_button)
+        self.remove_button = QPushButton(i18n.MODEL_PROFILE_REMOVE)
+        self.remove_button.clicked.connect(self.remove_selected)
+        buttons.addWidget(self.remove_button)
+        buttons.addStretch(1)
+        layout.addLayout(buttons)
+
+        layout.addWidget(_hint_label(i18n.MODEL_PROFILE_HINT))
+        self.refresh()
+        self.profile_combo.currentIndexChanged.connect(lambda _index: self._refresh_buttons())
+
+    # --- dane ---------------------------------------------------------------
+
+    def selected_name(self) -> str:
+        return str(self.profile_combo.currentData() or "")
+
+    def _describe(self, profile: EmbeddingProfile) -> str:
+        if profile.provider == "internal_api":
+            target = profile.internal_api_model or profile.internal_api_url or "?"
+            kind = i18n.MODEL_PROFILE_TYPE_REMOTE.format(value=target)
+        else:
+            kind = i18n.MODEL_PROFILE_TYPE_LOCAL.format(value=profile.model_key)
+        return f"{profile.name} ({kind})"
+
+    def refresh(self) -> None:
+        """Wypelnia liste profili, zachowujac wybor, i pokazuje profil aktywny."""
+        embedding = self.context.config.embedding
+        ensure_profiles(embedding)
+        combo = self.profile_combo
+        combo.blockSignals(True)
+        selected = self.selected_name() or embedding.active_profile
+        combo.clear()
+        for profile in embedding.profiles:
+            combo.addItem(self._describe(profile), profile.name)
+        position = combo.findData(selected)
+        if position < 0:
+            position = combo.findData(embedding.active_profile)
+        combo.setCurrentIndex(max(0, position))
+        combo.blockSignals(False)
+        self.active_label.setText(
+            i18n.MODEL_PROFILE_ACTIVE.format(
+                value=embedding.active_profile or i18n.MODEL_PROFILE_NONE
+            )
+        )
+        self._refresh_buttons()
+
+    def _refresh_buttons(self) -> None:
+        """Aktywacja i usuwanie dotycza profilu innego niz aktywny."""
+        active = self.context.config.embedding.active_profile
+        name = self.selected_name()
+        self.activate_button.setEnabled(bool(name) and name != active)
+        self.remove_button.setEnabled(bool(name) and name != active)
+
+    # --- akcje --------------------------------------------------------------
+
+    def activate_selected(self) -> None:
+        """Przelacza konfiguracje na wybrany profil i otwiera indeks ponownie."""
+        config = self.context.config
+        embedding = config.embedding
+        name = self.selected_name()
+        profile = next((p for p in embedding.profiles if p.name == name), None)
+        if profile is None:
+            return
+        if name == embedding.active_profile:
+            self.status_message.emit(i18n.MODEL_PROFILE_ALREADY_ACTIVE.format(name=name))
+            return
+
+        # Aktywacja pracuje na kopii: nieudane wczytanie manifestu modelu
+        # lokalnego nie zostawia konfiguracji w stanie posrednim. Wynik jest
+        # przepisywany do obiektu biezacego, a nie podmieniany, zeby wszystkie
+        # trzymane referencje do config.embedding pozostaly aktualne.
+        candidate = replace(embedding)
+        apply_profile(candidate, profile)
+        if profile.provider == "local_onnx":
+            extra = Path(profile.model_path) if profile.model_path else None
+            try:
+                sync_embedding_settings(candidate, profile.model_key, extra=extra)
+            except FindDocsError as exc:
+                show_error(self, exc.user_message)
+                return
+
+        before = config.vector_compat_hash()
+        for spec in dataclass_fields(candidate):
+            setattr(embedding, spec.name, getattr(candidate, spec.name))
+        # Synchronizacja z manifestem mogla odswiezyc przedrostki, wiec migawka
+        # profilu jest zapisywana ponownie: aktywacja to jawne dzialanie na nim.
+        save_profile(embedding, name)
+        notes = [i18n.MODEL_REBUILD_REQUIRED] if config.vector_compat_hash() != before else []
+        self.status_message.emit(i18n.MODEL_PROFILE_ACTIVATED.format(name=name))
+        self._finish_apply(notes, reload_needed=True)
+
+    def save_current_as(self) -> None:
+        """Zapisuje biezace ustawienia dostawcy jako nazwany profil."""
+        embedding = self.context.config.embedding
+        name, accepted = QInputDialog.getText(
+            self,
+            i18n.MODEL_PROFILE_SAVE_AS,
+            i18n.MODEL_PROFILE_NAME_PROMPT,
+            text=default_profile_name(embedding),
+        )
+        if not accepted:
+            return
+        name = name.strip()
+        if not name:
+            show_warning(self, i18n.MODEL_PROFILE_NAME_EMPTY)
+            return
+        existing = {profile.name for profile in embedding.profiles}
+        if name in existing and not ask_yes_no(
+            self, i18n.MODEL_PROFILE_OVERWRITE.format(name=name)
+        ):
+            return
+        save_profile(embedding, name)
+        self.context.save()
+        self.refresh()
+        self.status_message.emit(i18n.MODEL_PROFILE_SAVED.format(name=name))
+
+    def remove_selected(self) -> None:
+        """Usuwa wybrany profil. Profil aktywny nie moze zostac usuniety."""
+        embedding = self.context.config.embedding
+        name = self.selected_name()
+        if not name:
+            return
+        if name == embedding.active_profile:
+            show_warning(self, i18n.MODEL_PROFILE_REMOVE_ACTIVE)
+            return
+        if not ask_yes_no(self, i18n.MODEL_PROFILE_REMOVE_CONFIRM.format(name=name)):
+            return
+        embedding.profiles = [p for p in embedding.profiles if p.name != name]
+        self.context.save()
+        self.refresh()
+        self.status_message.emit(i18n.MODEL_PROFILE_REMOVED.format(name=name))
 
 
 class ModelCard(ConfigCard):
@@ -389,6 +580,17 @@ class ModelCard(ConfigCard):
         self._prefix_key = key
         self._initial_prefixes = prefixes
         self._finish_apply(notes, reload_needed)
+
+    def refresh_after_profile(self) -> None:
+        """Uzgadnia karte z konfiguracja po aktywacji profilu."""
+        embedding = self.context.config.embedding
+        self.refresh_models()
+        position = self.model_combo.findData(embedding.model_key)
+        self.model_combo.blockSignals(True)
+        self.model_combo.setCurrentIndex(max(0, position))
+        self.model_combo.blockSignals(False)
+        self.quantized_check.setChecked(embedding.quantized)
+        self._load_prefixes(embedding.model_key)
 
     def activate_model(self, key: str) -> None:
         """Ustawia zaimportowany model jako aktywny, tak jak finddocs model use."""
@@ -626,6 +828,12 @@ class ComputeCard(ConfigCard):
         self.remote_batch_spin.setFixedWidth(CONTROL_WIDTH)
         form.addRow(i18n.MODEL_REMOTE_BATCH, self.remote_batch_spin)
 
+        self.remote_query_prefix_edit = QLineEdit(embedding.query_prefix)
+        form.addRow(i18n.MODEL_QUERY_PREFIX, self.remote_query_prefix_edit)
+        self.remote_passage_prefix_edit = QLineEdit(embedding.passage_prefix)
+        form.addRow(i18n.MODEL_PASSAGE_PREFIX, self.remote_passage_prefix_edit)
+        form.addRow(_hint_label(i18n.MODEL_REMOTE_PREFIX_HINT))
+
         self.remote_key_edit = QLineEdit()
         self.remote_key_edit.setEchoMode(QLineEdit.EchoMode.Password)
         self.remote_key_edit.setPlaceholderText(i18n.MODEL_REMOTE_KEY_PLACEHOLDER)
@@ -664,6 +872,25 @@ class ComputeCard(ConfigCard):
         remote = self.remote_selected()
         self.local_panel.setVisible(not remote)
         self.remote_panel.setVisible(remote)
+
+    def refresh_from_config(self) -> None:
+        """Uzgadnia pola karty z konfiguracja, np. po aktywacji profilu."""
+        embedding = self.context.config.embedding
+        remote_active = embedding.provider == "internal_api" and embedding.internal_api_enabled
+        self.provider_switch.set_checked_index(1 if remote_active else 0)
+        position = self.device_combo.findData(embedding.device)
+        self.device_combo.setCurrentIndex(max(0, position))
+        self.batch_spin.setValue(embedding.batch_size)
+        self.batch_docs_spin.setValue(self.context.config.indexing.embed_batch_documents)
+        self.remote_url_edit.setText(embedding.internal_api_url)
+        position = self.remote_protocol_combo.findData(embedding.internal_api_protocol)
+        self.remote_protocol_combo.setCurrentIndex(max(0, position))
+        self.remote_model_edit.setText(embedding.internal_api_model)
+        self.remote_dimension_spin.setValue(embedding.internal_api_dimension)
+        self.remote_batch_spin.setValue(embedding.internal_api_batch_size)
+        self.remote_query_prefix_edit.setText(embedding.query_prefix)
+        self.remote_passage_prefix_edit.setText(embedding.passage_prefix)
+        self._show_provider_panels()
 
     # --- zapis ----------------------------------------------------------------
 
@@ -707,6 +934,17 @@ class ComputeCard(ConfigCard):
             or remote_model != embedding.internal_api_model
             or remote_dimension != embedding.internal_api_dimension
         )
+        if remote:
+            # Przedrostki dokleja aplikacja przed wysylka, wiec dla zdalnego
+            # dostawcy sa czescia tozsamosci przestrzeni wektorow.
+            remote_prefixes = (
+                self.remote_query_prefix_edit.text(),
+                self.remote_passage_prefix_edit.text(),
+            )
+            if remote_prefixes != (embedding.query_prefix, embedding.passage_prefix):
+                embedding.query_prefix, embedding.passage_prefix = remote_prefixes
+                remote_identity_changed = True
+                reload_needed = True
         remote_changed = (
             remote != embedding.internal_api_enabled
             or remote_url != embedding.internal_api_url
@@ -1058,6 +1296,7 @@ __all__ = [
     "ComputeCard",
     "ConfigCard",
     "ModelCard",
+    "ProfileCard",
     "SemanticCard",
     "VectorStoreCard",
 ]
