@@ -155,7 +155,7 @@ wymagania serwera i zasady bezpieczeństwa:
   "languages": ["pol"],
   "tesseract_path": "",
   "render_dpi": 220,
-  "max_pages_per_document": 60,
+  "max_pages_per_document": 1000,
   "min_chars_per_page": 90,
   "min_alpha_ratio": 0.45,
   "max_image_pixels": 40000000,

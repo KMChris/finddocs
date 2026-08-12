@@ -254,7 +254,7 @@ class OcrSettings:
     languages: list[str] = field(default_factory=lambda: ["pol"])
     tesseract_path: str = ""
     render_dpi: int = 220
-    max_pages_per_document: int = 60
+    max_pages_per_document: int = 1000
     min_chars_per_page: int = 90
     """Poniżej tej liczby znaków na stronę uznajemy warstwę tekstowa za bezużyteczna."""
 
@@ -617,6 +617,12 @@ _NESTED: dict[str, type] = {
 }
 
 
+#: Stary domyslny limit stron OCR. Konfiguracje zapisane z ta wartoscia dostaja
+#: przy wczytaniu biezacy limit domyslny: opcja nie ma kontrolki w interfejsie,
+#: wiec zapisane 60 to stara wartosc domyslna, a nie swiadomy wybor uzytkownika.
+_LEGACY_OCR_MAX_PAGES = 60
+
+
 def config_from_dict(data: dict[str, Any]) -> AppConfig:
     version = int(data.get("format_version", CONFIG_FORMAT_VERSION))
     if version > CONFIG_FORMAT_VERSION:
@@ -624,7 +630,10 @@ def config_from_dict(data: dict[str, Any]) -> AppConfig:
             "Plik konfiguracyjny pochodzi z nowszej wersji aplikacji. "
             "Zaktualizuj FindDocs albo usun plik konfiguracyjny."
         )
-    return _build(AppConfig, data)  # type: ignore[no-any-return]
+    config: AppConfig = _build(AppConfig, data)
+    if config.ocr.max_pages_per_document == _LEGACY_OCR_MAX_PAGES:
+        config.ocr.max_pages_per_document = OcrSettings().max_pages_per_document
+    return config
 
 
 def load_config(path: Path | None = None) -> AppConfig:

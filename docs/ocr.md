@@ -72,7 +72,7 @@ mówi o tym na ekranie **Diagnostyka**, zamiast po cichu pomijać skany.
 | Parametr | Wartość domyślna | Znaczenie |
 | --- | --- | --- |
 | `ocr.render_dpi` | 220 | rozdzielczość renderowania strony PDF |
-| `ocr.max_pages_per_document` | 60 | limit stron poddawanych OCR |
+| `ocr.max_pages_per_document` | 1000 | limit stron poddawanych OCR |
 | `ocr.max_image_pixels` | 40 000 000 | ochrona pamięci przed obrazem-bombą |
 | `ocr.page_timeout_seconds` | 120 | limit czasu na jedną stronę |
 | `ocr.auto_rotate` | `true` | wykrywanie i korekta orientacji |

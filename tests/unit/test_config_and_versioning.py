@@ -125,6 +125,18 @@ def test_plik_konfiguracyjny_nie_zawiera_poswiadczen(tmp_home):
     assert "access_token" not in tekst
 
 
+def test_stary_limit_stron_ocr_jest_podnoszony_przy_wczytaniu():
+    """Zapisane 60 stron to stara wartosc domyslna, nie wybor uzytkownika."""
+    config = config_from_dict({"ocr": {"max_pages_per_document": 60}})
+    assert config.ocr.max_pages_per_document == 1000
+
+
+def test_wlasny_limit_stron_ocr_zostaje_po_wczytaniu():
+    """Wartosc inna niz stara domyslna jest zachowywana bez zmian."""
+    config = config_from_dict({"ocr": {"max_pages_per_document": 250}})
+    assert config.ocr.max_pages_per_document == 250
+
+
 # --- skroty zgodnosci ----------------------------------------------------------
 
 

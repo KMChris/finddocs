@@ -82,7 +82,7 @@ niewyszukiwalne.
 albo w nietypowych krojach pisma dają wynik niepełny. Aplikacja podaje pewność
 rozpoznania, żeby dało się to ocenić.
 
-**Limit stron.** Domyślnie 60 stron na dokument. Dłuższe skany są rozpoznawane
+**Limit stron.** Domyślnie 1000 stron na dokument. Dłuższe skany są rozpoznawane
 częściowo, z ostrzeżeniem przy dokumencie.
 
 **Tabele w skanach tracą strukturę.** OCR zwraca tekst, nie układ kolumn.
