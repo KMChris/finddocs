@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import pytest
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QHeaderView, QTableWidget
+from PySide6.QtWidgets import QAbstractItemView, QHeaderView, QTableWidget
 
 from finddocs.gui.tables import (
     MIN_STRETCH_WIDTH,
@@ -56,6 +56,14 @@ def test_kolumny_sa_interaktywne_dla_uzytkownika(qtbot: object) -> None:
 
     for column in range(table.columnCount()):
         assert header.sectionResizeMode(column) is QHeaderView.ResizeMode.Interactive
+
+
+@pytest.mark.gui
+def test_przewijanie_poziome_jest_plynne(qtbot: object) -> None:
+    """Tabela przewija sie w poziomie po pikselach, nie skokami po kolumnach."""
+    table = _make_table(qtbot, [["a", "b", "c"]], stretch=(1,))
+
+    assert table.horizontalScrollMode() is QAbstractItemView.ScrollMode.ScrollPerPixel
 
 
 @pytest.mark.gui

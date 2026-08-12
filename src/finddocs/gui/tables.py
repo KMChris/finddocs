@@ -19,7 +19,13 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 
 from PySide6.QtCore import QCollator, QEvent, QLocale, QObject, Qt
-from PySide6.QtWidgets import QApplication, QHeaderView, QTableWidget, QTableWidgetItem
+from PySide6.QtWidgets import (
+    QAbstractItemView,
+    QApplication,
+    QHeaderView,
+    QTableWidget,
+    QTableWidgetItem,
+)
 
 #: Minimalna szerokosc kolumny opisowej, zeby naglowek zawsze byl czytelny.
 MIN_STRETCH_WIDTH = 140
@@ -82,6 +88,10 @@ def configure_columns(table: QTableWidget, stretch: tuple[int, ...]) -> None:
     header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
     header.setMinimumSectionSize(MIN_SECTION_WIDTH)
     table.verticalHeader().setDefaultSectionSize(ROW_HEIGHT)
+    # Domyslnie Qt przewija w poziomie skokami po calych kolumnach, co przy
+    # szerokich kolumnach opisowych wyglada jak przeskakiwanie. Przewijanie
+    # po pikselach jest plynne.
+    table.setHorizontalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
 
     table.setProperty(_STRETCH_PROP, tuple(stretch))
     table.setProperty(_MANUAL_PROP, False)
