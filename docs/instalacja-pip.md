@@ -29,7 +29,7 @@ Sam pakiet bez OCR instaluje się poleceniem `pip install finddocs`. Dodatki:
 | `ocr-easy` | silnik EasyOCR, cięższy i wymagający własnych modeli |
 | `export` | torch, transformers, onnx i onnxscript: konwersja checkpointów Hugging Face do ONNX oraz kwantyzacja INT8 |
 | `gpu-dml` | wariant DirectML pakietu onnxruntime: embeddingi na karcie graficznej AMD, Intel albo NVIDIA na Windows |
-| `gpu-cuda` | wariant CUDA pakietu onnxruntime: tylko NVIDIA, wymaga bibliotek CUDA i cuDNN |
+| `gpu-cuda` | wariant CUDA pakietu onnxruntime dla kart NVIDIA, razem z bibliotekami CUDA i cuDNN instalowanymi z pip (pakiety `nvidia-*`, około 2 GB) |
 | `pgvector` | sterownik psycopg: magazyn wektorów w bazie PostgreSQL z rozszerzeniem pgvector |
 | `all` | komplet dla samodzielnego stanowiska, równoważny `finddocs[ocr-rapid,export]` |
 
@@ -44,8 +44,37 @@ wariantu CPU z zależności bazowej. Oba wydania mają ten sam pakiet importowy,
 a pip nie gwarantuje, które koło zapisze pliki jako ostatnie, więc po dodatku
 zawsze wykonuje się drugie polecenie przywracające wariant GPU:
 `pip install --force-reinstall --no-deps onnxruntime-directml` (dla CUDA:
-`onnxruntime-gpu`). Stan sprawdza `finddocs model device`. Szczegóły, wersje
+`onnxruntime-gpu`). Stan sprawdza `finddocs model device`. Dodatek `gpu-cuda`
+przynosi biblioteki CUDA i cuDNN jako zwykłe pakiety pip, więc poza aktualnym
+sterownikiem NVIDIA nic nie trzeba instalować ręcznie. Szczegóły, wersje
 i zalecenia wydajności: [embeddingi na GPU i zdalne API](embeddingi-gpu-api.md).
+
+### Presety instalacyjne
+
+Preset to złożony dodatek pip: jedna nazwa instaluje zestaw dodatków dla
+typowego stanowiska.
+
+| Preset | Równoważny zestaw | Przeznaczenie |
+| --- | --- | --- |
+| `preset-standard` | `ocr-rapid` | stanowisko biurowe: obliczenia na CPU, OCR skanów |
+| `preset-gpu` | `gpu-dml,ocr-rapid` | stanowisko z dowolną kartą graficzną na Windows (DirectML działa na AMD, Intel i NVIDIA) |
+| `preset-nvidia` | `gpu-cuda,ocr-rapid` | stanowisko z kartą NVIDIA: embeddingi przez CUDA, najszybszy zmierzony wariant |
+| `preset-server` | `pgvector,ocr-rapid` | stanowisko indeksujące ze wspólnym magazynem wektorów w PostgreSQL |
+
+Przykład dla stanowiska z kartą NVIDIA; drugie polecenie jest konieczne
+z powodu opisanego wyżej i dotyczy obu presetów z GPU (dla `preset-gpu`
+brzmi `pip install --force-reinstall --no-deps onnxruntime-directml`):
+
+```bat
+pip install "finddocs[preset-nvidia]"
+pip install --force-reinstall --no-deps onnxruntime-gpu
+```
+
+Po instalacji urządzenie obliczeń włącza `finddocs model device cuda` (albo
+`dml`, albo `auto`) lub karta **Obliczenia embeddingów** w GUI. Presety nie
+zawierają narzędzi konwersji modeli: stanowisko, które ma samo pobierać modele
+z Hugging Face, potrzebuje jeszcze dodatku `export`, na przykład
+`finddocs[preset-nvidia,export]`.
 
 Tesseract, jeżeli jest preferowany, instaluje się osobno według rozdziału [OCR](ocr.md).
 

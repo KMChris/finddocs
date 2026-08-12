@@ -66,8 +66,12 @@ ocr-easy = ["easyocr>=1.7.2"]
 # Kontrola stanu: `finddocs model device`. Uwaga na wersje: linia
 # onnxruntime-directml konczy sie na 1.24.4 i nie idzie rowno z linia CPU
 # (1.28.0); interfejs ORT uzywany przez aplikacje jest zgodny w obu.
+# Dodatek gpu-cuda przynosi biblioteki CUDA i cuDNN jako pakiety pip nvidia-*
+# (ok. 2 GB), wiec poza sterownikiem NVIDIA nic nie trzeba instalowac recznie.
+# ORT nie znajduje tych bibliotek sam: dostawca laduje je przez preload_dlls()
+# (preload_cuda_libraries w providers/onnx_local.py).
 gpu-dml = ["onnxruntime-directml==1.24.4"]
-gpu-cuda = ["onnxruntime-gpu==1.28.0"]
+gpu-cuda = ["onnxruntime-gpu[cuda,cudnn]==1.28.0"]
 # Zewnetrzny magazyn wektorow w PostgreSQL z rozszerzeniem pgvector.
 # Sterownik jest importowany dopiero po swiadomym wlaczeniu magazynu
 # (vector_store.backend = pgvector); bez dodatku aplikacja dziala jak dotad.
@@ -89,6 +93,17 @@ export = ["torch>=2.2", "transformers>=4.40", "onnx>=1.16", "onnxscript>=0.1"]
 # go przed rapidocr, wiec dolozenie go tutaj podmieniloby silnik OCR kazdemu,
 # kto zainstalowal [all]. Kto go chce, instaluje finddocs[all,ocr-easy].
 all = ["finddocs[ocr-rapid,export]"]
+# Presety instalacyjne: gotowe zestawy dodatkow dla typowych stanowisk,
+# opisane w README i docs/instalacja-pip.md. Preset to zwykly dodatek pip
+# zlozony z dodatkow powyzej. Presety preset-gpu i preset-nvidia wymagaja
+# tego samego drugiego kroku instalacji co gpu-dml/gpu-cuda (komentarz wyzej).
+# Zaden preset nie zawiera narzedzi konwersji modeli (export): stanowisko,
+# ktore ma samo pobierac i konwertowac modele, dostaje je przez [all] albo
+# przez doklejenie do presetu, np. finddocs[preset-nvidia,export].
+preset-standard = ["finddocs[ocr-rapid]"]
+preset-gpu = ["finddocs[gpu-dml,ocr-rapid]"]
+preset-nvidia = ["finddocs[gpu-cuda,ocr-rapid]"]
+preset-server = ["finddocs[pgvector,ocr-rapid]"]
 
 [project.scripts]
 finddocs = "finddocs.cli:main"

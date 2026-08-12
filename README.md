@@ -57,6 +57,30 @@ oraz narzędzia importu i konwersji modeli embeddingów:
 pip install "finddocs[all]"
 ```
 
+Typowe stanowiska instaluje się jedną nazwą presetu:
+
+| Preset | Przeznaczenie |
+| --- | --- |
+| `preset-standard` | stanowisko biurowe: obliczenia na CPU, OCR skanów |
+| `preset-gpu` | dowolna karta graficzna na Windows (DirectML), OCR |
+| `preset-nvidia` | karta NVIDIA: embeddingi przez CUDA, OCR |
+| `preset-server` | indeksowanie do wspólnej bazy PostgreSQL (pgvector), OCR |
+
+Przykład dla stanowiska z kartą NVIDIA; presety z GPU wymagają drugiego
+polecenia, które przywraca wariant GPU pakietu onnxruntime:
+
+```bash
+pip install "finddocs[preset-nvidia]"
+```
+
+```bash
+pip install --force-reinstall --no-deps onnxruntime-gpu
+```
+
+Opis presetów, wymagań i wydajności GPU:
+[docs/instalacja-pip.md](https://github.com/KMChris/finddocs/blob/main/docs/instalacja-pip.md)
+oraz [docs/embeddingi-gpu-api.md](https://github.com/KMChris/finddocs/blob/main/docs/embeddingi-gpu-api.md).
+
 Po instalacji polecenie `finddocs-gui` uruchamia interfejs graficzny,
 a `finddocs` daje dostęp do poleceń administracyjnych. Wyszukiwanie dokładne
 działa od razu. Wyszukiwanie semantyczne i hybrydowe wymaga lokalnego modelu
@@ -160,7 +184,8 @@ connectors  ->  extractors / ocr  ->  normalization / chunking  ->  indexing
   w wariancie external content;
 * indeks wektorowy: FAISS HNSW z mapą identyfikatorów, usunięcia przez nagrobki
   i okresową kompaktację;
-* embeddingi: ONNX Runtime na CPU, model `sdadas/mmlw-retrieval-roberta-base`
+* embeddingi: ONNX Runtime na CPU, opcjonalnie na karcie graficznej (DirectML
+  albo CUDA), model `sdadas/mmlw-retrieval-roberta-base`
   (Apache-2.0, 768 wymiarów, pooling CLS);
 * interfejs: PySide6 (LGPL).
 
@@ -171,7 +196,8 @@ Szczegóły i diagramy: [docs/architektura.md](https://github.com/KMChris/finddo
 | Dokument | Zawartość |
 | --- | --- |
 | [Instrukcja użytkownika](https://github.com/KMChris/finddocs/blob/main/docs/instrukcja-uzytkownika.md) | obsługa aplikacji |
-| [Instalacja z PyPI](https://github.com/KMChris/finddocs/blob/main/docs/instalacja-pip.md) | pip, konfiguracja, lokalny model embeddingów |
+| [Instalacja z PyPI](https://github.com/KMChris/finddocs/blob/main/docs/instalacja-pip.md) | pip, presety instalacyjne, konfiguracja, lokalny model embeddingów |
+| [Embeddingi na GPU i zdalne API](https://github.com/KMChris/finddocs/blob/main/docs/embeddingi-gpu-api.md) | DirectML i CUDA, batch, zdalny dostawca z kluczem API |
 | [Instrukcja administratora](https://github.com/KMChris/finddocs/blob/main/docs/instrukcja-administratora.md) | wdrożenie, konfiguracja, CLI |
 | [Integracja z SharePoint](https://github.com/KMChris/finddocs/blob/main/docs/integracja-sharepoint.md) | Microsoft Graph, Entra ID, uprawnienia |
 | [Architektura](https://github.com/KMChris/finddocs/blob/main/docs/architektura.md) | warstwy, diagramy, decyzje |
