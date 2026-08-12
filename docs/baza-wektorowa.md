@@ -156,7 +156,30 @@ przy pierwszej kolejnej operacji.
 * Wyniki wyszukiwania semantycznego zależą od parametru `hnsw.ef_search`,
   ustawianego na czas zapytania; ranking jest przybliżony tak samo jak
   w FAISS.
-* Połączenie z prawdziwym serwerem PostgreSQL nie było częścią testów
-  automatycznych tego repozytorium: testy pokrywają logikę magazynu na
-  udawanym sterowniku. Przed wdrożeniem należy wykonać próbę połączenia
-  przyciskiem `Przetestuj połączenie` i zaindeksować zbiór próbny.
+
+## Stan weryfikacji
+
+Implementacja została sprawdzona na prawdziwym serwerze PostgreSQL 17.10
+z pgvector 0.8.6 w kontenerze Docker (`pgvector/pgvector:pg17`):
+
+* pełny cykl magazynu: tworzenie tabel i rozszerzenia, zapis, nadpisanie,
+  usuwanie, odtworzenie wektora bez straty precyzji float32, wsady ponad
+  500 wierszy, zapytania głębsze niż domyślny `ef_search`, metadane
+  zgodności (odrzucenie innego skrótu i wymiaru);
+* pełny potok z prawdziwym modelem MMLW: indeksowanie dokumentów
+  z wektorami w bazie i poprawny ranking wyszukiwania semantycznego;
+* TLS: `sslmode require` z sesją TLSv1.3 potwierdzoną w `pg_stat_ssl`;
+* polityka sieciowa: host spoza listy zablokowany, host nielokalny działa
+  wyłącznie po włączeniu kategorii `vector_db` i z TLS;
+* awaria serwera w trakcie pracy: zapis zgłasza błąd `FD-5004`, dokumenty
+  zostają w stanie częściowym, a po powrocie serwera połączenie odtwarza
+  się automatycznie;
+* konto bez uprawnień do `CREATE EXTENSION` dostaje czytelny komunikat.
+
+Testy: `tests/integration/test_pgvector_real.py` (domyślnie pomijane;
+opis uruchomienia kontenera i zmiennych środowiskowych w docstringu pliku).
+
+Nie testowano trybów `verify-ca` i `verify-full` z firmowym urzędem
+certyfikacji ani serwera produkcyjnego organizacji. Przed wdrożeniem wykonaj
+próbę połączenia przyciskiem `Przetestuj połączenie` i zaindeksuj zbiór
+próbny.

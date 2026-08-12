@@ -73,8 +73,12 @@ Dobre:
 Kosztowne:
 
 * pojawia się zależność opcjonalna i drugi wariant zachowań do testowania;
-  testy jednostkowe pokrywają magazyn na udawanym sterowniku, a połączenie
-  z prawdziwym serwerem wymaga próby przy wdrożeniu;
+  testy jednostkowe pokrywają magazyn na udawanym sterowniku, a zestaw
+  integracyjny (`tests/integration/test_pgvector_real.py`) został wykonany
+  na PostgreSQL 17.10 z pgvector 0.8.6 w Dockerze, łącznie z pełnym potokiem
+  na modelu MMLW, TLS (`require`, TLSv1.3), scenariuszami awarii i braku
+  uprawnień; tryby `verify-ca` i `verify-full` z firmowym urzędem
+  certyfikacji wymagają próby przy wdrożeniu;
 * zapytanie semantyczne w trybie pgvector wymaga działającej sieci; awaria
   bazy oznacza czasową utratę trybów semantycznych (świadomie przyjęte,
   z łagodną degradacją).
