@@ -22,6 +22,7 @@ from parser_data import (
     POLISH_SAMPLE,
     build_biff2_workbook,
     build_legacy_doc,
+    build_legacy_ppt,
     build_ole_container,
     build_rtf_document,
 )
@@ -556,4 +557,36 @@ def _default_doc_pieces() -> list[tuple[str, bool]]:
         ("Pismo okolne numer 00-99\r", True),
         (f"{POLISH_SAMPLE}, ćma i żuraw.\r", False),
         (f"{DISCLAIMER}\r", True),
+    ]
+
+
+# --- stary format PowerPoint ------------------------------------------------------
+
+
+@pytest.fixture
+def make_legacy_ppt(write_file: Callable[[str, bytes], Path]) -> Callable[..., Path]:
+    """Tworzy plik .ppt: kontener OLE ze strumieniem PowerPoint Document."""
+
+    def _make(
+        name: str = "prezentacja.ppt",
+        texts: list[tuple[str, bool]] | None = None,
+        *,
+        encrypted: bool = False,
+        encryption_atom: bool = False,
+    ) -> Path:
+        content = texts if texts is not None else _default_ppt_texts()
+        return write_file(
+            name,
+            build_legacy_ppt(content, encrypted=encrypted, encryption_atom=encryption_atom),
+        )
+
+    return _make
+
+
+def _default_ppt_texts() -> list[tuple[str, bool]]:
+    """Atomy tekstowe: jeden szeroki (UTF-16LE) i jeden jednobajtowy."""
+    return [
+        (f"Plan szkolenia.\r{POLISH_SAMPLE}", True),
+        ("Sala numer 12, godzina 9:00.", False),
+        (f"{DISCLAIMER}", True),
     ]

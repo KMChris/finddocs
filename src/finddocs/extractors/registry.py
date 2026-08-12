@@ -146,6 +146,7 @@ def build_default_registry(
     from finddocs.extractors.image import ImageExtractor
     from finddocs.extractors.msg import MsgExtractor
     from finddocs.extractors.pdf import PdfExtractor
+    from finddocs.extractors.ppt_legacy import LegacyPptComExtractor, LegacyPptOleExtractor
     from finddocs.extractors.pptx import PptxExtractor
     from finddocs.extractors.rtf import RtfExtractor
     from finddocs.extractors.text import PlainTextExtractor
@@ -167,7 +168,9 @@ def build_default_registry(
     registry.register(ImageExtractor())
     if office_com_enabled:
         registry.register(LegacyDocComExtractor())
+        registry.register(LegacyPptComExtractor())
     registry.register(LegacyDocOleExtractor())
+    registry.register(LegacyPptOleExtractor())
     if archives_enabled:
         from finddocs.extractors.archive import ZipArchiveExtractor
 

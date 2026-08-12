@@ -15,7 +15,6 @@ Uzyte struktury binarne (FIB, Clx, PlcPcd, PCD) sa opisane w specyfikacji [MS-DO
 from __future__ import annotations
 
 import contextlib
-import datetime as _dt
 import struct
 import sys
 import threading
@@ -27,18 +26,28 @@ from finddocs.errors import (
     CorruptedFileError,
     DependencyUnavailableError,
     EmptyDocumentError,
-    ExtractionError,
     ExtractionTimeoutError,
     FindDocsError,
     PasswordProtectedError,
     UnsupportedFormatError,
 )
 from finddocs.extractors.base import ExtractionContext, Extractor
+from finddocs.extractors.office_com import (
+    BOGUS_OFFICE_KEY,
+    DEFAULT_COM_TIMEOUT,
+    FALLBACK_WARNING,
+    MSO_AUTOMATION_SECURITY_FORCE_DISABLE,
+    metadata_from_builtin_properties,
+    metadata_from_ole,
+    probe_text,
+    read_builtin_properties,
+    sections_from_text,
+    translate_com_error,
+)
 from finddocs.logging_setup import get_logger
-from finddocs.normalization.text import clean_text, fold_diacritics, looks_like_garbage
+from finddocs.normalization.text import looks_like_garbage
 from finddocs.types import (
     DocumentMetadata,
-    ExtractedSection,
     ExtractionResult,
     SupportLevel,
 )
@@ -47,11 +56,6 @@ log = get_logger(__name__)
 
 #: Co ile iteracji petli sprawdzac anulowanie i limit czasu.
 _CHECKPOINT_EVERY = 16
-
-#: Ile znakow tekstu wystarczy, zeby ocenic jakosc dekodowania.
-_GARBAGE_PROBE_CHARS = 4000
-
-_FALLBACK_WARNING = "Tekst odczytano zapasowym parserem, formatowanie i tabele moga być uproszczone"
 
 # --- wspolne czyszczenie tekstu Worda ------------------------------------------
 
@@ -109,133 +113,13 @@ def _clean_word_text(text: str) -> str:
     return text.replace(_CELL_END_PAIR, _CELL_END).translate(_WORD_TRANSLATION)
 
 
-def _sections_from_text(
-    text: str, context: ExtractionContext
-) -> tuple[list[ExtractedSection], bool]:
-    """Dzieli tekst na akapity i buduje sekcje. Zwraca (sekcje, czy_przyciete)."""
-    sections: list[ExtractedSection] = []
-    total = 0
-    truncated = False
-    for index, paragraph in enumerate(text.split("\n")):
-        if index % _CHECKPOINT_EVERY == 0:
-            context.checkpoint()
-        cleaned = clean_text(paragraph)
-        if not cleaned:
-            continue
-        sections.append(ExtractedSection(text=cleaned, kind="text", order=len(sections)))
-        total += len(cleaned)
-        if total >= context.max_chars:
-            truncated = True
-            break
-    return sections, truncated
-
-
-def _probe_text(sections: list[ExtractedSection]) -> str:
-    """Krotka probka tekstu uzywana do oceny jakosci dekodowania."""
-    probe: list[str] = []
-    length = 0
-    for section in sections:
-        probe.append(section.text)
-        length += len(section.text)
-        if length >= _GARBAGE_PROBE_CHARS:
-            break
-    return " ".join(probe)[:_GARBAGE_PROBE_CHARS]
-
-
-# --- wspolne metadane ----------------------------------------------------------
-
-
-def _decode_meta_bytes(raw: bytes) -> str:
-    """Dekoduje bajty metadanych: najpierw cp1250, potem latin-1."""
-    try:
-        return raw.decode("cp1250")
-    except UnicodeDecodeError:
-        return raw.decode("latin-1", errors="replace")
-
-
-def _clean_meta_text(value: object) -> str | None:
-    """Sprowadza wartosc metadanej do czytelnego napisu albo None."""
-    if isinstance(value, bytes):
-        text = _decode_meta_bytes(value)
-    elif isinstance(value, str):
-        text = value
-    else:
-        return None
-    cleaned = clean_text(text.replace("\x00", " "))
-    return cleaned or None
-
-
-def _plain_datetime(value: _dt.datetime) -> _dt.datetime:
-    """Zwraca zwykly, naiwny ``datetime``. COM oddaje wlasna podklase z strefa czasowa."""
-    return _dt.datetime(
-        value.year,
-        value.month,
-        value.day,
-        value.hour,
-        value.minute,
-        value.second,
-        value.microsecond,
-    )
-
-
-def _coerce_datetime(value: object) -> _dt.datetime | None:
-    """Sprowadza date z COM albo z olefile do naiwnego ``datetime``."""
-    if isinstance(value, _dt.datetime):
-        return _plain_datetime(value)
-    if isinstance(value, _dt.date):
-        return _dt.datetime(value.year, value.month, value.day)
-    if isinstance(value, str) and value.strip():
-        with contextlib.suppress(ValueError):
-            return _plain_datetime(_dt.datetime.fromisoformat(value.strip()))
-    return None
-
-
 # --- adapter oparty o automatyzacje Microsoft Word ------------------------------
-
-#: msoAutomationSecurityForceDisable: Word otwiera plik z wylaczonymi makrami.
-_MSO_AUTOMATION_SECURITY_FORCE_DISABLE = 3
 
 #: wdDoNotSaveChanges.
 _WD_DO_NOT_SAVE_CHANGES = 0
 
-#: Celowo bledne haslo. Word zglosi blad zamiast czekac na okno dialogowe.
-_BOGUS_DOC_KEY = "__brak__"
-
-#: Limit czasu uzywany, gdy konfiguracja podaje wartosc niedodatnia.
-_DEFAULT_COM_TIMEOUT = 90.0
-
-#: Wlasciwosci wbudowane pobierane z dokumentu.
-_COM_PROPERTY_NAMES: tuple[str, ...] = (
-    "Title",
-    "Author",
-    "Subject",
-    "Keywords",
-    "Creation Date",
-    "Last Save Time",
-)
-
-#: Fragmenty komunikatow Worda swiadczace o zabezpieczeniu haslem (bez diakrytykow).
-_PASSWORD_MARKERS: tuple[str, ...] = (
-    "haslo",
-    "hasla",
-    "haslem",
-    "password",
-    "zaszyfrow",
-    "encrypt",
-    "chronion",
-    "protected",
-    "-2146822880",
-)
-
-#: Fragmenty komunikatow Worda swiadczace o uszkodzeniu pliku.
-_CORRUPTION_MARKERS: tuple[str, ...] = (
-    "uszkodz",
-    "corrupt",
-    "nie jest prawidłow",
-    "not a valid",
-    "nieprawidłowy format",
-    "unreadable",
-)
+#: Etykieta aplikacji w komunikatach bledow automatyzacji.
+_APP_LABEL = "Microsoft Word"
 
 
 @dataclass(slots=True)
@@ -246,66 +130,6 @@ class _ComCallState:
     text: str = ""
     properties: dict[str, Any] = field(default_factory=dict)
     error: BaseException | None = None
-
-
-def _error_text(exc: BaseException) -> str:
-    """Skleja wszystkie czesci komunikatu bledu COM w jeden napis."""
-    parts: list[str] = [str(exc)]
-    for arg in getattr(exc, "args", ()):
-        if isinstance(arg, tuple):
-            parts.extend(str(item) for item in arg)
-        else:
-            parts.append(str(arg))
-    return " ".join(parts)
-
-
-def _translate_com_error(exc: BaseException, path: Path) -> ExtractionError:
-    """Tlumaczy blad automatyzacji Worda na wyjatek aplikacji."""
-    probe = fold_diacritics(_error_text(exc)).casefold()
-    details: dict[str, Any] = {"plik": path.name, "blad": type(exc).__name__}
-    if any(marker in probe for marker in _PASSWORD_MARKERS):
-        return PasswordProtectedError(
-            "Dokument Word jest zabezpieczony hasłem, nie można odczytać jego treści.",
-            details=details,
-            cause=exc,
-        )
-    if any(marker in probe for marker in _CORRUPTION_MARKERS):
-        return CorruptedFileError(
-            "Microsoft Word uznał dokument za uszkodzony lub niekompletny.",
-            details=details,
-            cause=exc,
-        )
-    return ExtractionError(
-        "Microsoft Word nie zdołał otworzyć dokumentu.",
-        details=details,
-        cause=exc,
-    )
-
-
-def _read_com_properties(document: Any) -> dict[str, Any]:
-    """Odczytuje wybrane wlasciwosci wbudowane, pomijajac te niedostepne."""
-    properties: dict[str, Any] = {}
-    builtin: Any = None
-    with contextlib.suppress(Exception):
-        builtin = document.BuiltInDocumentProperties
-    if builtin is None:
-        return properties
-    for name in _COM_PROPERTY_NAMES:
-        with contextlib.suppress(Exception):
-            properties[name] = builtin(name).Value
-    return properties
-
-
-def _metadata_from_com(properties: dict[str, Any]) -> DocumentMetadata:
-    """Buduje metadane dokumentu z wlasciwosci wbudowanych Worda."""
-    return DocumentMetadata(
-        title=_clean_meta_text(properties.get("Title")),
-        author=_clean_meta_text(properties.get("Author")),
-        subject=_clean_meta_text(properties.get("Subject")),
-        keywords=_clean_meta_text(properties.get("Keywords")),
-        created_at=_coerce_datetime(properties.get("Creation Date")),
-        modified_at=_coerce_datetime(properties.get("Last Save Time")),
-    )
 
 
 class LegacyDocComExtractor(Extractor):
@@ -385,7 +209,7 @@ class LegacyDocComExtractor(Extractor):
         thread.start()
         timeout = float(context.office_com_timeout_seconds)
         if timeout <= 0:
-            timeout = _DEFAULT_COM_TIMEOUT
+            timeout = DEFAULT_COM_TIMEOUT
         thread.join(timeout)
         if thread.is_alive():
             self._force_quit(state)
@@ -396,9 +220,9 @@ class LegacyDocComExtractor(Extractor):
         if state.error is not None:
             if isinstance(state.error, FindDocsError):
                 raise state.error
-            raise _translate_com_error(state.error, path)
+            raise translate_com_error(state.error, path, _APP_LABEL)
 
-        sections, truncated = _sections_from_text(_clean_word_text(state.text), context)
+        sections, truncated = sections_from_text(_clean_word_text(state.text), context)
         if not sections:
             raise EmptyDocumentError(
                 "Dokument Word nie zawiera tekstu możliwego do zaindeksowania.",
@@ -406,7 +230,7 @@ class LegacyDocComExtractor(Extractor):
             )
         result = ExtractionResult(
             sections=sections,
-            metadata=_metadata_from_com(state.properties),
+            metadata=metadata_from_builtin_properties(state.properties),
             parser_name=self.name,
             support_level=self.support_level,
         )
@@ -432,7 +256,7 @@ class LegacyDocComExtractor(Extractor):
             app.Visible = False
             app.DisplayAlerts = 0
             with contextlib.suppress(Exception):
-                app.AutomationSecurity = _MSO_AUTOMATION_SECURITY_FORCE_DISABLE
+                app.AutomationSecurity = MSO_AUTOMATION_SECURITY_FORCE_DISABLE
             # Word rozwiazuje sciezki wzgledne wzgledem wlasnego katalogu roboczego,
             # dlatego zawsze przekazujemy sciezke bezwzgledna.
             document = app.Documents.Open(
@@ -440,12 +264,12 @@ class LegacyDocComExtractor(Extractor):
                 ConfirmConversions=False,
                 ReadOnly=True,
                 AddToRecentFiles=False,
-                PasswordDocument=_BOGUS_DOC_KEY,
-                WritePasswordDocument=_BOGUS_DOC_KEY,
+                PasswordDocument=BOGUS_OFFICE_KEY,
+                WritePasswordDocument=BOGUS_OFFICE_KEY,
                 Visible=False,
             )
             state.text = str(document.Content.Text or "")
-            state.properties = _read_com_properties(document)
+            state.properties = read_builtin_properties(document)
         except Exception as exc:
             state.error = exc
         finally:
@@ -527,25 +351,6 @@ class _DocStreams:
     table: bytes
     flags: int
     metadata: DocumentMetadata
-
-
-def _metadata_from_ole(ole: Any) -> DocumentMetadata:
-    """Buduje metadane z bloku SummaryInformation kontenera OLE."""
-    meta: Any = None
-    with contextlib.suppress(Exception):
-        meta = ole.get_metadata()
-    if meta is None:
-        return DocumentMetadata()
-    pages = getattr(meta, "num_pages", None)
-    return DocumentMetadata(
-        title=_clean_meta_text(getattr(meta, "title", None)),
-        author=_clean_meta_text(getattr(meta, "author", None)),
-        subject=_clean_meta_text(getattr(meta, "subject", None)),
-        keywords=_clean_meta_text(getattr(meta, "keywords", None)),
-        created_at=_coerce_datetime(getattr(meta, "create_time", None)),
-        modified_at=_coerce_datetime(getattr(meta, "last_saved_time", None)),
-        page_count=pages if isinstance(pages, int) and pages > 0 else None,
-    )
 
 
 def _slice_clx(table: bytes, fc_clx: int, lcb_clx: int) -> bytes:
@@ -701,9 +506,9 @@ class LegacyDocOleExtractor(Extractor):
         """Odczytuje tekst i metadane pliku .doc bez udzialu Microsoft Word."""
         context.checkpoint()
         streams = self._load_streams(path)
-        warnings: list[str] = [_FALLBACK_WARNING]
+        warnings: list[str] = [FALLBACK_WARNING]
         text = _clean_word_text(_document_text(streams, context, warnings))
-        sections, truncated = _sections_from_text(text, context)
+        sections, truncated = sections_from_text(text, context)
         if not sections:
             raise EmptyDocumentError(
                 "Dokument Word nie zawiera tekstu możliwego do zaindeksowania.",
@@ -711,7 +516,7 @@ class LegacyDocOleExtractor(Extractor):
             )
         if truncated:
             warnings.append("Dokument był bardzo długi, tekst przycięto do limitu znaków.")
-        if looks_like_garbage(_probe_text(sections)):
+        if looks_like_garbage(probe_text(sections)):
             warnings.append(
                 "Odczytany tekst wygląda na uszkodzony lub zapisany w nieznanym kodowaniu."
             )
@@ -768,7 +573,7 @@ class LegacyDocOleExtractor(Extractor):
                         details={"plik": path.name},
                     )
                 table = self._read_table_stream(ole, flags)
-                metadata = _metadata_from_ole(ole)
+                metadata = metadata_from_ole(ole)
         except FindDocsError:
             raise
         except _BINARY_ERRORS as exc:

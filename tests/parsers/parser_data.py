@@ -394,6 +394,57 @@ def build_legacy_doc(pieces: list[tuple[str, bool]], *, encrypted: bool = False)
     )
 
 
+# --- prezentacja PowerPoint 97-2003 ----------------------------------------------
+
+#: Typy rekordow strumienia PowerPoint Document ([MS-PPT]).
+PPT_RT_DOCUMENT = 0x03E8
+PPT_RT_CURRENT_USER = 0x0FF6
+PPT_RT_TEXT_CHARS = 0x0FA0
+PPT_RT_TEXT_BYTES = 0x0FA8
+PPT_RT_ENCRYPTION = 0x2F14
+
+#: Znaczniki CurrentUserAtom.headerToken: plik zwykly i zaszyfrowany.
+PPT_TOKEN_PLAIN = 0xE391C05F
+PPT_TOKEN_ENCRYPTED = 0xF3D1C4DF
+
+
+def ppt_record(record_type: int, payload: bytes, *, ver_instance: int = 0) -> bytes:
+    """Sklada rekord strumienia PowerPoint: naglowek RecordHeader plus tresc."""
+    return struct.pack("<HHI", ver_instance, record_type, len(payload)) + payload
+
+
+def build_legacy_ppt(
+    texts: list[tuple[str, bool]],
+    *,
+    encrypted: bool = False,
+    encryption_atom: bool = False,
+) -> bytes:
+    """Buduje plik .ppt: kontener OLE ze strumieniami Current User i dokumentu.
+
+    ``texts`` to lista par (tekst, czy_szeroki). Tekst szeroki trafia do
+    TextCharsAtom (UTF-16LE), pozostale do TextBytesAtom (mlodsze bajty
+    znakow UTF-16, czyli latin-1). Atomy leza w rekordzie kontenerowym
+    dokumentu, jak w prawdziwych plikach.
+    """
+    atoms = b""
+    for text, wide in texts:
+        if wide:
+            atoms += ppt_record(PPT_RT_TEXT_CHARS, text.encode("utf-16-le"))
+        else:
+            atoms += ppt_record(PPT_RT_TEXT_BYTES, text.encode("latin-1"))
+    if encryption_atom:
+        atoms += ppt_record(PPT_RT_ENCRYPTION, b"\x00" * 4)
+    document = ppt_record(PPT_RT_DOCUMENT, atoms, ver_instance=0x000F)
+
+    token = PPT_TOKEN_ENCRYPTED if encrypted else PPT_TOKEN_PLAIN
+    current_user_body = struct.pack("<II", 20, token) + b"\x00" * 16
+    current_user = ppt_record(PPT_RT_CURRENT_USER, current_user_body)
+
+    return build_ole_container(
+        [(("Current User",), current_user), (("PowerPoint Document",), document)],
+    )
+
+
 # --- strumienie PR_RTF_COMPRESSED ----------------------------------------------
 
 #: Znaczniki COMPTYPE z MS-OXRTFCP zapisane jako liczby little-endian.

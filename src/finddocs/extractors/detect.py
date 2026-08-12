@@ -49,6 +49,8 @@ EXTENSION_MIME: dict[str, str] = {
     ".ppsx": "application/vnd.openxmlformats-officedocument.presentationml.slideshow",
     ".ppsm": "application/vnd.ms-powerpoint.slideshow.macroEnabled.12",
     ".ppt": "application/vnd.ms-powerpoint",
+    ".pps": "application/vnd.ms-powerpoint",
+    ".pot": "application/vnd.ms-powerpoint",
     ".zip": "application/zip",
 }
 

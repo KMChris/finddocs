@@ -75,6 +75,7 @@ hiddenimports = [
     "finddocs.extractors.msg",
     "finddocs.extractors.image",
     "finddocs.extractors.doc_legacy",
+    "finddocs.extractors.ppt_legacy",
     "finddocs.ocr.engines.tesseract",
     "finddocs.ocr.engines.rapidocr_engine",
     "finddocs.ocr.engines.easyocr_engine",

@@ -22,6 +22,8 @@ Poziomy wsparcia:
 | Word 97-2003 z Office | `.doc`, `.dot` | ograniczony | automatyzacja Microsoft Word | wymaga zainstalowanego Office, makra wyłączone |
 | Word 97-2003 bez Office | `.doc`, `.dot` | eksperymentalny | własny czytnik OLE | tekst z tablicy fragmentów, bez układu i tabel |
 | PowerPoint | `.pptx`, `.ppsx`, `.pptm`, `.ppsm` | pełny | python-pptx | slajdy z numeracją, tabele, notatki prelegenta, metadane |
+| PowerPoint 97-2003 z Office | `.ppt`, `.pps`, `.pot` | ograniczony | automatyzacja Microsoft PowerPoint | wymaga zainstalowanego Office, makra wyłączone, zachowuje podział na slajdy i notatki |
+| PowerPoint 97-2003 bez Office | `.ppt`, `.pps`, `.pot` | eksperymentalny | własny czytnik OLE | sam tekst slajdów i notatek, bez przypisania do slajdów |
 | Excel | `.xlsx`, `.xlsm` | pełny | openpyxl | arkusze, nagłówki kolumn, daty i liczby jako tekst |
 | Excel 97-2003 | `.xls` | dobry | xlrd | tylko odczyt, formuły jako wartości |
 | Dane rozdzielane | `.csv`, `.tsv` | pełny | biblioteka standardowa | wykrywanie separatora `;` `,` tabulator `|` i kodowania |
@@ -76,7 +78,7 @@ Każdy pominięty plik trafia na listę w raporcie pokrycia wraz z powodem.
 
 ## Dokumenty zabezpieczone hasłem
 
-PDF, DOCX, XLSX, PPTX i DOC z hasłem otwarcia kończą się statusem
+PDF, DOCX, XLSX, PPTX, DOC i PPT z hasłem otwarcia kończą się statusem
 `password_protected` i kodem `FD-3003`. Aplikacja nie próbuje łamać ani zgadywać
 haseł. Taki dokument jest widoczny w raporcie pokrycia jako niewyszukiwalny.
 
