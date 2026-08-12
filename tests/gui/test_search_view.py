@@ -558,6 +558,32 @@ def test_chip_daty_pokazuje_zakres(make_search_view: Callable[..., SearchView]) 
 
 
 @pytest.mark.gui
+def test_chipy_nie_przesuwaja_panelu_filtrow(
+    make_search_view: Callable[..., SearchView],
+) -> None:
+    """Chip dolozony przy otwartym panelu nie moze przesunac tego panelu.
+
+    Wiersz chipow lezy pod panelem filtrow, wiec jego pojawienie sie odsuwa
+    tylko wyniki. Gdy lezal nad panelem, zaznaczenie pierwszego filtra spychalo
+    caly panel w dol i kolejne pole uciekalo spod kursora.
+    """
+    view = make_search_view()
+    view.resize(900, 700)
+    view.filters_toggle.setChecked(True)
+    root = view.layout()
+    assert root is not None
+    root.activate()
+    before = view._filters_panel.pos()
+
+    view.filter_ocr.setChecked(True)
+    root.activate()
+
+    assert not view._chips_row.isHidden()
+    assert view._filters_panel.pos() == before, "Panel filtrow stoi w miejscu mimo chipa."
+    assert view._chips_row.y() > view._filters_panel.y()
+
+
+@pytest.mark.gui
 def test_wiersz_stron_pojawia_sie_dopiero_przy_wielu_stronach(
     qtbot: object,
     make_search_view: Callable[..., SearchView],

@@ -164,8 +164,10 @@ Panel filtrów rozwija przycisk **Filtry** (albo `Ctrl+Shift+F`). Filtry można 
 | Źródło, Biblioteka | katalog lokalny albo konkretna biblioteka SharePoint |
 | Tylko dokumenty z OCR | wyłącznie teksty rozpoznane z obrazu |
 
-Aktywne filtry są widoczne jako chipy pod paskiem trybów, także przy zwiniętym
-panelu. Kliknięcie krzyżyka na chipie zdejmuje pojedynczy filtr i odświeża
+Aktywne filtry są widoczne jako chipy pod panelem filtrów, także przy zwiniętym
+panelu (wypadają wtedy tuż pod paskiem trybów). Ustawienie filtra przy otwartym
+panelu nie przesuwa pól, bo chipy dokładają się poniżej, nad listą wyników.
+Kliknięcie krzyżyka na chipie zdejmuje pojedynczy filtr i odświeża
 wyniki. Liczba w nawiasie na przycisku **Filtry** mówi, ile filtrów działa.
 Przycisk **Wyczyść filtry** przywraca stan wyjściowy. Liczba wyników przy tytule
 ekranu zawsze dotyczy stanu po zastosowaniu filtrów.

@@ -148,11 +148,16 @@ class SearchView(QWidget):
         self._chips_layout.setSpacing(SPACE_SM)
         self._chips_layout.addStretch(1)
         self._chips_row.setVisible(False)
-        root.addWidget(self._chips_row)
 
         self._filters_panel = self._build_filters()
         root.addWidget(self._filters_panel)
         self._filters_panel.setVisible(False)
+
+        # Wiersz chipow stoi pod panelem, nie nad nim. Nad panelem pierwszy
+        # ustawiony filtr spychal caly panel w dol i kolejne pole uciekalo spod
+        # kursora. Pod panelem chipy odsuwaja tylko wyniki, a przy zwinietym
+        # panelu i tak wypadaja tuz pod paskiem trybow.
+        root.addWidget(self._chips_row)
 
         self.notes_banner = Banner()
         root.addWidget(self.notes_banner)

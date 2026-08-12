@@ -19,8 +19,10 @@ Konsekwencje tej zasady widoczne w kodzie:
 * liczba wyników jest w wierszu tytułu ekranu, a nie w osobnym wierszu;
 * wiersz stron pojawia się dopiero wtedy, gdy stron jest więcej niż jedna;
 * panel filtrów jest zwinięty, a to, że jednak działa, sygnalizują chipy
-  aktywnych filtrów pod paskiem trybów i liczba na przycisku **Filtry**;
-  klik chipa zdejmuje pojedynczy filtr;
+  aktywnych filtrów i liczba na przycisku **Filtry**; klik chipa zdejmuje
+  pojedynczy filtr. Wiersz chipów leży pod panelem, więc przy zwiniętym panelu
+  wypada tuż pod paskiem trybów, a chip dołożony przy otwartym panelu odsuwa
+  tylko wyniki i nie rusza samego panelu;
 * baner nad listą wyników dostaje wyłącznie uwagi zależne od zapytania
   (obcięta lista, niedostępny indeks semantyczny). Stała charakterystyka trybu
   jest w podpowiedzi pod przełącznikiem trybów: ostrzeżenie pokazywane przy
