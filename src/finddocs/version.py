@@ -17,10 +17,16 @@ CHUNKING_VERSION = 1
 #: Wersja formatu skladowania indeksu wektorowego.
 VECTOR_STORE_VERSION = 1
 
+#: Wersja formatu naglowka kontekstu dokumentu (nazwa pliku i sciezka) doklejanego
+#: do fragmentow przed osadzeniem. Wchodzi do skrotu zgodnosci czesci wektorowej
+#: wylacznie przy wlaczonym wzbogaceniu. Zmiana formatu naglowka wymaga podniesienia.
+EMBED_CONTEXT_VERSION = 1
+
 __all__ = [
     "APP_NAME",
     "APP_VERSION",
     "CHUNKING_VERSION",
+    "EMBED_CONTEXT_VERSION",
     "NORMALIZATION_VERSION",
     "SCHEMA_VERSION",
     "VECTOR_STORE_VERSION",

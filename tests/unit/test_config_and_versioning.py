@@ -303,6 +303,37 @@ def test_plik_konfiguracyjny_pgvector_nie_zawiera_hasla(tmp_home):
     assert "haslo" not in tekst
 
 
+def test_wlaczenie_wzbogacenia_kontekstem_uniewaznia_indeks_wektorowy():
+    """Naglowek z nazwa pliku zmienia teksty podawane modelowi, wiec i wektory."""
+    bazowa = AppConfig()
+    zmieniona = AppConfig()
+    zmieniona.embedding.enrich_context = True
+
+    assert zmieniona.vector_compat_hash() != bazowa.vector_compat_hash()
+    assert zmieniona.index_compat_hash() == bazowa.index_compat_hash()
+
+
+def test_wylaczone_wzbogacenie_kontekstem_nie_zmienia_skrotu():
+    """Skrot konfiguracji sprzed wprowadzenia opcji musi zostac ten sam."""
+    dane = config_to_dict(AppConfig())
+    del dane["embedding"]["enrich_context"]
+
+    stara = config_from_dict(dane)
+
+    assert stara.embedding.enrich_context is False
+    assert stara.vector_compat_hash() == AppConfig().vector_compat_hash()
+
+
+def test_wzbogacenie_kontekstem_przezywa_zapis_i_odczyt(tmp_home):
+    config = AppConfig(data_root=str(tmp_home.root))
+    config.embedding.enrich_context = True
+
+    sciezka = save_config(config, tmp_home.config_file)
+    odczytana = load_config(sciezka)
+
+    assert odczytana.embedding.enrich_context is True
+
+
 def test_wylaczenie_semantyki_nie_uniewaznia_zadnego_indeksu():
     """Przelacznik semantyki nie moze wymuszac przebudowy po ponownym wlaczeniu.
 

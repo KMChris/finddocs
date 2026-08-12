@@ -17,7 +17,12 @@ from typing import Any
 from finddocs.app_paths import AppPaths
 from finddocs.errors import ConfigurationError
 from finddocs.types import SourceKind
-from finddocs.version import CHUNKING_VERSION, NORMALIZATION_VERSION, SCHEMA_VERSION
+from finddocs.version import (
+    CHUNKING_VERSION,
+    EMBED_CONTEXT_VERSION,
+    NORMALIZATION_VERSION,
+    SCHEMA_VERSION,
+)
 
 CONFIG_FORMAT_VERSION = 1
 
@@ -180,6 +185,14 @@ class EmbeddingSettings:
     query_prefix: str = "zapytanie: "
     passage_prefix: str = ""
     normalize: bool = True
+    enrich_context: bool = False
+    """Wzbogacenie semantyczne o nazwę pliku i ścieżkę.
+
+    Po włączeniu każdy fragment dostaje przed policzeniem wektora nagłówek
+    z nazwą pliku i jego ścieżką w źródle. Nagłówek nie trafia do bazy ani do
+    indeksu pełnotekstowego. Zmiana tej opcji unieważnia część semantyczną
+    indeksu i wymaga jej przebudowy."""
+
     internal_api_url: str = ""
     internal_api_enabled: bool = False
     internal_api_protocol: str = "openai"
@@ -414,6 +427,8 @@ class AppConfig:
         API sa dodawane tylko dla dostawcy internal_api, a pola magazynu pgvector
         tylko dla backendu innego niz faiss, zeby skrot dotychczasowych
         konfiguracji lokalnych nie zmienil sie po aktualizacji aplikacji.
+        Z tego samego powodu wzbogacenie kontekstem (nazwa pliku i sciezka)
+        wchodzi do skrotu wylacznie po wlaczeniu, razem z wersja formatu naglowka.
 
         Tozsamosc magazynu pgvector (host, baza, schemat, tabela) wchodzi do
         skrotu, bo wskazanie innej tabeli oznacza inny, zwykle pusty zbior
@@ -432,6 +447,8 @@ class AppConfig:
                 "normalize": self.embedding.normalize,
             }
         )
+        if self.embedding.enrich_context:
+            payload["embed_context"] = EMBED_CONTEXT_VERSION
         if self.embedding.provider == "internal_api":
             payload.update(
                 {

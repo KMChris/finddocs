@@ -325,6 +325,7 @@ finddocs model import intfloat/multilingual-e5-small
 finddocs model use mmlw-retrieval-roberta-base
 finddocs model remove moj-model
 finddocs model device dml --batch 64
+finddocs model context --enable
 finddocs model api --url https://embeddingi.example.com/v1 --enable
 finddocs model api-key
 finddocs model profile save Klaster
@@ -339,10 +340,12 @@ eksportem ONNX, katalog z checkpointem HuggingFace (konwersja wymaga dodatku
 walidowany próbnym przebiegiem przed instalacją i od razu widoczny na liście
 modeli w GUI. Zmiana aktywnego modelu wymaga przebudowy części wektorowej
 (`finddocs maintenance rebuild --vectors-only`, potem `finddocs index`).
-`model device` przełącza obliczenia między CPU i GPU, `model api`
-z `model api-key` konfigurują zdalne API embeddingów (domyślny kontrakt
-zgodny z OpenAI), a `model profile` zapisuje i aktywuje nazwane profile
-dostawcy; opis w dokumencie
+`model device` przełącza obliczenia między CPU i GPU, `model context`
+włącza wzbogacenie semantyczne: przed policzeniem wektora każdy fragment
+dostaje nagłówek z nazwą pliku i ścieżką w źródle (zmiana wymaga przebudowy
+części wektorowej). `model api` z `model api-key` konfigurują zdalne API
+embeddingów (domyślny kontrakt zgodny z OpenAI), a `model profile` zapisuje
+i aktywuje nazwane profile dostawcy; opis w dokumencie
 [embeddingi na GPU i zdalne API](embeddingi-gpu-api.md).
 Szczegóły i opcje: [instalacja z PyPI](instalacja-pip.md).
 

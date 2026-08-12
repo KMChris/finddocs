@@ -255,7 +255,13 @@ Przycisk **Ustawienia...** obok listy otwiera okno, w którym można:
   Zmiana wymaga przebudowy części semantycznej indeksu;
 * **wyłączyć indeksowanie semantyczne**: aplikacja przestaje liczyć wektory
   i działa wyłącznie w trybie dokładnym. Po ponownym włączeniu wystarczy zwykłe
-  skanowanie, brakujące wektory zostaną uzupełnione automatycznie.
+  skanowanie, brakujące wektory zostaną uzupełnione automatycznie;
+* **wzbogacić wektory o nazwę pliku i ścieżkę**: każdy fragment dostaje przed
+  policzeniem wektora nagłówek z nazwą pliku i jego ścieżką w źródle. Dzięki
+  temu zapytanie wspominające katalog albo nazwę pliku (na przykład „regulamin
+  z katalogu Kadry”) znajdzie dokument, nawet gdy jego treść o nich nie
+  wspomina. Nagłówek nie zmienia treści pokazywanej w wynikach ani wyszukiwania
+  dokładnego. Zmiana wymaga przebudowy części semantycznej indeksu.
 
 Po zapisaniu zmian aplikacja sama otwiera indeks ponownie; nie trzeba jej
 restartować. Każdy zaimportowany model pojawia się na liście obok modeli

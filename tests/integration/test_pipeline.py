@@ -570,6 +570,171 @@ def test_zagniezdzone_archiwa_maja_limit_glebokosci(
     assert "poziom4.txt" not in names
 
 
+# --- wzbogacenie semantyczne -------------------------------------------------------
+
+
+class _RecordingProvider:
+    """Dostawca zapisujacy teksty przekazane do osadzenia."""
+
+    def __init__(self) -> None:
+        from finddocs.providers.base import ProviderInfo
+
+        self.calls: list[list[str]] = []
+        self.info = ProviderInfo(
+            provider_key="test",
+            model_key="model-testowy",
+            model_version="1",
+            dimension=8,
+            max_sequence_length=128,
+            pooling="cls",
+            normalized=True,
+            quantized=False,
+            query_prefix="zapytanie: ",
+            passage_prefix="",
+            license_name="test",
+            source="test",
+            runtime="test",
+        )
+        self.dimension = 8
+
+    def embed_passages(self, texts: list[str], *, cancel: object | None = None) -> object:
+        import numpy as np
+
+        self.calls.append(list(texts))
+        return np.zeros((len(texts), self.dimension), dtype="float32")
+
+    def embed_query(self, text: str) -> object:
+        import numpy as np
+
+        return np.zeros(self.dimension, dtype="float32")
+
+    def close(self) -> None:
+        pass
+
+
+class _NullVectorStore:
+    """Magazyn wektorow przyjmujacy zapisy bez skladowania."""
+
+    def add(self, ids: list[int], vectors: object) -> None:
+        pass
+
+    def remove(self, ids: list[int]) -> None:
+        pass
+
+    def save(self) -> None:
+        pass
+
+    def close(self) -> None:
+        pass
+
+    def count(self) -> int:
+        return 0
+
+
+def _nested_document(
+    index_service: IndexService, docs_root: Path, logical: str, content: str
+) -> SourceItem:
+    """Tworzy plik w podkatalogu zrodla i rejestruje go w repozytorium."""
+    target = docs_root / logical
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(content, encoding="utf-8")
+    index_service.repository.upsert_source(
+        SOURCE_ID, SourceKind.LOCAL_DIR, "Test", location=str(docs_root), enabled=True
+    )
+    return SourceItem(
+        source_id=SOURCE_ID,
+        external_id=logical,
+        name=Path(logical).name,
+        logical_path=logical,
+        size=target.stat().st_size,
+    )
+
+
+def test_wzbogacenie_dokleja_naglowek_do_osadzanych_fragmentow(
+    app_config: AppConfig,
+    make_pipeline: Callable[[AppConfig], DocumentPipeline],
+    docs_root: Path,
+    index_service: IndexService,
+    workspace: Path,
+) -> None:
+    """Dostawca dostaje fragmenty z naglowkiem, a baza fragmenty bez niego."""
+    app_config.ocr.enabled = False
+    app_config.embedding.enrich_context = True
+    provider = _RecordingProvider()
+    index_service.provider = provider  # type: ignore[assignment]
+    index_service.vector_store = _NullVectorStore()  # type: ignore[assignment]
+
+    item = _nested_document(
+        index_service,
+        docs_root,
+        "umowy/2015/kontrakt.txt",
+        "Umowa ramowa zawarta w lipcu. Strony ustalily wynagrodzenie.\n",
+    )
+    scan_id = index_service.repository.next_scan_id()
+    doc_id = index_service.repository.register_item(item, scan_id)
+
+    outcome = make_pipeline(app_config).process(
+        _connector(docs_root),
+        item,
+        doc_id,
+        workspace=workspace,
+        control=JobControl(),
+        scan_id=scan_id,
+    )
+
+    assert outcome.status is DocumentStatus.INDEXED
+    assert len(provider.calls) == 1
+    naglowek = "Plik: kontrakt.txt\nŚcieżka: umowy/2015\n"
+    assert provider.calls[0]
+    assert all(text.startswith(naglowek) for text in provider.calls[0])
+
+    # Fragmenty w bazie oraz indeks pelnotekstowy pozostaja bez naglowka.
+    rows = index_service.db.query_all("SELECT text FROM chunks WHERE doc_id = ?", (doc_id,))
+    assert rows
+    assert all("Plik: kontrakt.txt" not in str(row["text"]) for row in rows)
+
+
+def test_bez_wzbogacenia_dostawca_dostaje_czyste_fragmenty(
+    app_config: AppConfig,
+    make_pipeline: Callable[[AppConfig], DocumentPipeline],
+    docs_root: Path,
+    index_service: IndexService,
+    workspace: Path,
+) -> None:
+    """Domyslna konfiguracja osadza fragmenty dokladnie takie, jakie ida do bazy."""
+    app_config.ocr.enabled = False
+    assert app_config.embedding.enrich_context is False
+    provider = _RecordingProvider()
+    index_service.provider = provider  # type: ignore[assignment]
+    index_service.vector_store = _NullVectorStore()  # type: ignore[assignment]
+
+    item = _nested_document(
+        index_service,
+        docs_root,
+        "umowy/2015/kontrakt.txt",
+        "Umowa ramowa zawarta w lipcu. Strony ustalily wynagrodzenie.\n",
+    )
+    scan_id = index_service.repository.next_scan_id()
+    doc_id = index_service.repository.register_item(item, scan_id)
+
+    outcome = make_pipeline(app_config).process(
+        _connector(docs_root),
+        item,
+        doc_id,
+        workspace=workspace,
+        control=JobControl(),
+        scan_id=scan_id,
+    )
+
+    assert outcome.status is DocumentStatus.INDEXED
+    assert len(provider.calls) == 1
+    assert all(not text.startswith("Plik:") for text in provider.calls[0])
+    rows = index_service.db.query_all(
+        "SELECT text FROM chunks WHERE doc_id = ? ORDER BY ordinal", (doc_id,)
+    )
+    assert [str(row["text"]) for row in rows] == provider.calls[0]
+
+
 # --- porzadki --------------------------------------------------------------------
 
 

@@ -203,13 +203,22 @@ class SemanticCard(ConfigCard):
         self.status_label = _muted_label()
         layout.addWidget(self.status_label)
         layout.addWidget(_hint_label(i18n.MODEL_SEMANTIC_HINT))
+
+        self.context_check = QCheckBox(i18n.MODEL_CONTEXT_TOGGLE)
+        self.context_check.setChecked(context.config.embedding.enrich_context)
+        self.context_check.toggled.connect(self._on_context_toggled)
+        layout.addWidget(self.context_check)
+        layout.addWidget(_hint_label(i18n.MODEL_CONTEXT_HINT))
         self.refresh()
 
     def refresh(self) -> None:
-        """Uzgadnia wlacznik i opis stanu z konfiguracja oraz otwartym indeksem."""
+        """Uzgadnia wlaczniki i opis stanu z konfiguracja oraz otwartym indeksem."""
         self.semantic_check.blockSignals(True)
         self.semantic_check.setChecked(self.context.config.embedding.semantic_enabled)
         self.semantic_check.blockSignals(False)
+        self.context_check.blockSignals(True)
+        self.context_check.setChecked(self.context.config.embedding.enrich_context)
+        self.context_check.blockSignals(False)
 
         index = self.context.index
         if index is not None and index.provider is not None:
@@ -232,6 +241,14 @@ class SemanticCard(ConfigCard):
         embedding.semantic_enabled = bool(checked)
         self.context.save()
         self.applied.emit(True)
+
+    def _on_context_toggled(self, checked: bool) -> None:
+        """Przelacza wzbogacenie o nazwe pliku i sciezke. Zmiana uniewaznia wektory."""
+        embedding = self.context.config.embedding
+        if bool(checked) == embedding.enrich_context:
+            return
+        embedding.enrich_context = bool(checked)
+        self._finish_apply([i18n.MODEL_REBUILD_REQUIRED], reload_needed=True)
 
 
 class ProfileCard(ConfigCard):

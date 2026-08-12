@@ -95,3 +95,27 @@ def test_model_remove_wymaga_potwierdzenia(tmp_home: AppPaths) -> None:
     assert directory.exists()
     assert main(["model", "remove", "do-kasacji", "--yes"]) == EXIT_OK
     assert not directory.parent.exists()
+
+
+def test_model_context_pokazuje_stan_domyslny(
+    tmp_home: AppPaths, capsys: pytest.CaptureFixture[str]
+) -> None:
+    assert main(["--json", "model", "context"]) == EXIT_OK
+    data = json.loads(capsys.readouterr().out)
+    assert data["wzbogacenie_kontekstem"] is False
+
+
+def test_model_context_enable_zapisuje_i_ostrzega(
+    tmp_home: AppPaths, capsys: pytest.CaptureFixture[str]
+) -> None:
+    assert main(["model", "context", "--enable"]) == EXIT_OK
+    out = capsys.readouterr().out
+    assert "przebudowy" in out
+    assert load_config(tmp_home.config_file).embedding.enrich_context is True
+
+    # Ponowne wlaczenie niczego nie zmienia i nie straszy przebudowa.
+    assert main(["model", "context", "--enable"]) == EXIT_OK
+    assert "przebudowy" not in capsys.readouterr().out
+
+    assert main(["model", "context", "--disable"]) == EXIT_OK
+    assert load_config(tmp_home.config_file).embedding.enrich_context is False

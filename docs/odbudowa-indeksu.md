@@ -9,6 +9,7 @@ Wszystkie operacje działają na katalogu `%LOCALAPPDATA%\FindDocs\index`.
 | --- | --- |
 | inny model embeddingów (`model_key`) | tylko wektory |
 | przełączenie `quantized` albo `max_sequence_length` | tylko wektory |
+| wzbogacenie o nazwę pliku i ścieżkę (`enrich_context`) | tylko wektory |
 | nowa wersja normalizacji tekstu | całość |
 | nowa wersja reguł fragmentacji | całość |
 | zmiana ustawień fragmentacji w konfiguracji | całość |

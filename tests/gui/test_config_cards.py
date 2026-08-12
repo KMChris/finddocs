@@ -105,6 +105,41 @@ def test_opis_stanu_odroznia_wylaczenie_od_braku_modelu(
     assert not card.semantic_check.isChecked()
 
 
+@pytest.mark.gui
+def test_wlaczenie_wzbogacenia_zapisuje_konfiguracje_i_ostrzega(
+    qtbot: object, card_context: AppContext, message_boxes: list[QMessageBox]
+) -> None:
+    """Przelacznik wzbogacenia uniewaznia wektory, wiec pokazuje uwage o przebudowie."""
+    card = SemanticCard(card_context)
+    qtbot.addWidget(card)  # type: ignore[attr-defined]
+    assert not card.context_check.isChecked()
+    zgloszenia: list[bool] = []
+    card.applied.connect(zgloszenia.append)
+
+    card.context_check.setChecked(True)
+
+    assert zgloszenia == [True]
+    assert card_context.config.embedding.enrich_context is True
+    zapisana = load_config(card_context.paths.config_file)
+    assert zapisana.embedding.enrich_context is True
+    assert any(i18n.MODEL_REBUILD_REQUIRED in box.text() for box in message_boxes)
+
+
+@pytest.mark.gui
+def test_refresh_uzgadnia_przelacznik_wzbogacenia(qtbot: object, card_context: AppContext) -> None:
+    card = SemanticCard(card_context)
+    qtbot.addWidget(card)  # type: ignore[attr-defined]
+    zgloszenia: list[bool] = []
+    card.applied.connect(zgloszenia.append)
+
+    card_context.config.embedding.enrich_context = True
+    card.refresh()
+
+    # Uzgodnienie stanu nie moze wyzwolic zapisu ani sygnalu applied.
+    assert card.context_check.isChecked()
+    assert zgloszenia == []
+
+
 # --- karta modelu: przedrostki ------------------------------------------------
 
 

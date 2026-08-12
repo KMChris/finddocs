@@ -652,6 +652,31 @@ def cmd_model_device(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def cmd_model_context(args: argparse.Namespace) -> int:
+    """Pokazuje albo przelacza wzbogacenie semantyczne o nazwe pliku i sciezke."""
+    config = _load(args)
+    embedding = config.embedding
+
+    changed = False
+    if args.enable and not embedding.enrich_context:
+        embedding.enrich_context = True
+        changed = True
+    if args.disable and embedding.enrich_context:
+        embedding.enrich_context = False
+        changed = True
+    if changed:
+        save_config(config, _paths(args).config_file)
+
+    _print({"wzbogacenie_kontekstem": embedding.enrich_context}, as_json=args.json)
+    if changed:
+        print()
+        print("Zmiana wymaga przebudowy części semantycznej indeksu:")
+        print("  finddocs maintenance rebuild --vectors-only")
+        print("  finddocs index")
+        print("Do tego czasu wyszukiwanie dokładne działa bez zmian.")
+    return EXIT_OK
+
+
 def cmd_model_api(args: argparse.Namespace) -> int:
     """Konfiguruje zdalne API embeddingow."""
     config = _load(args)
@@ -1007,6 +1032,20 @@ def build_parser() -> argparse.ArgumentParser:
         "--batch-documents", type=int, help="dokumenty osadzane wspolnie przy indeksowaniu"
     )
     model_device.set_defaults(func=cmd_model_device)
+
+    model_context = model_sub.add_parser(
+        "context",
+        help="wzbogacenie semantyczne o nazwę pliku i ścieżkę",
+        description=(
+            "Bez argumentu pokazuje biezacy stan. Po wlaczeniu kazdy fragment "
+            "dostaje przed policzeniem wektora naglowek z nazwa pliku i sciezka "
+            "w zrodle. Zmiana wymaga przebudowy czesci semantycznej indeksu."
+        ),
+    )
+    context_switch = model_context.add_mutually_exclusive_group()
+    context_switch.add_argument("--enable", action="store_true", help="włącza wzbogacenie")
+    context_switch.add_argument("--disable", action="store_true", help="wyłącza wzbogacenie")
+    model_context.set_defaults(func=cmd_model_context)
 
     model_api = model_sub.add_parser(
         "api",

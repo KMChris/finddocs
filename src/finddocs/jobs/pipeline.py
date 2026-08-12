@@ -54,8 +54,8 @@ from finddocs.logging_setup import get_logger
 from finddocs.ocr.detector import decide as decide_ocr
 from finddocs.ocr.detector import pages_needing_ocr
 from finddocs.ocr.service import OcrService
+from finddocs.providers.context import document_context_header, enrich_passages
 from finddocs.types import (
-    Chunk,
     DocumentRecord,
     DocumentStatus,
     ExtractedAttachment,
@@ -399,6 +399,14 @@ class DocumentPipeline:
             warnings=warnings,
         )
 
+        # Wzbogacenie semantyczne: naglowek z nazwa pliku i sciezka wchodzi
+        # wylacznie do tekstow podawanych dostawcy embeddingow. Fragmenty
+        # zapisywane do bazy i indeksu FTS pozostaja bez naglowka.
+        embed_texts = [chunk.text for chunk in chunks]
+        if self.config.embedding.enrich_context:
+            header = document_context_header(item.name, item.logical_path, library=item.library)
+            embed_texts = enrich_passages(embed_texts, header)
+
         # Tryb batchowy: fragmenty czekaja na wspolne embeddingi, a zapis
         # wykona batcher. Bez semantyki bufor nie ma czego grupowac, wiec
         # dokument idzie od razu zwykla sciezka.
@@ -416,13 +424,13 @@ class DocumentPipeline:
             )
             batcher.submit(
                 payload,
-                [chunk.text for chunk in chunks],
+                embed_texts,
                 outcome,
                 tracked=track_outcome,
                 control=control,
             )
         else:
-            payload.embeddings = self._embed(chunks, control)
+            payload.embeddings = self._embed(embed_texts, control)
             write = self.index.writer.write_document(payload)
             outcome = DocumentOutcome(
                 doc_id=doc_id,
@@ -477,14 +485,12 @@ class DocumentPipeline:
         sections = self.ocr.to_sections(ocr_result)
         return sections, ocr_result.page_count, ocr_result.confidence, ocr_result.warnings
 
-    def _embed(self, chunks: list[Chunk], control: JobControl) -> np.ndarray | None:
+    def _embed(self, texts: list[str], control: JobControl) -> np.ndarray | None:
         if not self.index.semantic_available or self.index.provider is None:
             return None
         control.checkpoint()
         try:
-            return self.index.provider.embed_passages(
-                [chunk.text for chunk in chunks], cancel=control
-            )
+            return self.index.provider.embed_passages(texts, cancel=control)
         except JobCancelledError:
             raise
         except Exception as exc:

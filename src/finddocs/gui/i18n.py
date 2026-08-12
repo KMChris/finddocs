@@ -235,6 +235,14 @@ MODEL_SEMANTIC_HINT = (
     "semantyczny i hybrydowy przestają działać. Po ponownym włączeniu wystarczy "
     "zwykłe skanowanie: brakujące wektory zostaną uzupełnione automatycznie."
 )
+MODEL_CONTEXT_TOGGLE = "Wzbogacaj wektory o nazwę pliku i ścieżkę"
+MODEL_CONTEXT_HINT = (
+    "Przed policzeniem wektora każdy fragment dostaje nagłówek z nazwą pliku "
+    "i jego ścieżką w źródle. Zapytania wspominające katalog albo nazwę pliku "
+    "znajdą dokument, nawet gdy jego treść o nich nie wspomina. Nagłówek nie "
+    "trafia do indeksu pełnotekstowego. Zmiana tej opcji wymaga przebudowy "
+    "części semantycznej indeksu."
+)
 MODEL_PROFILE_BOX = "Profile dostawcy embeddingów"
 MODEL_PROFILE_LABEL = "Profil"
 MODEL_PROFILE_ACTIVE = "Aktywny profil: {value}"
