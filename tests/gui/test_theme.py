@@ -36,6 +36,31 @@ def test_zastosowanie_motywu_zmienia_polityke_fokusa_przyciskow(qapp: QApplicati
             qapp.setStyle(restored)
 
 
+def test_pole_zapytania_ma_wieksza_metryke_ikony(qapp: QApplication) -> None:
+    """Qt maluje znak czyszczenia w rozmiarze PM_SmallIconSize pola.
+
+    Rozmiar ustawiony na samym przycisku jest przy malowaniu pomijany, wiec
+    wieksza ikona bierze sie wylacznie z tej metryki. Pozostale kontrolki
+    musza zostac przy wartosci stylu bazowego.
+    """
+    from PySide6.QtWidgets import QWidget
+
+    base = QStyleFactory.create("fusion")
+    assert base is not None
+    style = theme.TabFocusStyle("fusion")
+    metric = QStyle.PixelMetric.PM_SmallIconSize
+
+    search_box = QWidget()
+    search_box.setObjectName("SearchBox")
+    other = QWidget()
+    try:
+        assert style.pixelMetric(metric, None, search_box) == theme.SEARCH_ICON_METRIC
+        assert style.pixelMetric(metric, None, other) == base.pixelMetric(metric, None, other)
+    finally:
+        search_box.deleteLater()
+        other.deleteLater()
+
+
 def test_uniwersalna_regula_qwidget_nie_ustawia_tla() -> None:
     """Tlo na kazdej kontrolce malowaloby prostokaty pod tekstem etykiet."""
     css = theme.build_stylesheet(theme.LIGHT)
@@ -66,6 +91,7 @@ GLYPH_NAMES = (
     "chart",
     "pulse",
     "settings",
+    "clear",
     "play",
     "pause",
     "cross",

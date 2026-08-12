@@ -134,6 +134,20 @@ def test_szkielety_wypelniaja_pusta_liste_i_znikaja_po_wynikach(
 
 
 @pytest.mark.gui
+def test_znak_czyszczenia_pola_zapytania_ma_glif_motywu(
+    make_search_view: Callable[..., SearchView],
+) -> None:
+    """Systemowy znak byl cienka kreska w rozmiarze zwyklej kontrolki."""
+    from PySide6.QtWidgets import QToolButton
+
+    view = make_search_view()
+    buttons = view.query_edit.findChildren(QToolButton)
+
+    assert buttons, "pole zapytania ma miec przycisk czyszczenia"
+    assert not buttons[0].icon().isNull()
+
+
+@pytest.mark.gui
 def test_query_returns_result_cards(
     qtbot: object,
     make_search_view: Callable[..., SearchView],

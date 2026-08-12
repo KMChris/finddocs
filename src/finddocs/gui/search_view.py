@@ -32,6 +32,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QScrollArea,
     QSizePolicy,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
@@ -46,6 +47,7 @@ from finddocs.gui.theme import (
     SPACE_XS,
     Palette,
     accent_icon,
+    muted_icon,
     theme_icon,
 )
 from finddocs.gui.widgets.motion import apply_soft_shadow, expand_vertically
@@ -80,6 +82,7 @@ FILTER_COLUMNS = 4
 
 #: Liczba zarysow kart pokazywanych w czasie wyszukiwania.
 SKELETON_CARDS = 3
+
 
 #: Uwagi opisujace nature trybu, niezalezne od zapytania. Ich tresc niesie
 #: podpowiedz pod przelacznikiem trybow, wiec baner ich nie powtarza. Powtarzane
@@ -196,6 +199,7 @@ class SearchView(QWidget):
         self.query_edit.setPlaceholderText(i18n.SEARCH_PLACEHOLDER)
         self.query_edit.setAccessibleName(i18n.A11Y_QUERY)
         self.query_edit.setClearButtonEnabled(True)
+        self._restyle_clear_button()
         self.query_edit.returnPressed.connect(self.run_search)
         # Podpowiedzi ostatnich zapytan tej sesji. Patrz QUERY_HISTORY_LIMIT.
         self._history: list[str] = []
@@ -222,6 +226,17 @@ class SearchView(QWidget):
         self.search_button.clicked.connect(self._on_search_clicked)
         row.addWidget(self.search_button)
         return container
+
+    def _restyle_clear_button(self) -> None:
+        """Daje przyciskowi czyszczenia glif motywu zamiast znaku systemowego.
+
+        Rozmiar rysunku bierze sie z metryki stylu (``SEARCH_ICON_METRIC``), bo
+        Qt maluje ten przycisk w rozmiarze ``PM_SmallIconSize`` pola i nie patrzy
+        na ``setIconSize``. Sam przycisk tworzy Qt, wiec docieramy do niego przez
+        liste dzieci pola; gdyby Qt przestalo go tworzyc, petla nic nie zrobi.
+        """
+        for button in self.query_edit.findChildren(QToolButton):
+            button.setIcon(muted_icon("clear", self.palette_colors))
 
     def _build_mode_row(self) -> QWidget:
         container = QWidget()

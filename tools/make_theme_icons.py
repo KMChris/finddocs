@@ -194,6 +194,16 @@ GLYPHS: dict[str, tuple[float, tuple[Op, ...]]] = {
             ("line", ((11.4, 4.6), (4.6, 11.4))),
         ),
     ),
+    # Znak czyszczenia pola. Ten sam ksztalt co ``cross``, ale rozciagniety na
+    # cale pole ikony: ``cross`` zajmuje 42 procent boku, wiec w polu zapytania
+    # rysunek wychodzil mniejszy niz domyslny znak Qt mimo wiekszej ikony.
+    "clear": (
+        1.6,
+        (
+            ("line", ((3.2, 3.2), (12.8, 12.8))),
+            ("line", ((12.8, 3.2), (3.2, 12.8))),
+        ),
+    ),
     "plus": (
         1.7,
         (

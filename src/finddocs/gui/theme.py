@@ -190,14 +190,24 @@ DOT_COLORS: dict[str, dict[str, str]] = {
 }
 
 
+#: Bok ikony czyszczenia w polu zapytania. Qt rysuje ten przycisk w rozmiarze
+#: ``PM_SmallIconSize`` pola, a nie w rozmiarze ustawionym na samym przycisku,
+#: wiec jedyna droga do wiekszego znaku wiedzie przez metryke stylu. Pole
+#: zapytania jest wyzsze od pozostalych pol, wiec domyslne 16 px gubilo sie w nim.
+SEARCH_ICON_METRIC = 24
+
+
 class TabFocusStyle(QProxyStyle):
-    """Styl, w ktorym przyciski przyjmuja fokus tylko z klawiatury.
+    """Styl aplikacji: polityka fokusa przyciskow i metryka ikon pola zapytania.
 
     Domyslnie na Windows klikniety przycisk zatrzymuje fokus i rysuje na sobie
     ramke zaznaczenia, ktora zostaje do nastepnego kliknieciu gdzie indziej.
     Ten styl zmienia polityke fokusa przyciskow na ``TabFocus``: klikniecie
     tylko wykonuje akcje, a ramke fokusa widza wylacznie osoby poruszajace sie
     klawiszem Tab.
+
+    Druga rola to rozmiar znaku czyszczenia w polu zapytania, opisany przy
+    ``SEARCH_ICON_METRIC``.
     """
 
     def styleHint(
@@ -210,6 +220,20 @@ class TabFocusStyle(QProxyStyle):
         if hint == QStyle.StyleHint.SH_Button_FocusPolicy:
             return int(Qt.FocusPolicy.TabFocus.value)
         return super().styleHint(hint, option, widget, returnData)
+
+    def pixelMetric(
+        self,
+        metric: QStyle.PixelMetric,
+        option: QStyleOption | None = None,
+        widget: QWidget | None = None,
+    ) -> int:
+        if (
+            metric == QStyle.PixelMetric.PM_SmallIconSize
+            and widget is not None
+            and widget.objectName() == "SearchBox"
+        ):
+            return SEARCH_ICON_METRIC
+        return super().pixelMetric(metric, option, widget)
 
 
 #: Rodzina rozwiazana raz, przy pierwszym pytaniu. Lista zainstalowanych rodzin
