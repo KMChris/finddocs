@@ -3,6 +3,10 @@
 Dokument wygenerowany automatycznie przez `tools/gen_sbom.py` dla wersji 0.2.4.
 Odpowiadajacy mu plik SBOM w formacie CycloneDX to `sbom.cdx.json`.
 
+Wykaz obejmuje zaleznosci zadeklarowane w `pyproject.toml` wraz z zaleznosciami
+przechodnimi. Pakiet doinstalowany doraznie do srodowiska deweloperskiego nie jest
+komponentem produktu i nie wchodzi na te liste.
+
 Wszystkie komponenty dzialaja lokalnie. Zaden z nich nie wysyla tresci dokumentow
 ani zapytan poza komputer uzytkownika w konfiguracji domyslnej.
 
@@ -18,7 +22,6 @@ ani zapytan poza komputer uzytkownika w konfiguracji domyslnej.
 | cffi | 2.1.0 | MIT-0 | zaleznosc posrednia | https://cffi.readthedocs.io/ |
 | charset-normalizer | 3.4.9 | MIT | wykrywanie kodowania plikow tekstowych | https://charset-normalizer.readthedocs.io/ |
 | colorama | 0.4.6 | BSD License | zaleznosc posrednia | https://github.com/tartley/colorama |
-| coloredlogs | 15.0.1 | MIT License | zaleznosc posrednia | https://coloredlogs.readthedocs.io |
 | colorlog | 6.12.0 | MIT License | zaleznosc posrednia | https://github.com/borntyping/python-colorlog |
 | cryptography | 50.0.0 | Apache-2.0 OR BSD-3-Clause | zaleznosc posrednia | https://cryptography.io/ |
 | et_xmlfile | 2.0.0 | MIT License | zaleznosc posrednia | https://foss.heptapod.net/openpyxl/et_xmlfile |
@@ -30,7 +33,6 @@ ani zapytan poza komputer uzytkownika w konfiguracji domyslnej.
 | httpcore | 1.0.9 | BSD License | zaleznosc posrednia | https://www.encode.io/httpcore |
 | httpx | 0.28.1 | BSD License | klient HTTP dla Microsoft Graph | https://www.python-httpx.org |
 | huggingface_hub | 0.36.2 | Apache Software License | zaleznosc posrednia | https://github.com/huggingface/huggingface_hub |
-| humanfriendly | 10.0 | MIT License | zaleznosc posrednia | https://humanfriendly.readthedocs.io |
 | idna | 3.18 | BSD-3-Clause | zaleznosc posrednia | https://github.com/kjd/idna |
 | importlib_metadata | 9.0.0 | Apache-2.0 | zaleznosc posrednia | https://github.com/python/importlib_metadata |
 | jaraco.classes | 3.4.0 | MIT License | zaleznosc posrednia | https://github.com/jaraco/jaraco.classes |
@@ -40,7 +42,6 @@ ani zapytan poza komputer uzytkownika w konfiguracji domyslnej.
 | librt | 0.13.0 | MIT | zaleznosc posrednia | https://github.com/mypyc/librt |
 | lxml | 6.1.1 | BSD-3-Clause | zaleznosc posrednia | https://lxml.de/ |
 | more-itertools | 11.1.0 | MIT | zaleznosc posrednia | https://more-itertools.readthedocs.io/en/stable/ |
-| mpmath | 1.3.0 | BSD License | zaleznosc posrednia | http://mpmath.org/ |
 | msal | 1.37.0 | MIT License | uwierzytelnienie w Microsoft Entra ID | https://github.com/AzureAD/microsoft-authentication-library-for-python |
 | numpy | 2.4.6 | BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0 | operacje na wektorach | https://numpy.org |
 | olefile | 0.47 | BSD License | odczyt kontenerow OLE (DOC, MSG) | https://www.decalage.info/python/olefileio |
@@ -51,13 +52,11 @@ ani zapytan poza komputer uzytkownika w konfiguracji domyslnej.
 | packaging | 26.2 | Apache-2.0 OR BSD-2-Clause | zaleznosc posrednia | https://packaging.pypa.io/ |
 | pathspec | 1.1.1 | Mozilla Public License 2.0 (MPL 2.0) | zaleznosc posrednia | https://python-path-specification.readthedocs.io/en/latest/index.html |
 | pillow | 12.3.0 | MIT-CMU | obsluga obrazow i przygotowanie stron do OCR | https://pillow.readthedocs.io |
-| pip | 26.2 | MIT | zaleznosc posrednia | https://pip.pypa.io |
 | protobuf | 7.35.1 | 3-Clause BSD License | zaleznosc posrednia | https://developers.google.com/protocol-buffers/ |
 | pyclipper | 1.4.0 | MIT License | zaleznosc posrednia | https://github.com/fonttools/pyclipper |
 | pycparser | 3.0 | BSD-3-Clause | zaleznosc posrednia | https://github.com/eliben/pycparser |
 | PyJWT | 2.13.0 | MIT | zaleznosc posrednia | https://github.com/jpadilla/pyjwt |
 | pypdfium2 | 5.12.1 | BSD-3-Clause, Apache-2.0, dependency licenses | odczyt i rasteryzacja PDF | https://github.com/pypdfium2-team/pypdfium2 |
-| pyreadline3 | 3.5.6 | BSD License | zaleznosc posrednia | https://github.com/pyreadline3/pyreadline3 |
 | PySide6 | 6.11.1 | LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only | interfejs graficzny | https://pyside.org |
 | PySide6_Addons | 6.11.1 | LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only | interfejs graficzny | https://pyside.org |
 | PySide6_Essentials | 6.11.1 | LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only | interfejs graficzny | https://pyside.org |
@@ -72,12 +71,10 @@ ani zapytan poza komputer uzytkownika w konfiguracji domyslnej.
 | shiboken6 | 6.11.1 | LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only | warstwa wiazan Qt dla Pythona | https://pyside.org |
 | six | 1.17.0 | MIT License | zaleznosc posrednia | https://github.com/benjaminp/six |
 | structlog | 26.1.0 | Apache Software License | strukturalne logowanie | https://www.structlog.org/ |
-| sympy | 1.14.0 | BSD License | zaleznosc posrednia | https://sympy.org |
 | tokenizers | 0.22.2 | Apache Software License | tokenizacja tekstu dla modelu embeddingow | https://github.com/huggingface/tokenizers |
 | tqdm | 4.70.0 | MPL-2.0 AND MIT | zaleznosc posrednia | https://tqdm.github.io |
 | typing_extensions | 4.16.0 | PSF-2.0 | zaleznosc posrednia | https://typing-extensions.readthedocs.io/ |
 | urllib3 | 2.7.0 | MIT | zaleznosc posrednia | https://urllib3.readthedocs.io |
-| wheel | 0.47.0 | MIT | zaleznosc posrednia | https://wheel.readthedocs.io/ |
 | xlrd | 2.0.2 | BSD License | odczyt starych plikow XLS | http://www.python-excel.org/ |
 | zipp | 4.1.0 | MIT | zaleznosc posrednia | https://github.com/jaraco/zipp |
 

@@ -163,7 +163,10 @@ nie mogą zmienić struktury wyrażenia.
 zawierać sekretów. Nie ma zakodowanych na sztywno poświadczeń ani kluczy.
 
 **Kontrola: zależności przypięte.** `requirements-lock.txt` zawiera dokładne
-wersje. SBOM w formacie CycloneDX 1.5 jest w `sbom.cdx.json`.
+wersje. SBOM w formacie CycloneDX 1.5 jest w `sbom.cdx.json`. Wykaz powstaje
+z zależności zadeklarowanych w `pyproject.toml` wraz z zależnościami przechodnimi,
+więc pakiet doinstalowany doraźnie do środowiska deweloperskiego nie trafia do
+komponentów produktu. Generator wypisuje takie pakiety jako ostrzeżenie.
 
 **Kontrola: licencje sprawdzone.** Wszystkie zależności mają licencję
 dopuszczającą użycie komercyjne. Składniki o licencjach kłopotliwych (PyMuPDF

@@ -1,7 +1,13 @@
 """Generator SBOM w formacie CycloneDX oraz zestawienia licencji.
 
-Skrypt czyta metadane pakietow zainstalowanych w biezacym srodowisku, uzupelnia je
-o informacje o modelach i komponentach zewnetrznych, a nastepnie zapisuje:
+Wykaz komponentow powstaje z zaleznosci zadeklarowanych w ``pyproject.toml``
+(sekcje ``dependencies`` i ``optional-dependencies``) rozwinietych o zaleznosci
+przechodnie z metadanych ``Requires-Dist``. Wersje i licencje czytamy z pakietow
+zainstalowanych w biezacym srodowisku, ale sama obecnosc pakietu w ``.venv`` nie
+wystarczy: narzedzie doinstalowane doraznie nie jest komponentem produktu.
+Do tego dochodza modele i komponenty zewnetrzne z listy ``EXTERNAL``.
+
+Skrypt zapisuje:
 
 * ``sbom.cdx.json``  Software Bill of Materials w formacie CycloneDX 1.5;
 * ``docs/licencje.md``  czytelna tabela z licencjami i zrodlami.
@@ -17,12 +23,19 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import tomllib
 from dataclasses import dataclass, field
 from importlib.metadata import Distribution, distributions
 from pathlib import Path
 from typing import Any
 
+# packaging jest wymaganiem onnxruntime i faiss-cpu, czyli zawsze jest
+# w srodowisku razem z zaleznosciami podstawowymi.
+from packaging.requirements import InvalidRequirement, Requirement
+from packaging.utils import canonicalize_name
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PYPROJECT = PROJECT_ROOT / "pyproject.toml"
 APP_NAME = "FindDocs"
 APP_VERSION = "0.2.4"
 
@@ -198,14 +211,114 @@ def _source_of(dist: Distribution) -> str:
     return f"https://pypi.org/project/{dist.metadata['Name']}/"
 
 
-def collect_components() -> list[Component]:
-    """Zbiera pakiety Pythona z biezacego srodowiska."""
-    components: list[Component] = []
+@dataclass(slots=True)
+class Resolution:
+    """Wynik przejscia po zadeklarowanych zaleznosciach."""
+
+    #: Zainstalowane pakiety osiagalne z pyproject.toml.
+    reachable: set[str] = field(default_factory=set)
+    #: Zadeklarowane pakiety, ktorych nie ma w srodowisku (np. dodatek export).
+    missing: set[str] = field(default_factory=set)
+    #: Wpisy Requires-Dist, ktorych nie dalo sie sparsowac.
+    broken: list[str] = field(default_factory=list)
+    #: Znormalizowana nazwa samego projektu.
+    own: str = ""
+
+
+def _installed_distributions() -> dict[str, Distribution]:
+    """Zainstalowane pakiety pod znormalizowanymi nazwami."""
+    found: dict[str, Distribution] = {}
     for dist in distributions():
         name = str(dist.metadata["Name"] or "").strip()
-        if not name or _normalize(name) == "finddocs":
+        if name:
+            found.setdefault(canonicalize_name(name), dist)
+    return found
+
+
+def _requirement_applies(requirement: Requirement, extras: frozenset[str]) -> bool:
+    """Czy wymaganie dotyczy tego srodowiska i tych dodatkow.
+
+    Marker pyta albo o srodowisko (``sys_platform == 'win32'``), albo o dodatek
+    (``extra == "export"``). Sprawdzamy kontekst bez dodatku i po jednym
+    kontekscie na kazdy zadany dodatek; wystarczy, ze pasuje ktorykolwiek.
+    """
+    if requirement.marker is None:
+        return True
+    contexts: list[dict[str, str]] = [{"extra": ""}]
+    contexts += [{"extra": extra} for extra in sorted(extras)]
+    return any(requirement.marker.evaluate(context) for context in contexts)
+
+
+def resolve_declared(installed: dict[str, Distribution]) -> Resolution:
+    """Przechodzi graf zaleznosci zadeklarowanych w pyproject.toml.
+
+    Zaczynamy od ``dependencies`` i wszystkich grup ``optional-dependencies``,
+    a potem schodzimy po ``Requires-Dist`` zainstalowanych pakietow. Wezlem jest
+    para (pakiet, zadane dodatki), bo ten sam pakiet moze byc odwiedzony raz bez
+    dodatkow, a raz z dodatkiem, ktory doklada wlasne zaleznosci.
+    """
+    with PYPROJECT.open("rb") as handle:
+        data = tomllib.load(handle)
+    project = data.get("project", {})
+    own_name = canonicalize_name(str(project.get("name") or ""))
+    extra_groups: dict[str, list[str]] = {
+        canonicalize_name(name): list(values)
+        for name, values in (project.get("optional-dependencies") or {}).items()
+    }
+
+    result = Resolution(own=own_name)
+    queue: list[tuple[str, frozenset[str]]] = [
+        (raw, frozenset()) for raw in project.get("dependencies") or []
+    ]
+    for group in extra_groups.values():
+        queue += [(raw, frozenset()) for raw in group]
+
+    visited: set[tuple[str, frozenset[str]]] = set()
+    while queue:
+        raw, context = queue.pop()
+        try:
+            requirement = Requirement(raw)
+        except InvalidRequirement:
+            result.broken.append(raw)
             continue
-        key = _normalize(name)
+        if not _requirement_applies(requirement, context):
+            continue
+        name = canonicalize_name(requirement.name)
+        extras = frozenset(canonicalize_name(extra) for extra in requirement.extras)
+        if (name, extras) in visited:
+            continue
+        visited.add((name, extras))
+        if name == own_name:
+            # Dodatek ``all`` odwoluje sie do samego pakietu. Rozwijamy go
+            # z pyproject, a nie z metadanych zainstalowanej kopii: przy
+            # instalacji edytowalnej te metadane bywaja starsze niz zrodla.
+            for extra in extras:
+                queue += [(entry, frozenset()) for entry in extra_groups.get(extra, [])]
+            continue
+        dist = installed.get(name)
+        if dist is None:
+            result.missing.add(name)
+            continue
+        result.reachable.add(name)
+        queue += [(entry, extras) for entry in dist.metadata.get_all("Requires-Dist") or []]
+    return result
+
+
+def collect_components() -> tuple[list[Component], Resolution, list[str]]:
+    """Zbiera pakiety osiagalne z zaleznosci zadeklarowanych w pyproject.toml.
+
+    Zwraca komponenty, wynik przejscia po grafie oraz nazwy pakietow obecnych
+    w srodowisku, ale nieosiagalnych z tego grafu. Sieroty biora sie z recznych
+    instalacji i z pakietow, ktore przestaly byc czyjas zaleznoscia, a pip ich
+    nie usunal. Do wykazu komponentow produktu nie naleza.
+    """
+    installed = _installed_distributions()
+    resolution = resolve_declared(installed)
+    components: list[Component] = []
+    for key, dist in installed.items():
+        if key not in resolution.reachable:
+            continue
+        name = str(dist.metadata["Name"] or "").strip()
         components.append(
             Component(
                 name=name,
@@ -218,7 +331,8 @@ def collect_components() -> list[Component]:
             )
         )
     components.sort(key=lambda c: c.name.lower())
-    return components
+    orphans = sorted(set(installed) - resolution.reachable - {resolution.own})
+    return components, resolution, orphans
 
 
 def build_cyclonedx(components: list[Component]) -> dict[str, Any]:
@@ -289,6 +403,10 @@ def build_markdown(components: list[Component]) -> str:
         "",
         f"Dokument wygenerowany automatycznie przez `tools/gen_sbom.py` dla wersji {APP_VERSION}.",
         "Odpowiadajacy mu plik SBOM w formacie CycloneDX to `sbom.cdx.json`.",
+        "",
+        "Wykaz obejmuje zaleznosci zadeklarowane w `pyproject.toml` wraz z zaleznosciami",
+        "przechodnimi. Pakiet doinstalowany doraznie do srodowiska deweloperskiego nie jest",
+        "komponentem produktu i nie wchodzi na te liste.",
         "",
         "Wszystkie komponenty dzialaja lokalnie. Zaden z nich nie wysyla tresci dokumentow",
         "ani zapytan poza komputer uzytkownika w konfiguracji domyslnej.",
@@ -365,7 +483,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--docs", type=Path, default=PROJECT_ROOT / "docs" / "licencje.md")
     args = parser.parse_args(argv)
 
-    components = collect_components()
+    components, resolution, orphans = collect_components()
     document = build_cyclonedx(components)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(document, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -379,6 +497,18 @@ def main(argv: list[str] | None = None) -> int:
     unclear = [c.name for c in components if c.license_name == "nieokreslona"]
     if unclear:
         print(f"Uwaga: bez zadeklarowanej licencji: {', '.join(unclear)}")
+    if orphans:
+        print(
+            f"Uwaga: pominieto {len(orphans)} pakietow spoza zaleznosci projektu: "
+            f"{', '.join(orphans)}"
+        )
+    if resolution.missing:
+        print(
+            "Uwaga: zadeklarowane, ale niezainstalowane, wiec bez wpisu w wykazie: "
+            f"{', '.join(sorted(resolution.missing))}"
+        )
+    if resolution.broken:
+        print(f"Uwaga: nieczytelne wpisy Requires-Dist: {', '.join(resolution.broken)}")
     return 0
 
 
