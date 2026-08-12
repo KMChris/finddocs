@@ -13,10 +13,12 @@ i wyniki nie są nigdzie wysyłane.
 5. [Filtry](#filtry)
 6. [Wyniki](#wyniki)
 7. [Źródła dokumentów](#źródła-dokumentów)
-8. [Indeksowanie](#indeksowanie)
-9. [Raport pokrycia](#raport-pokrycia)
-10. [Ustawienia](#ustawienia)
-11. [Częste pytania](#częste-pytania)
+8. [Wyszukiwanie semantyczne](#wyszukiwanie-semantyczne)
+9. [Przechowywanie](#przechowywanie)
+10. [Indeksowanie](#indeksowanie)
+11. [Raport pokrycia](#raport-pokrycia)
+12. [Ustawienia](#ustawienia)
+13. [Częste pytania](#częste-pytania)
 
 ## Pierwsze uruchomienie
 
@@ -41,10 +43,10 @@ ani firmowych.
 
 Komunikat o niedostępnym trybie semantycznym przy starcie oznacza, że na komputerze
 nie ma modelu językowego. Wyszukiwanie dokładne działa normalnie. Model można
-pobrać przyciskiem **Ustawienia...** obok listy modeli na ekranie
-**Źródła i konfiguracja** (wymaga zgody na jednorazowe połączenie z Hugging Face)
-albo poprosić administratora, patrz
-[instrukcja administratora](instrukcja-administratora.md).
+pobrać przyciskiem **Pobierz z Hugging Face...** na karcie **Model embeddingów**
+(ekran **Źródła i konfiguracja**, zakładka **Wyszukiwanie semantyczne**; pobranie
+wymaga zgody na jednorazowe połączenie z Hugging Face) albo poprosić
+administratora, patrz [instrukcja administratora](instrukcja-administratora.md).
 
 ## Ekran wyszukiwania
 
@@ -216,7 +218,12 @@ trybach opisuje wielkość rozważanego zbioru kandydatów.
 
 ## Źródła dokumentów
 
-Ekran **Źródła i konfiguracja** pozwala dodać dwa rodzaje źródeł.
+Ekran **Źródła i konfiguracja** ma trzy zakładki: **Źródła** (lista źródeł
+dokumentów i opcje indeksowania), **Wyszukiwanie semantyczne** (model językowy
+i sposób liczenia embeddingów) oraz **Przechowywanie** (katalog danych
+i magazyn wektorów).
+
+Zakładka **Źródła** pozwala dodać dwa rodzaje źródeł.
 
 **Katalog lokalny albo dysk sieciowy.** Wskaż folder. Możesz ograniczyć
 rozszerzenia plików, wykluczyć wzorce nazw (na przykład `~$*`) i ustawić
@@ -233,39 +240,82 @@ Przyciski **Testuj połączenie** i **Usuń** działają na źródle zaznaczonym
 liście. Dopóki nic nie jest zaznaczone, są nieaktywne. **Usuń** kasuje źródło
 z konfiguracji, a jego dokumenty znikają z indeksu.
 
-## Model wyszukiwania semantycznego
+Pod listą źródeł, w sekcji **Opcje indeksowania**, jest przełącznik
+**Indeksuj zawartość archiwów ZIP**. Po włączeniu archiwum jest rozpakowywane,
+a każdy plik w środku trafia do indeksu jako osobny dokument, tak jak załącznik
+wiadomości. Zmiana zaczyna działać od następnego skanowania.
 
-Na dole ekranu **Źródła i konfiguracja** znajduje się lista modeli językowych.
-Wybierz model i naciśnij **Zastosuj ustawienia modelu**, żeby go aktywować.
-Zmiana modelu wymaga przebudowy części semantycznej indeksu (pełne
-przeindeksowanie na ekranie **Indeksowanie**); do tego czasu działa
-wyszukiwanie dokładne.
+## Wyszukiwanie semantyczne
 
-Przycisk **Ustawienia...** obok listy otwiera okno, w którym można:
+Część semantyczną konfiguruje zakładka **Wyszukiwanie semantyczne** na ekranie
+**Źródła i konfiguracja**. Zakładka składa się z czterech kart. Przełączniki
+pierwszej karty i przyciski karty profili działają od razu; zmiany na kartach
+modelu i obliczeń zapisuje ich przycisk **Zastosuj**. Po zapisie aplikacja sama
+otwiera indeks ponownie, nie trzeba jej restartować.
 
-* **zaimportować własny model z dysku**: wskaż katalog z gotowym eksportem ONNX
-  albo z checkpointem Hugging Face (konwersja wymaga dodatku `finddocs[export]`,
-  opisanego w [instalacji z PyPI](instalacja-pip.md));
-* **pobrać model z Hugging Face**: podaj identyfikator repozytorium, na przykład
-  `sdadas/mmlw-retrieval-roberta-base`. Aplikacja poprosi o zgodę na jednorazowe
-  połączenie z serwerami Hugging Face; poza tym nie nawiązuje żadnych połączeń;
-* **zmienić przedrostki zapytania i treści**: część modeli (na przykład rodzina
-  E5) wymaga doklejenia przedrostka do tekstu przed policzeniem wektora.
-  Przedrostki są wykrywane automatycznie przy imporcie, ale można je poprawić.
-  Zmiana wymaga przebudowy części semantycznej indeksu;
-* **wyłączyć indeksowanie semantyczne**: aplikacja przestaje liczyć wektory
-  i działa wyłącznie w trybie dokładnym. Po ponownym włączeniu wystarczy zwykłe
-  skanowanie, brakujące wektory zostaną uzupełnione automatycznie;
-* **wzbogacić wektory o nazwę pliku i ścieżkę**: każdy fragment dostaje przed
+**Wyszukiwanie semantyczne.** Karta pokazuje aktywny model (nazwę, wymiar
+wektora i licencję) i ma dwa przełączniki:
+
+* **Włącz indeksowanie i wyszukiwanie semantyczne**: po wyłączeniu aplikacja
+  przestaje liczyć wektory i działa wyłącznie w trybie dokładnym. Po ponownym
+  włączeniu wystarczy zwykłe skanowanie, brakujące wektory zostaną uzupełnione
+  automatycznie;
+* **Wzbogacaj wektory o nazwę pliku i ścieżkę**: każdy fragment dostaje przed
   policzeniem wektora nagłówek z nazwą pliku i jego ścieżką w źródle. Dzięki
   temu zapytanie wspominające katalog albo nazwę pliku (na przykład „regulamin
   z katalogu Kadry”) znajdzie dokument, nawet gdy jego treść o nich nie
   wspomina. Nagłówek nie zmienia treści pokazywanej w wynikach ani wyszukiwania
   dokładnego. Zmiana wymaga przebudowy części semantycznej indeksu.
 
-Po zapisaniu zmian aplikacja sama otwiera indeks ponownie; nie trzeba jej
-restartować. Każdy zaimportowany model pojawia się na liście obok modeli
-wbudowanych.
+**Profile dostawcy embeddingów.** Profil to nazwany zestaw ustawień dostawcy:
+model lokalny z urządzeniem obliczeń albo zdalne API z adresem i kontraktem.
+**Aktywuj** przełącza całą konfigurację na wybrany profil, a **Zapisz bieżące
+jako profil** tworzy profil z obecnych ustawień. Edycja ustawień na kartach
+niżej nie zmienia zapisanych profili; znika wtedy tylko wskazanie profilu
+aktywnego.
+
+**Model embeddingów.** Karta jest widoczna, gdy dostawcą jest model lokalny.
+Można tu:
+
+* **wybrać aktywny model** z listy modeli wbudowanych i zaimportowanych oraz
+  przełączyć wersję skwantyzowaną (szybszą na procesorze, z mniejszym plikiem);
+* **zmienić przedrostki zapytania i treści**: część modeli (na przykład rodzina
+  E5) wymaga doklejenia przedrostka do tekstu przed policzeniem wektora.
+  Przedrostki są wykrywane automatycznie przy imporcie, ale można je poprawić;
+* **zaimportować własny model z dysku** (przycisk **Importuj z dysku...**):
+  wskaż katalog z gotowym eksportem ONNX albo z checkpointem Hugging Face
+  (konwersja wymaga dodatku `finddocs[export]`, opisanego w
+  [instalacji z PyPI](instalacja-pip.md));
+* **pobrać model z Hugging Face** (przycisk **Pobierz z Hugging Face...**):
+  podaj identyfikator repozytorium, na przykład
+  `sdadas/mmlw-retrieval-roberta-base`. Aplikacja poprosi o zgodę na
+  jednorazowe połączenie z serwerami Hugging Face; poza tym nie nawiązuje
+  żadnych połączeń.
+
+Parametry importu (nazwę, pooling, kwantyzację) podaje się w osobnym oknie.
+Każdy zaimportowany model pojawia się na liście obok modeli wbudowanych.
+Zmiana modelu, wariantu skwantyzowanego albo przedrostków wymaga przebudowy
+części semantycznej indeksu (pełne przeindeksowanie na ekranie
+**Indeksowanie**); do tego czasu działa wyszukiwanie dokładne.
+
+**Obliczenia embeddingów.** Przełącznik dostawcy: **Model lokalny (ONNX)**
+liczy embeddingi na tym komputerze, bez połączeń sieciowych, a **Zdalne API
+organizacji** wysyła treść fragmentów do API wskazanego przez organizację.
+Dla modelu lokalnego karta ustawia urządzenie obliczeń (procesor albo kartę
+graficzną) i wielkość paczek. Dla zdalnego API: adres, kontrakt, nazwę modelu,
+wymiar wektora oraz klucz API, przechowywany w magazynie poświadczeń, nigdy
+w pliku konfiguracyjnym. Zmiana dostawcy wymaga przebudowy części semantycznej
+indeksu. Szczegóły w dokumencie
+[embeddingi na GPU i zdalne API](embeddingi-gpu-api.md).
+
+## Przechowywanie
+
+Zakładka **Przechowywanie** pokazuje katalog danych aplikacji, wolne miejsce
+i rozmiar indeksu. **Zmień katalog** wskazuje nowe miejsce na dane; zmiana
+zaczyna działać po ponownym uruchomieniu aplikacji. Karta **Magazyn wektorów**
+przełącza między plikiem lokalnym (FAISS) a zewnętrzną bazą PostgreSQL
+z rozszerzeniem pgvector. To opcja dla administratorów, opisana w dokumencie
+[baza wektorowa](baza-wektorowa.md).
 
 ## Indeksowanie
 
@@ -383,8 +433,9 @@ administrator, patrz [odbudowa indeksu](odbudowa-indeksu.md).
 **Czy moje dokumenty gdzieś wyciekają?**
 Nie. Aplikacja nie zawiera telemetrii, a cały ruch wychodzący jest domyślnie
 zablokowany. Jedyne dozwolone połączenia to Microsoft Graph (gdy skonfigurujesz
-SharePoint) i jednorazowe pobranie modelu. Lista dozwolonych adresów jest widoczna
-na zakładce **Diagnostyka** w Ustawieniach.
+SharePoint), jednorazowe pobranie modelu oraz połączenia włączone jawnie przez
+administratora: zdalne API embeddingów i zewnętrzna baza wektorów. Lista
+dozwolonych adresów jest widoczna na zakładce **Diagnostyka** w Ustawieniach.
 
 **Gdzie są moje dane?**
 W katalogu `%LOCALAPPDATA%\FindDocs`. Indeks zawiera treść dokumentów, więc

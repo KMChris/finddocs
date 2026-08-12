@@ -186,11 +186,13 @@ na ekranie **Źródła i konfiguracja**. `finddocs model use` przełącza aktywn
 model i synchronizuje ustawienia (przedrostki, długość sekwencji) z jego
 manifestem.
 
-Te same operacje są dostępne w GUI: przycisk **Ustawienia...** obok listy
-modeli otwiera okno z importem z dysku, pobieraniem z Hugging Face, edycją
-przedrostków zapytania i treści oraz przełącznikiem indeksowania semantycznego.
-Wyłączenie semantyki zatrzymuje liczenie wektorów (działa tylko tryb dokładny);
-po ponownym włączeniu zwykłe skanowanie uzupełnia brakujące wektory.
+Te same operacje są dostępne w GUI, na zakładce **Wyszukiwanie semantyczne**
+ekranu **Źródła i konfiguracja**: karta **Model embeddingów** zawiera wybór
+aktywnego modelu, import z dysku, pobieranie z Hugging Face i edycję
+przedrostków zapytania i treści, a karta **Wyszukiwanie semantyczne**
+przełącznik indeksowania semantycznego. Wyłączenie semantyki zatrzymuje
+liczenie wektorów (działa tylko tryb dokładny); po ponownym włączeniu zwykłe
+skanowanie uzupełnia brakujące wektory.
 
 ### Ręczne wskazanie modelu
 
