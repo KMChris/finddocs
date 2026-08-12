@@ -20,8 +20,7 @@ from finddocs.indexing.service import IndexService
 from finddocs.jobs.runner import JobRunner
 from finddocs.logging_setup import get_logger
 from finddocs.search.service import SearchService
-from finddocs.security.network import EgressCategory, NetworkPolicy, set_policy
-from finddocs.types import SourceKind
+from finddocs.security.network import policy_from_config, set_policy
 
 log = get_logger(__name__)
 
@@ -95,14 +94,7 @@ class AppContext:
             self.runner.config = self.config
 
     def _apply_network_policy(self) -> None:
-        policy = NetworkPolicy.offline()
-        if any(s.kind is SourceKind.SHAREPOINT and s.enabled for s in self.config.sources):
-            policy.enable(EgressCategory.MICROSOFT_GRAPH)
-        if self.config.allow_model_download:
-            policy.enable(EgressCategory.MODEL_DOWNLOAD)
-        if self.config.embedding.internal_api_enabled:
-            policy.enable(EgressCategory.INTERNAL_API)
-        set_policy(policy)
+        set_policy(policy_from_config(self.config))
 
     # --- otwieranie dokumentow -------------------------------------------
 

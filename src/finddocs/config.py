@@ -102,7 +102,7 @@ class EmbeddingSettings:
     """
 
     provider: str = "local_onnx"
-    """local_onnx albo internal_api (drugi jest przygotowany, ale wylaczony)."""
+    """local_onnx albo internal_api (zdalne API wymaga jawnego wlaczenia)."""
 
     model_key: str = "mmlw-retrieval-roberta-base"
     model_path: str = ""
@@ -113,12 +113,33 @@ class EmbeddingSettings:
     num_threads: int = 0
     """0 oznacza automatyczny dobór na podstawie liczby rdzeni."""
 
+    device: str = "cpu"
+    """Urządzenie obliczeń lokalnego modelu: cpu, auto, dml albo cuda.
+
+    Wartości dml i cuda wymagają pakietu onnxruntime z odpowiednim providerem
+    (onnxruntime-directml albo onnxruntime-gpu). Gdy żądanego urządzenia nie ma
+    w środowisku, dostawca działa na CPU i odnotowuje to w diagnostyce.
+    """
+
     quantized: bool = True
     query_prefix: str = "zapytanie: "
     passage_prefix: str = ""
     normalize: bool = True
     internal_api_url: str = ""
     internal_api_enabled: bool = False
+    internal_api_protocol: str = "finddocs"
+    """Kontrakt zdalnego API: finddocs albo openai (zgodny z /v1/embeddings)."""
+
+    internal_api_model: str = ""
+    """Nazwa modelu po stronie zdalnego API. Wchodzi do skrótu zgodności wektorów."""
+
+    internal_api_dimension: int = 768
+    internal_api_batch_size: int = 64
+    internal_api_timeout_seconds: float = 30.0
+    internal_api_max_retries: int = 3
+    internal_api_key_header: str = ""
+    """Pusta wartość oznacza nagłówek Authorization: Bearer <klucz>.
+    Inna wartość to nazwa nagłówka, w którym zdalne API oczekuje klucza."""
 
 
 @dataclass(slots=True)
@@ -194,6 +215,15 @@ class IndexingSettings:
     extraction_timeout_seconds: float = 300.0
     office_com_enabled: bool = True
     office_com_timeout_seconds: float = 90.0
+    embed_batch_documents: int = 8
+    """Ile dokumentów może czekać na wspólne policzenie embeddingów.
+
+    Wartość 1 wyłącza tryb batchowy: każdy dokument jest osadzany i zapisywany
+    od razu, tak jak przed wprowadzeniem batchowania.
+    """
+
+    embed_batch_chunks: int = 128
+    """Górny limit fragmentów w buforze batcha. Chroni pamięć przy dużych plikach."""
 
 
 @dataclass(slots=True)
@@ -267,7 +297,13 @@ class AppConfig:
         return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:32]
 
     def vector_compat_payload(self) -> dict[str, Any]:
-        """Elementy konfiguracji, ktorych zmiana uniewaznia indeks wektorowy."""
+        """Elementy konfiguracji, ktorych zmiana uniewaznia indeks wektorowy.
+
+        Urzadzenie obliczen (CPU albo GPU) celowo nie wchodzi do skrotu: ten sam
+        model daje te same wektory niezaleznie od miejsca liczenia. Pola zdalnego
+        API sa dodawane tylko dla dostawcy internal_api, zeby skrot dotychczasowych
+        konfiguracji lokalnych nie zmienil sie po aktualizacji aplikacji.
+        """
         payload = self.index_compat_payload()
         payload.update(
             {
@@ -280,6 +316,14 @@ class AppConfig:
                 "normalize": self.embedding.normalize,
             }
         )
+        if self.embedding.provider == "internal_api":
+            payload.update(
+                {
+                    "internal_api_protocol": self.embedding.internal_api_protocol,
+                    "internal_api_model": self.embedding.internal_api_model,
+                    "internal_api_dimension": self.embedding.internal_api_dimension,
+                }
+            )
         return payload
 
     def vector_compat_hash(self) -> str:

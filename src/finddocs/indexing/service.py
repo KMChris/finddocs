@@ -12,7 +12,12 @@ from typing import Any
 
 from finddocs.app_paths import AppPaths
 from finddocs.config import AppConfig
-from finddocs.errors import IndexIncompatibleError, ProviderError
+from finddocs.errors import (
+    ConfigurationError,
+    IndexIncompatibleError,
+    NetworkPolicyError,
+    ProviderError,
+)
 from finddocs.indexing.db import Database, check_fts5
 from finddocs.indexing.fts import FtsIndex
 from finddocs.indexing.maintenance import (
@@ -143,8 +148,10 @@ class IndexService:
         from finddocs.providers import create_provider
 
         try:
-            self.provider = create_provider(self.config.embedding)
-        except ProviderError as exc:
+            self.provider = create_provider(
+                self.config.embedding, credentials_dir=self.paths.config_dir
+            )
+        except (ProviderError, ConfigurationError, NetworkPolicyError) as exc:
             self.provider = None
             self._notes.append(
                 f"Wyszukiwanie semantyczne jest niedostępne: {exc.user_message} "

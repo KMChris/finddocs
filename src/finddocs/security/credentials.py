@@ -220,7 +220,12 @@ def token_cache_key(source_id: str) -> str:
     return f"msal-token-cache::{source_id}"
 
 
+#: Nazwa wpisu z kluczem API zdalnego dostawcy embeddingow.
+EMBEDDING_API_KEY_NAME: Final = "embedding-api-key"
+
+
 __all__ = [
+    "EMBEDDING_API_KEY_NAME",
     "SERVICE_NAME",
     "CredentialStore",
     "DpapiCredentialStore",

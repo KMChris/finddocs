@@ -209,22 +209,28 @@ def _sqlite_info() -> dict[str, Any]:
 def _onnxruntime_info() -> dict[str, Any]:
     """Wersja ONNX Runtime i lista providerow widocznych w tym srodowisku.
 
-    Lista jest informacja o srodowisku, a nie o wyborze aplikacji: sesje sa
-    tworzone zawsze z jawna lista zawierajaca wylacznie CPUExecutionProvider.
+    Lista jest informacja o srodowisku, a nie o wyborze aplikacji: sesje powstaja
+    zawsze z jawnej listy providerow liczacych lokalnie (CPU, DirectML, CUDA).
     """
-    from finddocs.providers.onnx_local import ALLOWED_EXECUTION_PROVIDERS
+    from finddocs.providers.onnx_local import (
+        ALLOWED_EXECUTION_PROVIDERS,
+        DEVICE_LABELS,
+        available_devices,
+    )
 
     try:
         import onnxruntime
     except ImportError:
         return {"wersja": None, "providery_w_srodowisku": [], "dostępny": False}
     providers = list(onnxruntime.get_available_providers())
+    devices = available_devices()
     return {
         "wersja": str(getattr(onnxruntime, "__version__", "")),
         "providery_w_srodowisku": providers,
-        "provider_uzywany_przez_aplikacje": ", ".join(ALLOWED_EXECUTION_PROVIDERS),
+        "providery_dozwolone": ", ".join(ALLOWED_EXECUTION_PROVIDERS),
         "dostępny": True,
-        "srodowisko_ma_tylko_cpu": providers == list(ALLOWED_EXECUTION_PROVIDERS),
+        "urzadzenia_dostepne": [DEVICE_LABELS[d] for d, ok in devices.items() if ok],
+        "srodowisko_ma_tylko_cpu": not any(ok for d, ok in devices.items() if d != "cpu"),
     }
 
 

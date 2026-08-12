@@ -10,6 +10,14 @@ i polityka sieciowa mają na to miejsce. Nie oznacza to, że są gotowe.
 
 ## Etap 1: akceleracja GPU dla embeddingów
 
+**Stan: zrealizowane w wersji 0.2.x.** Lokalny dostawca obsługuje urządzenia
+`cpu`, `auto`, `dml` i `cuda` z jawną listą providerów i kontrolą po utworzeniu
+sesji, indeksowanie osadza fragmenty wielu dokumentów wspólnie, a zdalne API
+embeddingów (przygotowane pod klaster GPU) przyjmuje klucz API z magazynu
+poświadczeń. Warunki z tego rozdziału zostały zachowane: CPU pozostaje
+domyślne, `AzureExecutionProvider` pozostaje zakazany, a zmiana urządzenia nie
+unieważnia indeksu. Instrukcja: [embeddingi na GPU i zdalne API](embeddingi-gpu-api.md).
+
 ### Po co
 
 Embeddingi na CPU przetwarzają około 351 fragmentów na sekundę w wariancie

@@ -49,6 +49,7 @@ from finddocs.extractors.registry import ExtractorRegistry
 from finddocs.indexing.service import IndexService
 from finddocs.indexing.writer import DocumentPayload
 from finddocs.jobs.control import JobControl, RetryPolicy
+from finddocs.jobs.embed_batch import EmbeddingBatcher
 from finddocs.logging_setup import get_logger
 from finddocs.ocr.detector import decide as decide_ocr
 from finddocs.ocr.detector import pages_needing_ocr
@@ -93,6 +94,11 @@ class DocumentOutcome:
     error_message: str | None = None
     warnings: list[str] = field(default_factory=list)
     skipped_unchanged: bool = False
+    deferred: bool = False
+    """Dokument czeka w buforze batchera na embeddingi i zapis.
+
+    Status i liczba fragmentow takiego wyniku staja sie wiazace dopiero po
+    oproznieniu bufora. Zadanie nie liczy go do postepu przy zwrocie."""
 
     @property
     def is_success(self) -> bool:
@@ -108,11 +114,14 @@ class DocumentPipeline:
         index: IndexService,
         registry: ExtractorRegistry,
         ocr: OcrService,
+        *,
+        batcher: EmbeddingBatcher | None = None,
     ) -> None:
         self.config = config
         self.index = index
         self.registry = registry
         self.ocr = ocr
+        self.batcher = batcher
         self.retry = RetryPolicy(
             max_attempts=config.indexing.max_retries_per_document,
             base_delay=config.indexing.retry_backoff_seconds,
@@ -262,6 +271,7 @@ class DocumentPipeline:
         control: JobControl,
         scan_id: int,
         workspace: Path,
+        track_outcome: bool = True,
     ) -> DocumentOutcome:
         doc_id = record.doc_id
         context = ExtractionContext(
@@ -362,7 +372,6 @@ class DocumentPipeline:
             )
             return DocumentOutcome(doc_id=doc_id, status=DocumentStatus.EMPTY, bytes_processed=size)
 
-        embeddings = self._embed(chunks, control)
         metadata = result.metadata if result else None
         payload = DocumentPayload(
             doc_id=doc_id,
@@ -379,11 +388,45 @@ class DocumentPipeline:
             support_level=result.support_level if result else SupportLevel.LIMITED,
             title=(metadata.title if metadata else None) or None,
             author=(metadata.author if metadata else None) or item.author,
-            embeddings=embeddings,
+            embeddings=None,
             model_key=self.index.provider.info.model_key if self.index.provider else None,
             warnings=warnings,
         )
-        write = self.index.writer.write_document(payload)
+
+        # Tryb batchowy: fragmenty czekaja na wspolne embeddingi, a zapis
+        # wykona batcher. Bez semantyki bufor nie ma czego grupowac, wiec
+        # dokument idzie od razu zwykla sciezka.
+        batcher = self.batcher if self.index.semantic_available else None
+        if batcher is not None:
+            outcome = DocumentOutcome(
+                doc_id=doc_id,
+                status=DocumentStatus.INDEXED,
+                chunks=len(chunks),
+                used_ocr=ocr_pages > 0,
+                ocr_pages=ocr_pages,
+                bytes_processed=size,
+                warnings=warnings,
+                deferred=True,
+            )
+            batcher.submit(
+                payload,
+                [chunk.text for chunk in chunks],
+                outcome,
+                tracked=track_outcome,
+                control=control,
+            )
+        else:
+            payload.embeddings = self._embed(chunks, control)
+            write = self.index.writer.write_document(payload)
+            outcome = DocumentOutcome(
+                doc_id=doc_id,
+                status=write.status,
+                chunks=write.chunk_count,
+                used_ocr=ocr_pages > 0,
+                ocr_pages=ocr_pages,
+                bytes_processed=size,
+                warnings=warnings,
+            )
 
         attachments = result.attachments if result else []
         if attachments and self.config.indexing.office_com_enabled is not None:
@@ -406,15 +449,7 @@ class DocumentPipeline:
                 retryable=False,
             )
 
-        return DocumentOutcome(
-            doc_id=doc_id,
-            status=write.status,
-            chunks=write.chunk_count,
-            used_ocr=ocr_pages > 0,
-            ocr_pages=ocr_pages,
-            bytes_processed=size,
-            warnings=warnings,
-        )
+        return outcome
 
     def _run_ocr(
         self,
@@ -500,6 +535,7 @@ class DocumentPipeline:
                     control=control,
                     scan_id=scan_id,
                     workspace=child_dir,
+                    track_outcome=False,
                 )
             except JobCancelledError:
                 raise

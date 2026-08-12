@@ -26,6 +26,7 @@ from finddocs.errors import (
 from finddocs.extractors.registry import ExtractorRegistry, build_default_registry
 from finddocs.indexing.service import IndexService
 from finddocs.jobs.control import JobControl
+from finddocs.jobs.embed_batch import EmbeddingBatcher
 from finddocs.jobs.pipeline import DocumentPipeline
 from finddocs.logging_setup import bind_context, clear_context, get_logger
 from finddocs.ocr.service import OcrService
@@ -96,7 +97,20 @@ class IndexingJob:
             stage="przygotowanie",
             stage_label="Przygotowanie",
         )
-        self._pipeline = DocumentPipeline(config, index, self.registry, self.ocr)
+        # Tryb batchowy embeddingow: fragmenty kolejnych dokumentow sa osadzane
+        # wspolnie. Wartosc 1 w konfiguracji wylacza bufor i przywraca zapis
+        # kazdego dokumentu od razu.
+        batch_documents = max(1, config.indexing.embed_batch_documents)
+        self._batcher: EmbeddingBatcher | None = None
+        if batch_documents > 1 and index.semantic_available:
+            self._batcher = EmbeddingBatcher(
+                index,
+                max_documents=batch_documents,
+                max_chunks=max(1, config.indexing.embed_batch_chunks),
+            )
+        self._pipeline = DocumentPipeline(
+            config, index, self.registry, self.ocr, batcher=self._batcher
+        )
         self._workspace: Path | None = None
         self._started = _dt.datetime.now().astimezone()
 
@@ -132,14 +146,18 @@ class IndexingJob:
                 self._run_source(source)
             self._finish(JobState.COMPLETED)
         except JobCancelledError:
+            self._discard_embedding_buffer()
             self._finish(JobState.CANCELLED, "Zadanie zostało anulowane przez użytkownika.")
         except StorageSpaceError as exc:
+            self._salvage_embedding_buffer()
             self._finish(JobState.FAILED, exc.user_message)
         except FindDocsError as exc:
             log.error("job.failed", code=exc.code, error_type=type(exc).__name__)
+            self._salvage_embedding_buffer()
             self._finish(JobState.FAILED, exc.user_message)
         except Exception as exc:
             log.error("job.crashed", error_type=type(exc).__name__)
+            self._salvage_embedding_buffer()
             self._finish(JobState.FAILED, f"Nieoczekiwany błąd zadania: {type(exc).__name__}.")
         finally:
             if self._workspace is not None:
@@ -230,16 +248,22 @@ class IndexingJob:
                     )
                     self._emit_progress()
                     continue
-                self._apply_outcome(outcome)
+                if not outcome.deferred:
+                    self._apply_outcome(outcome)
+                self._drain_embedding_outcomes()
                 since_checkpoint += 1
 
                 if since_checkpoint >= self.config.indexing.checkpoint_every:
+                    # Bufor batchera musi byc pusty przed checkpointem, inaczej
+                    # licznik przetworzonych dokumentow wyprzedzilby zapisy.
+                    self._flush_embeddings()
                     self._save_checkpoint(source, scan_id, connector.cursor(), discovered)
                     since_checkpoint = 0
                 self._guard_temp_space()
                 self._emit_progress()
 
             self.snapshot.discovery_complete = True
+            self._flush_embeddings()
             self._save_checkpoint(source, scan_id, connector.cursor(), discovered, done=True)
 
             if self.options.detect_deletions:
@@ -254,6 +278,37 @@ class IndexingJob:
             self.index.repository.clear_checkpoint(source.source_id, self.job_id)
         finally:
             connector.close()
+
+    # --- batchowanie embeddingow -----------------------------------------
+
+    def _drain_embedding_outcomes(self) -> None:
+        """Dolicza do postepu dokumenty zapisane przez batcher od ostatniego razu."""
+        if self._batcher is None:
+            return
+        for outcome in self._batcher.take_completed():
+            self._apply_outcome(outcome)
+
+    def _flush_embeddings(self) -> None:
+        """Oproznia bufor batchera i dolicza wyniki do postepu."""
+        if self._batcher is None:
+            return
+        self._batcher.flush(self.control)
+        self._drain_embedding_outcomes()
+
+    def _discard_embedding_buffer(self) -> None:
+        """Porzuca bufor po anulowaniu. Dokumenty wroca przy nastepnym skanowaniu."""
+        if self._batcher is not None:
+            self._batcher.discard()
+
+    def _salvage_embedding_buffer(self) -> None:
+        """Po bledzie zadania probuje zapisac to, co czeka w buforze."""
+        if self._batcher is None:
+            return
+        try:
+            self._flush_embeddings()
+        except Exception as exc:
+            log.warning("job.embed_salvage_failed", error_type=type(exc).__name__)
+            self._batcher.discard()
 
     # --- pomocnicze -------------------------------------------------------
 

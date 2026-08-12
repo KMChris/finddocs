@@ -51,7 +51,11 @@ def _load(args: argparse.Namespace) -> AppConfig:
 
 def _open_index(config: AppConfig, *, load_provider: bool = True) -> Any:
     from finddocs.indexing.service import IndexService
+    from finddocs.security.network import policy_from_config, set_policy
 
+    # CLI stosuje te sama polityke sieciowa co GUI: bez tego zdalne API
+    # embeddingow i SharePoint bylyby blokowane przez domyslny tryb offline.
+    set_policy(policy_from_config(config))
     service = IndexService(config)
     service.open(load_provider=load_provider)
     return service
@@ -605,6 +609,136 @@ def cmd_model_remove(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def cmd_model_device(args: argparse.Namespace) -> int:
+    """Pokazuje albo zmienia urzadzenie obliczen lokalnego modelu."""
+    from finddocs.providers.onnx_local import DEVICE_LABELS, available_devices
+
+    config = _load(args)
+    devices = available_devices()
+
+    if args.value:
+        config.embedding.device = args.value
+        if args.batch is not None:
+            config.embedding.batch_size = max(1, args.batch)
+        if args.batch_documents is not None:
+            config.indexing.embed_batch_documents = max(1, args.batch_documents)
+        save_config(config, _paths(args).config_file)
+
+    data = {
+        "urzadzenie": config.embedding.device,
+        "fragmenty_w_batchu": config.embedding.batch_size,
+        "dokumenty_osadzane_wspolnie": config.indexing.embed_batch_documents,
+        "dostepne_w_srodowisku": [
+            DEVICE_LABELS[key] for key, available in devices.items() if available
+        ],
+    }
+    _print(data, as_json=args.json)
+    if args.value and args.value not in {"auto", "cpu"} and not devices.get(args.value, False):
+        print()
+        print("Uwaga: wybrane urządzenie nie jest dostępne w tym środowisku.")
+        print("Obliczenia będą wykonywane na CPU do czasu instalacji pakietu:")
+        print("  DirectML: pip uninstall onnxruntime && pip install onnxruntime-directml")
+        print("  CUDA:     pip uninstall onnxruntime && pip install onnxruntime-gpu")
+    return EXIT_OK
+
+
+def cmd_model_api(args: argparse.Namespace) -> int:
+    """Konfiguruje zdalne API embeddingow."""
+    config = _load(args)
+    embedding = config.embedding
+    changed_identity = False
+
+    if args.url is not None:
+        embedding.internal_api_url = args.url.strip()
+    if args.protocol is not None and args.protocol != embedding.internal_api_protocol:
+        embedding.internal_api_protocol = args.protocol
+        changed_identity = True
+    if args.model is not None and args.model != embedding.internal_api_model:
+        embedding.internal_api_model = args.model
+        changed_identity = True
+    if args.dimension is not None and args.dimension != embedding.internal_api_dimension:
+        embedding.internal_api_dimension = max(1, args.dimension)
+        changed_identity = True
+    if args.batch is not None:
+        embedding.internal_api_batch_size = max(1, args.batch)
+    if args.key_header is not None:
+        embedding.internal_api_key_header = args.key_header.strip()
+    if args.timeout is not None:
+        embedding.internal_api_timeout_seconds = max(1.0, args.timeout)
+    if args.retries is not None:
+        embedding.internal_api_max_retries = max(1, args.retries)
+
+    if args.enable and args.disable:
+        print("Opcje --enable i --disable wykluczają się.", file=sys.stderr)
+        return EXIT_USAGE
+    if args.enable:
+        if not embedding.internal_api_url:
+            print("Podaj adres API (--url), zanim włączysz zdalnego dostawcę.", file=sys.stderr)
+            return EXIT_ERROR
+        if embedding.provider != "internal_api":
+            changed_identity = True
+        embedding.internal_api_enabled = True
+        embedding.provider = "internal_api"
+    if args.disable:
+        if embedding.provider == "internal_api":
+            changed_identity = True
+        embedding.internal_api_enabled = False
+        embedding.provider = "local_onnx"
+
+    save_config(config, _paths(args).config_file)
+    data = {
+        "dostawca": embedding.provider,
+        "wlaczone": embedding.internal_api_enabled,
+        "adres": embedding.internal_api_url or "(nie podano)",
+        "kontrakt": embedding.internal_api_protocol,
+        "model": embedding.internal_api_model or "(nie podano)",
+        "wymiar": embedding.internal_api_dimension,
+        "teksty_w_zadaniu": embedding.internal_api_batch_size,
+        "naglowek_klucza": embedding.internal_api_key_header or "Authorization: Bearer",
+    }
+    _print(data, as_json=args.json)
+    if embedding.internal_api_enabled:
+        print()
+        print("Uwaga: treść fragmentów dokumentów będzie wysyłana na wskazany adres.")
+        print("Połączenia są ograniczone do hosta z adresu API, wyłącznie przez https.")
+    if changed_identity:
+        print()
+        print("Zmiana dostawcy embeddingów wymaga przebudowy części semantycznej:")
+        print("  finddocs maintenance rebuild --vectors-only")
+        print("  finddocs index")
+    return EXIT_OK
+
+
+def cmd_model_api_key(args: argparse.Namespace) -> int:
+    """Zapisuje albo usuwa klucz API zdalnego dostawcy w magazynie poswiadczen."""
+    from finddocs.security.credentials import (
+        EMBEDDING_API_KEY_NAME,
+        create_credential_store,
+    )
+
+    paths = _paths(args).ensure()
+    store = create_credential_store(paths.config_dir)
+    if args.clear:
+        store.delete_secret(EMBEDDING_API_KEY_NAME)
+        print("Klucz API został usunięty z magazynu poświadczeń.")
+        return EXIT_OK
+
+    import getpass
+
+    try:
+        key = getpass.getpass("Klucz API (wpis nie jest wyświetlany): ").strip()
+    except (EOFError, OSError):
+        key = ""
+    if not key:
+        print("Nie podano klucza. Nic nie zapisano.", file=sys.stderr)
+        return EXIT_ERROR
+    store.set_secret(EMBEDDING_API_KEY_NAME, key)
+    print(f"Klucz API został zapisany w magazynie poświadczeń ({store.name}).")
+    if not store.persistent:
+        print("Uwaga: magazyn nie jest trwały, klucz zniknie po zamknięciu procesu.")
+    return EXIT_OK
+
+
 # --- parser argumentow ----------------------------------------------------
 
 
@@ -748,6 +882,62 @@ def build_parser() -> argparse.ArgumentParser:
     model_remove.add_argument("key")
     model_remove.add_argument("--yes", action="store_true", help="nie pytaj o potwierdzenie")
     model_remove.set_defaults(func=cmd_model_remove)
+
+    model_device = model_sub.add_parser(
+        "device",
+        help="pokazuje albo zmienia urzadzenie obliczen (CPU/GPU)",
+        description=(
+            "Bez argumentu pokazuje biezace urzadzenie i dostepnosc GPU. "
+            "Urzadzenia dml i cuda wymagaja pakietu onnxruntime-directml "
+            "albo onnxruntime-gpu. Zmiana urzadzenia nie wymaga przebudowy indeksu."
+        ),
+    )
+    model_device.add_argument(
+        "value", nargs="?", choices=["cpu", "auto", "dml", "cuda"], help="nowe urzadzenie"
+    )
+    model_device.add_argument("--batch", type=int, help="fragmenty w jednym przebiegu modelu")
+    model_device.add_argument(
+        "--batch-documents", type=int, help="dokumenty osadzane wspolnie przy indeksowaniu"
+    )
+    model_device.set_defaults(func=cmd_model_device)
+
+    model_api = model_sub.add_parser(
+        "api",
+        help="konfiguruje zdalne API embeddingów",
+        description=(
+            "Ustawia adres i parametry zdalnego API embeddingów oraz przelacza "
+            "dostawce. Wlaczenie oznacza wysylanie tresci fragmentow na podany adres. "
+            "Klucz API zapisuje osobne polecenie: finddocs model api-key."
+        ),
+    )
+    model_api.add_argument("--enable", action="store_true", help="przelacz na zdalne API")
+    model_api.add_argument("--disable", action="store_true", help="wroc do modelu lokalnego")
+    model_api.add_argument("--url", help="adres API, np. https://embeddingi.example.com/v1")
+    model_api.add_argument(
+        "--protocol", choices=["finddocs", "openai"], help="kontrakt zdalnego API"
+    )
+    model_api.add_argument("--model", help="nazwa modelu po stronie API")
+    model_api.add_argument("--dimension", type=int, help="wymiar zwracanych wektorów")
+    model_api.add_argument("--batch", type=int, help="liczba tekstów w jednym żądaniu")
+    model_api.add_argument(
+        "--key-header",
+        help="nazwa naglowka z kluczem; pusta wartosc oznacza Authorization: Bearer",
+    )
+    model_api.add_argument("--timeout", type=float, help="limit czasu żądania w sekundach")
+    model_api.add_argument("--retries", type=int, help="liczba prób przy błędach przejściowych")
+    model_api.set_defaults(func=cmd_model_api)
+
+    model_api_key = model_sub.add_parser(
+        "api-key",
+        help="zapisuje klucz API w magazynie poświadczeń",
+        description=(
+            "Klucz jest pobierany z ukrytego wejscia i trafia wylacznie do magazynu "
+            "poswiadczen Windows (albo DPAPI). Nigdy nie jest zapisywany w pliku "
+            "konfiguracyjnym ani logach."
+        ),
+    )
+    model_api_key.add_argument("--clear", action="store_true", help="usuwa zapisany klucz")
+    model_api_key.set_defaults(func=cmd_model_api_key)
 
     sub.add_parser("gui", help="uruchamia interfejs graficzny").set_defaults(func=cmd_gui)
     return parser

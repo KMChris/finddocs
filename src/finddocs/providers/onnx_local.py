@@ -1,8 +1,15 @@
-"""Lokalny dostawca embeddingow oparty o ONNX Runtime na CPU.
+"""Lokalny dostawca embeddingow oparty o ONNX Runtime.
 
-Sesja ONNX Runtime jest tworzona wylacznie z ``CPUExecutionProvider``. Biblioteka
-domyslnie wystawia takze ``AzureExecutionProvider``, ktory potrafi wysylac dane do
-uslugi zdalnej. Jawne podanie listy providerow zamyka te droge.
+Sesja ONNX Runtime jest tworzona wylacznie z jawnej listy providerow liczacych
+na sprzecie tego komputera: CPU, DirectML albo CUDA. Biblioteka domyslnie
+wystawia takze ``AzureExecutionProvider``, ktory potrafi wysylac dane do uslugi
+zdalnej. Ten provider nigdy nie znajdzie sie na liscie, a lista aktywna po
+utworzeniu sesji jest dodatkowo sprawdzana.
+
+Domyslnym urzadzeniem jest CPU. Urzadzenia GPU wymagaja pakietu onnxruntime
+z odpowiednim providerem: onnxruntime-directml (DML) albo onnxruntime-gpu (CUDA).
+Gdy zadanego urzadzenia nie ma w srodowisku, dostawca liczy na CPU i zapisuje
+te informacje w opisie diagnostycznym.
 """
 
 from __future__ import annotations
@@ -14,7 +21,7 @@ from typing import Any
 
 import numpy as np
 
-from finddocs.errors import ModelNotAvailableError, ProviderError
+from finddocs.errors import ConfigurationError, ModelNotAvailableError, ProviderError
 from finddocs.logging_setup import get_logger
 from finddocs.providers.base import EmbeddingProvider, ProviderInfo, l2_normalize
 from finddocs.providers.model_manifest import (
@@ -26,10 +33,84 @@ from finddocs.types import CancellationToken
 
 log = get_logger(__name__)
 
-#: Jedyny dozwolony provider ONNX Runtime. Nie zmieniaj bez analizy bezpieczenstwa.
-ALLOWED_EXECUTION_PROVIDERS: tuple[str, ...] = ("CPUExecutionProvider",)
+#: Sesje pomocnicze (import i weryfikacja modelu) zawsze licza na CPU.
+CPU_EXECUTION_PROVIDERS: tuple[str, ...] = ("CPUExecutionProvider",)
+
+#: Wszystkie providery ONNX Runtime, ktore licza lokalnie na tym komputerze.
+#: Zaden inny (w szczegolnosci AzureExecutionProvider) nie moze trafic do sesji.
+#: Nie rozszerzaj bez analizy bezpieczenstwa.
+ALLOWED_EXECUTION_PROVIDERS: tuple[str, ...] = (
+    "DmlExecutionProvider",
+    "CUDAExecutionProvider",
+    "CPUExecutionProvider",
+)
+
+#: Mapa urzadzenia z konfiguracji na provider ONNX Runtime.
+EXECUTION_PROVIDER_BY_DEVICE: dict[str, str] = {
+    "cpu": "CPUExecutionProvider",
+    "dml": "DmlExecutionProvider",
+    "cuda": "CUDAExecutionProvider",
+}
+
+#: Kolejnosc probowania urzadzen w trybie auto.
+AUTO_DEVICE_ORDER: tuple[str, ...] = ("dml", "cuda", "cpu")
+
+#: Etykiety urzadzen do opisu diagnostycznego i interfejsu.
+DEVICE_LABELS: dict[str, str] = {
+    "cpu": "CPU",
+    "dml": "GPU (DirectML)",
+    "cuda": "GPU (CUDA)",
+}
 
 PROVIDER_KEY = "local_onnx"
+
+
+def available_devices() -> dict[str, bool]:
+    """Zwraca dostepnosc urzadzen w biezacym srodowisku ONNX Runtime."""
+    try:
+        import onnxruntime as ort
+
+        present = set(ort.get_available_providers())
+    except ImportError:
+        present = set()
+    return {
+        device: provider in present for device, provider in EXECUTION_PROVIDER_BY_DEVICE.items()
+    }
+
+
+def resolve_execution_providers(device: str) -> tuple[list[str], str]:
+    """Dobiera liste providerow sesji dla zadanego urzadzenia.
+
+    Zwraca pare (lista providerow, faktyczne urzadzenie). Lista zawsze konczy sie
+    providerem CPU, zeby operatory bez implementacji GPU mialy dokad spasc.
+    Zadanie niedostepnego urzadzenia nie jest bledem: wybor spada na CPU,
+    a rozjazd widac w zwroconym urzadzeniu i w logu ostrzezenia.
+    """
+    requested = (device or "cpu").strip().lower()
+    if requested not in {"auto", *EXECUTION_PROVIDER_BY_DEVICE}:
+        raise ConfigurationError(
+            f"Nieznane urządzenie obliczeń embeddingów: '{device}'. "
+            "Dozwolone wartości: cpu, auto, dml, cuda."
+        )
+    availability = available_devices()
+    candidates = AUTO_DEVICE_ORDER if requested == "auto" else (requested, "cpu")
+    for candidate in candidates:
+        if availability.get(candidate, False):
+            resolved = candidate
+            break
+    else:
+        resolved = "cpu"
+    if requested not in {"auto", resolved}:
+        log.warning(
+            "provider.device_unavailable",
+            requested=requested,
+            resolved=resolved,
+            available=[d for d, ok in availability.items() if ok],
+        )
+    providers = [EXECUTION_PROVIDER_BY_DEVICE[resolved]]
+    if resolved != "cpu":
+        providers.append(EXECUTION_PROVIDER_BY_DEVICE["cpu"])
+    return providers, resolved
 
 
 class OnnxEmbeddingProvider(EmbeddingProvider):
@@ -43,6 +124,7 @@ class OnnxEmbeddingProvider(EmbeddingProvider):
         max_sequence_length: int | None = None,
         batch_size: int = 8,
         num_threads: int = 0,
+        device: str = "cpu",
         verify_checksums: bool = False,
     ) -> None:
         self.model_dir = Path(model_dir)
@@ -70,6 +152,10 @@ class OnnxEmbeddingProvider(EmbeddingProvider):
 
         import onnxruntime as ort
 
+        session_providers, resolved_device = resolve_execution_providers(device)
+        self._requested_device = (device or "cpu").strip().lower()
+        self._device = resolved_device
+
         options = ort.SessionOptions()
         threads = num_threads if num_threads > 0 else max(1, (os.cpu_count() or 4) - 1)
         options.intra_op_num_threads = threads
@@ -77,20 +163,32 @@ class OnnxEmbeddingProvider(EmbeddingProvider):
         options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
         options.enable_cpu_mem_arena = True
         options.log_severity_level = 3
+        if resolved_device == "dml":
+            # DmlExecutionProvider nie wspiera wzorca pamieci ORT.
+            options.enable_mem_pattern = False
 
         self._session: Any | None = ort.InferenceSession(
             str(model_path),
             sess_options=options,
-            providers=list(ALLOWED_EXECUTION_PROVIDERS),
+            providers=session_providers,
         )
-        active = self._session.get_providers()
-        if active != list(ALLOWED_EXECUTION_PROVIDERS):
+        active = list(self._session.get_providers())
+        if not set(active) <= set(ALLOWED_EXECUTION_PROVIDERS):
             raise ProviderError(
                 "ONNX Runtime uruchomił się z niedozwolonym providerem: " + ", ".join(active)
             )
         self._input_names = {i.name for i in self._session.get_inputs()}
         self._quantized = model_path.name.endswith(".int8.onnx")
         self._model_path = model_path
+
+        device_label = DEVICE_LABELS.get(resolved_device, resolved_device)
+        runtime = (
+            f"onnxruntime CPU, {threads} wątków"
+            if resolved_device == "cpu"
+            else f"onnxruntime {device_label}, rezerwa CPU"
+        )
+        if self._requested_device not in {"auto", resolved_device}:
+            runtime += f" (żądane {self._requested_device} niedostępne)"
 
         descriptor = KNOWN_MODELS.get(self.manifest.model_key)
         self._info = ProviderInfo(
@@ -107,7 +205,7 @@ class OnnxEmbeddingProvider(EmbeddingProvider):
             passage_prefix=self.manifest.passage_prefix,
             license_name=descriptor.license_name if descriptor else self.manifest.license,
             source=descriptor.source_url if descriptor else self.manifest.source,
-            runtime=f"onnxruntime CPU, {threads} wątków",
+            runtime=runtime,
         )
         log.info(
             "provider.loaded",
@@ -115,6 +213,8 @@ class OnnxEmbeddingProvider(EmbeddingProvider):
             dimension=self._info.dimension,
             quantized=self._quantized,
             threads=threads,
+            device=resolved_device,
+            execution_providers=active,
         )
 
     # --- pomocnicze --------------------------------------------------------
@@ -207,10 +307,17 @@ class OnnxEmbeddingProvider(EmbeddingProvider):
         with self._lock:
             self._session = None
 
+    @property
+    def device(self) -> str:
+        """Faktyczne urzadzenie obliczen: cpu, dml albo cuda."""
+        return self._device
+
     def describe(self) -> dict[str, Any]:
         data = super().describe()
         data["plik_modelu"] = str(self._model_path)
         data["katalog"] = str(self.model_dir)
+        data["urzadzenie"] = DEVICE_LABELS.get(self._device, self._device)
+        data["urzadzenie_zadane"] = self._requested_device
         return data
 
 
@@ -222,6 +329,7 @@ def create_local_provider(
     max_sequence_length: int | None = None,
     batch_size: int = 8,
     num_threads: int = 0,
+    device: str = "cpu",
 ) -> OnnxEmbeddingProvider:
     """Znajduje model na dysku i tworzy dostawce."""
     extra = Path(model_path) if model_path else None
@@ -243,12 +351,19 @@ def create_local_provider(
         max_sequence_length=max_sequence_length,
         batch_size=batch_size,
         num_threads=num_threads,
+        device=device,
     )
 
 
 __all__ = [
     "ALLOWED_EXECUTION_PROVIDERS",
+    "AUTO_DEVICE_ORDER",
+    "CPU_EXECUTION_PROVIDERS",
+    "DEVICE_LABELS",
+    "EXECUTION_PROVIDER_BY_DEVICE",
     "PROVIDER_KEY",
     "OnnxEmbeddingProvider",
+    "available_devices",
     "create_local_provider",
+    "resolve_execution_providers",
 ]

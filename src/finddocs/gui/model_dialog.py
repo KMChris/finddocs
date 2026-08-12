@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import (
@@ -28,6 +29,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QPushButton,
+    QSpinBox,
     QVBoxLayout,
     QWidget,
 )
@@ -51,6 +53,10 @@ from finddocs.providers.model_store import (
     looks_like_repo_id,
     sanitize_model_key,
 )
+from finddocs.providers.onnx_local import DEVICE_LABELS, available_devices
+
+if TYPE_CHECKING:
+    from finddocs.security.credentials import CredentialStore
 
 log = get_logger(__name__)
 
@@ -60,6 +66,20 @@ _POOLING_CHOICES: tuple[tuple[str, str], ...] = (
     ("CLS (pierwszy token)", "cls"),
     ("uśrednianie (mean)", "mean"),
     ("brak (model zwraca gotowy wektor)", "none"),
+)
+
+#: Urzadzenia obliczen lokalnego modelu w kolejnosci pokazywanej w oknie.
+_DEVICE_CHOICES: tuple[tuple[str, str], ...] = (
+    ("cpu", i18n.MODEL_DEVICE_CPU),
+    ("auto", i18n.MODEL_DEVICE_AUTO),
+    ("dml", i18n.MODEL_DEVICE_DML),
+    ("cuda", i18n.MODEL_DEVICE_CUDA),
+)
+
+#: Kontrakty zdalnego API w kolejnosci pokazywanej w oknie.
+_PROTOCOL_CHOICES: tuple[tuple[str, str], ...] = (
+    ("finddocs", i18n.MODEL_REMOTE_PROTOCOL_FINDDOCS),
+    ("openai", i18n.MODEL_REMOTE_PROTOCOL_OPENAI),
 )
 
 
@@ -184,6 +204,8 @@ class ModelSettingsDialog(QDialog):
 
         layout.addWidget(self._build_prefix_box())
         layout.addWidget(self._build_semantic_box())
+        layout.addWidget(self._build_compute_box())
+        layout.addWidget(self._build_remote_box())
         layout.addWidget(self._build_import_box())
 
         self.buttons = QDialogButtonBox(
@@ -228,6 +250,106 @@ class ModelSettingsDialog(QDialog):
         hint.setObjectName("Hint")
         hint.setWordWrap(True)
         layout.addWidget(hint)
+        return box
+
+    def _build_compute_box(self) -> QWidget:
+        box = QGroupBox(i18n.MODEL_DEVICE_BOX)
+        form = QFormLayout(box)
+        form.setHorizontalSpacing(16)
+        form.setVerticalSpacing(10)
+        embedding = self.context.config.embedding
+
+        self.device_combo = QComboBox()
+        for value, label in _DEVICE_CHOICES:
+            self.device_combo.addItem(label, value)
+        position = self.device_combo.findData(embedding.device)
+        self.device_combo.setCurrentIndex(max(0, position))
+        form.addRow(i18n.MODEL_DEVICE_LABEL, self.device_combo)
+
+        devices = available_devices()
+        detected = ", ".join(DEVICE_LABELS[d] for d, ok in devices.items() if ok) or "brak"
+        available_label = QLabel(i18n.MODEL_DEVICE_AVAILABLE.format(value=detected))
+        available_label.setObjectName("Muted")
+        available_label.setWordWrap(True)
+        form.addRow("", available_label)
+
+        self.batch_spin = QSpinBox()
+        self.batch_spin.setRange(1, 512)
+        self.batch_spin.setValue(embedding.batch_size)
+        form.addRow(i18n.MODEL_BATCH_LABEL, self.batch_spin)
+
+        self.batch_docs_spin = QSpinBox()
+        self.batch_docs_spin.setRange(1, 64)
+        self.batch_docs_spin.setValue(self.context.config.indexing.embed_batch_documents)
+        self.batch_docs_spin.setToolTip(i18n.MODEL_BATCH_DOCS_HINT)
+        form.addRow(i18n.MODEL_BATCH_DOCS_LABEL, self.batch_docs_spin)
+
+        hint = QLabel(i18n.MODEL_DEVICE_HINT)
+        hint.setObjectName("Hint")
+        hint.setWordWrap(True)
+        form.addRow(hint)
+        return box
+
+    def _build_remote_box(self) -> QWidget:
+        box = QGroupBox(i18n.MODEL_REMOTE_BOX)
+        form = QFormLayout(box)
+        form.setHorizontalSpacing(16)
+        form.setVerticalSpacing(10)
+        embedding = self.context.config.embedding
+
+        self.remote_enable_check = QCheckBox(i18n.MODEL_REMOTE_ENABLE)
+        self.remote_enable_check.setChecked(
+            embedding.provider == "internal_api" and embedding.internal_api_enabled
+        )
+        form.addRow("", self.remote_enable_check)
+
+        self.remote_url_edit = QLineEdit(embedding.internal_api_url)
+        self.remote_url_edit.setPlaceholderText(i18n.MODEL_REMOTE_URL_PLACEHOLDER)
+        form.addRow(i18n.MODEL_REMOTE_URL, self.remote_url_edit)
+
+        self.remote_protocol_combo = QComboBox()
+        for value, label in _PROTOCOL_CHOICES:
+            self.remote_protocol_combo.addItem(label, value)
+        position = self.remote_protocol_combo.findData(embedding.internal_api_protocol)
+        self.remote_protocol_combo.setCurrentIndex(max(0, position))
+        form.addRow(i18n.MODEL_REMOTE_PROTOCOL, self.remote_protocol_combo)
+
+        self.remote_model_edit = QLineEdit(embedding.internal_api_model)
+        form.addRow(i18n.MODEL_REMOTE_MODEL, self.remote_model_edit)
+
+        self.remote_dimension_spin = QSpinBox()
+        self.remote_dimension_spin.setRange(16, 8192)
+        self.remote_dimension_spin.setValue(embedding.internal_api_dimension)
+        form.addRow(i18n.MODEL_REMOTE_DIMENSION, self.remote_dimension_spin)
+
+        self.remote_batch_spin = QSpinBox()
+        self.remote_batch_spin.setRange(1, 1024)
+        self.remote_batch_spin.setValue(embedding.internal_api_batch_size)
+        form.addRow(i18n.MODEL_REMOTE_BATCH, self.remote_batch_spin)
+
+        self.remote_key_edit = QLineEdit()
+        self.remote_key_edit.setEchoMode(QLineEdit.EchoMode.Password)
+        self.remote_key_edit.setPlaceholderText(i18n.MODEL_REMOTE_KEY_PLACEHOLDER)
+        key_row = QHBoxLayout()
+        key_row.setSpacing(8)
+        key_row.addWidget(self.remote_key_edit, stretch=1)
+        self.remote_key_save_button = QPushButton(i18n.MODEL_REMOTE_KEY_SAVE)
+        self.remote_key_save_button.clicked.connect(self.save_api_key)
+        key_row.addWidget(self.remote_key_save_button)
+        self.remote_key_clear_button = QPushButton(i18n.MODEL_REMOTE_KEY_CLEAR)
+        self.remote_key_clear_button.clicked.connect(self.clear_api_key)
+        key_row.addWidget(self.remote_key_clear_button)
+        form.addRow(i18n.MODEL_REMOTE_KEY, key_row)
+
+        self.remote_key_status = QLabel("")
+        self.remote_key_status.setObjectName("Muted")
+        form.addRow("", self.remote_key_status)
+        self._update_key_status()
+
+        hint = QLabel(i18n.MODEL_REMOTE_HINT)
+        hint.setObjectName("Hint")
+        hint.setWordWrap(True)
+        form.addRow(hint)
         return box
 
     def _build_import_box(self) -> QWidget:
@@ -293,17 +415,71 @@ class ModelSettingsDialog(QDialog):
     # --- zapis ------------------------------------------------------------
 
     def apply_settings(self) -> None:
-        """Zapisuje przedrostki i przelacznik semantyki, po czym zamyka okno."""
+        """Zapisuje ustawienia dostawcy, urzadzenia i przedrostkow, po czym zamyka okno."""
         if self._busy:
             return
         config = self.context.config
+        embedding = config.embedding
         reload_needed = False
         notes: list[str] = []
 
         semantic = self.semantic_check.isChecked()
-        if semantic != config.embedding.semantic_enabled:
-            config.embedding.semantic_enabled = semantic
+        if semantic != embedding.semantic_enabled:
+            embedding.semantic_enabled = semantic
             reload_needed = True
+
+        remote_enabled = self.remote_enable_check.isChecked()
+        remote_url = self.remote_url_edit.text().strip()
+        if remote_enabled and not remote_url:
+            show_warning(self, i18n.MODEL_REMOTE_URL_REQUIRED)
+            return
+
+        target_provider = "internal_api" if remote_enabled else "local_onnx"
+        provider_changed = target_provider != embedding.provider
+        if provider_changed:
+            embedding.provider = target_provider
+            reload_needed = True
+
+        device = str(self.device_combo.currentData())
+        if device != embedding.device:
+            embedding.device = device
+            reload_needed = True
+
+        batch = int(self.batch_spin.value())
+        if batch != embedding.batch_size:
+            embedding.batch_size = batch
+            reload_needed = True
+
+        batch_docs = int(self.batch_docs_spin.value())
+        if batch_docs != config.indexing.embed_batch_documents:
+            config.indexing.embed_batch_documents = batch_docs
+
+        remote_protocol = str(self.remote_protocol_combo.currentData())
+        remote_model = self.remote_model_edit.text().strip()
+        remote_dimension = int(self.remote_dimension_spin.value())
+        remote_batch = int(self.remote_batch_spin.value())
+        remote_identity_changed = (
+            remote_protocol != embedding.internal_api_protocol
+            or remote_model != embedding.internal_api_model
+            or remote_dimension != embedding.internal_api_dimension
+        )
+        remote_changed = (
+            remote_enabled != embedding.internal_api_enabled
+            or remote_url != embedding.internal_api_url
+            or remote_batch != embedding.internal_api_batch_size
+            or remote_identity_changed
+        )
+        if remote_changed:
+            embedding.internal_api_enabled = remote_enabled
+            embedding.internal_api_url = remote_url
+            embedding.internal_api_protocol = remote_protocol
+            embedding.internal_api_model = remote_model
+            embedding.internal_api_dimension = remote_dimension
+            embedding.internal_api_batch_size = remote_batch
+            reload_needed = True
+
+        if provider_changed or (target_provider == "internal_api" and remote_identity_changed):
+            notes.append(i18n.MODEL_REBUILD_REQUIRED)
 
         prefixes = (self.query_edit.text(), self.passage_edit.text())
         if prefixes != self._initial_prefixes:
@@ -330,8 +506,9 @@ class ModelSettingsDialog(QDialog):
                 notes.append(i18n.MODEL_REBUILD_REQUIRED)
 
         self.context.save()
-        if notes:
-            show_info(self, "\n\n".join(notes))
+        unique_notes = list(dict.fromkeys(notes))
+        if unique_notes:
+            show_info(self, "\n\n".join(unique_notes))
         self.config_applied.emit(reload_needed)
         self.accept()
 
@@ -457,6 +634,54 @@ class ModelSettingsDialog(QDialog):
         self.passage_edit.setText(self._initial_prefixes[1])
         show_info(self, i18n.MODEL_REBUILD_REQUIRED)
         self.config_applied.emit(True)
+
+    # --- klucz API zdalnego dostawcy --------------------------------------
+
+    def _credential_store(self) -> CredentialStore:
+        from finddocs.security.credentials import create_credential_store
+
+        return create_credential_store(self.context.paths.config_dir)
+
+    def _update_key_status(self) -> None:
+        from finddocs.security.credentials import EMBEDDING_API_KEY_NAME
+
+        try:
+            present = self._credential_store().get_secret(EMBEDDING_API_KEY_NAME) is not None
+        except Exception as exc:
+            log.warning("gui.api_key_status_failed", error_type=type(exc).__name__)
+            present = False
+        self.remote_key_status.setText(
+            i18n.MODEL_REMOTE_KEY_PRESENT if present else i18n.MODEL_REMOTE_KEY_MISSING
+        )
+        self.remote_key_clear_button.setEnabled(present)
+
+    def save_api_key(self) -> None:
+        """Zapisuje klucz API w magazynie poswiadczen. Klucz nie trafia do pliku."""
+        key = self.remote_key_edit.text().strip()
+        if not key:
+            show_warning(self, i18n.MODEL_REMOTE_KEY_EMPTY)
+            return
+        from finddocs.security.credentials import EMBEDDING_API_KEY_NAME
+
+        try:
+            self._credential_store().set_secret(EMBEDDING_API_KEY_NAME, key)
+        except FindDocsError as exc:
+            show_error(self, exc.user_message)
+            return
+        self.remote_key_edit.clear()
+        self._update_key_status()
+        show_info(self, i18n.MODEL_REMOTE_KEY_SAVED)
+
+    def clear_api_key(self) -> None:
+        from finddocs.security.credentials import EMBEDDING_API_KEY_NAME
+
+        try:
+            self._credential_store().delete_secret(EMBEDDING_API_KEY_NAME)
+        except FindDocsError as exc:
+            show_error(self, exc.user_message)
+            return
+        self._update_key_status()
+        show_info(self, i18n.MODEL_REMOTE_KEY_CLEARED)
 
     # --- pomocnicze -------------------------------------------------------
 

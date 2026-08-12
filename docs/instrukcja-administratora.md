@@ -96,6 +96,7 @@ odczytuje go przy starcie. Poniżej pola, które zwykle się zmienia.
   "max_sequence_length": 512,
   "batch_size": 8,
   "num_threads": 0,
+  "device": "cpu",
   "quantized": true
 }
 ```
@@ -104,6 +105,14 @@ odczytuje go przy starcie. Poniżej pola, które zwykle się zmienia.
 `quantized` wybiera wariant INT8 (ok. 125 MB) zamiast pełnego FP32 (ok. 500 MB).
 Zmiana `model_key`, `quantized` albo `max_sequence_length` unieważnia indeks
 wektorowy i wymaga jego przebudowy.
+
+`device` wybiera urządzenie obliczeń: `cpu`, `auto`, `dml` (DirectML) albo
+`cuda`. GPU wymaga zamiany pakietu onnxruntime na wariant z odpowiednim
+providerem. Zmiana urządzenia nie unieważnia indeksu. Osobna grupa ustawień
+w sekcji `indexing` (`embed_batch_documents`, `embed_batch_chunks`) steruje
+wspólnym osadzaniem fragmentów wielu dokumentów podczas indeksowania.
+Aplikacja obsługuje też zdalne API embeddingów z kluczem API (pola
+`internal_api_*`). Szczegóły: [embeddingi na GPU i zdalne API](embeddingi-gpu-api.md).
 
 Modele instaluje i przełącza grupa poleceń `finddocs model` (opis niżej).
 `finddocs model use` ustawia `model_key` i synchronizuje pozostałe pola
@@ -212,7 +221,7 @@ Domyślnie każdy ruch wychodzący jest zablokowany. Kategorie włącza się
 | --- | --- | --- |
 | `microsoft_graph` | po dodaniu źródła SharePoint | `graph.microsoft.com`, `login.microsoftonline.com`, `*.sharepoint.com` |
 | `model_download` | po ustawieniu `allow_model_download` | `huggingface.co`, `cdn-lfs.huggingface.co`, `*.hf.co` |
-| `internal_api` | tylko z jawnie podanym adresem | lista pusta, wymaga konfiguracji |
+| `internal_api` | po włączeniu zdalnego API embeddingów | wyłącznie host z adresu podanego w konfiguracji |
 
 Dozwolony jest wyłącznie protokół HTTPS. Lista jest wpisana w kod
 (`src/finddocs/security/network.py`) i widoczna na ekranie **Diagnostyka**.
@@ -281,6 +290,9 @@ finddocs model import D:\Modele\moj-model --name moj-model
 finddocs model import intfloat/multilingual-e5-small
 finddocs model use mmlw-retrieval-roberta-base
 finddocs model remove moj-model
+finddocs model device dml --batch 64
+finddocs model api --url https://embeddingi.example.com/v1 --protocol openai --enable
+finddocs model api-key
 ```
 
 `import` bez argumentu pobiera domyślny model MMLW z Hugging Face; pobranie
@@ -291,6 +303,9 @@ eksportem ONNX, katalog z checkpointem HuggingFace (konwersja wymaga dodatku
 walidowany próbnym przebiegiem przed instalacją i od razu widoczny na liście
 modeli w GUI. Zmiana aktywnego modelu wymaga przebudowy części wektorowej
 (`finddocs maintenance rebuild --vectors-only`, potem `finddocs index`).
+`model device` przełącza obliczenia między CPU i GPU, a `model api`
+z `model api-key` konfigurują zdalne API embeddingów; opis w dokumencie
+[embeddingi na GPU i zdalne API](embeddingi-gpu-api.md).
 Szczegóły i opcje: [instalacja z PyPI](instalacja-pip.md).
 
 ### Indeksowanie

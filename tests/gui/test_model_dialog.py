@@ -143,6 +143,94 @@ def test_prefiksy_nieaktywnego_niezainstalowanego_modelu_daja_ostrzezenie(
     assert [box.text() for box in message_boxes] == [i18n.MODEL_PREFIX_NOT_INSTALLED]
 
 
+@pytest.mark.gui
+def test_zmiana_urzadzenia_i_batcha_zapisuje_konfiguracje(
+    qtbot: object, dialog_context: AppContext
+) -> None:
+    dialog = ModelSettingsDialog(dialog_context, model_key=FAKE_KEY)
+    qtbot.addWidget(dialog)  # type: ignore[attr-defined]
+    zgloszenia: list[bool] = []
+    dialog.config_applied.connect(zgloszenia.append)
+
+    position = dialog.device_combo.findData("dml")
+    assert position >= 0
+    dialog.device_combo.setCurrentIndex(position)
+    dialog.batch_spin.setValue(64)
+    dialog.batch_docs_spin.setValue(16)
+    dialog.apply_settings()
+
+    assert zgloszenia == [True]
+    zapisana = load_config(dialog_context.paths.config_file)
+    assert zapisana.embedding.device == "dml"
+    assert zapisana.embedding.batch_size == 64
+    assert zapisana.indexing.embed_batch_documents == 16
+
+
+@pytest.mark.gui
+def test_wlaczenie_zdalnego_api_bez_adresu_daje_ostrzezenie(
+    qtbot: object, dialog_context: AppContext, message_boxes: list[QMessageBox]
+) -> None:
+    dialog = ModelSettingsDialog(dialog_context, model_key=FAKE_KEY)
+    qtbot.addWidget(dialog)  # type: ignore[attr-defined]
+
+    dialog.remote_enable_check.setChecked(True)
+    dialog.apply_settings()
+
+    assert dialog.result() != int(QDialog.DialogCode.Accepted)
+    assert [box.text() for box in message_boxes] == [i18n.MODEL_REMOTE_URL_REQUIRED]
+    assert dialog_context.config.embedding.provider == "local_onnx"
+
+
+@pytest.mark.gui
+def test_wlaczenie_zdalnego_api_przelacza_dostawce(
+    qtbot: object, dialog_context: AppContext, message_boxes: list[QMessageBox]
+) -> None:
+    dialog = ModelSettingsDialog(dialog_context, model_key=FAKE_KEY)
+    qtbot.addWidget(dialog)  # type: ignore[attr-defined]
+    zgloszenia: list[bool] = []
+    dialog.config_applied.connect(zgloszenia.append)
+
+    dialog.remote_enable_check.setChecked(True)
+    dialog.remote_url_edit.setText("https://embeddingi.example.com/v1")
+    position = dialog.remote_protocol_combo.findData("openai")
+    assert position >= 0
+    dialog.remote_protocol_combo.setCurrentIndex(position)
+    dialog.remote_model_edit.setText("model-zdalny")
+    dialog.remote_dimension_spin.setValue(1024)
+    dialog.apply_settings()
+
+    assert zgloszenia == [True]
+    zapisana = load_config(dialog_context.paths.config_file)
+    assert zapisana.embedding.provider == "internal_api"
+    assert zapisana.embedding.internal_api_enabled is True
+    assert zapisana.embedding.internal_api_url == "https://embeddingi.example.com/v1"
+    assert zapisana.embedding.internal_api_protocol == "openai"
+    assert zapisana.embedding.internal_api_model == "model-zdalny"
+    assert zapisana.embedding.internal_api_dimension == 1024
+    assert any(i18n.MODEL_REBUILD_REQUIRED in box.text() for box in message_boxes)
+
+
+@pytest.mark.gui
+def test_wylaczenie_zdalnego_api_wraca_do_modelu_lokalnego(
+    qtbot: object, dialog_context: AppContext, message_boxes: list[QMessageBox]
+) -> None:
+    embedding = dialog_context.config.embedding
+    embedding.provider = "internal_api"
+    embedding.internal_api_enabled = True
+    embedding.internal_api_url = "https://embeddingi.example.com/v1"
+
+    dialog = ModelSettingsDialog(dialog_context, model_key=FAKE_KEY)
+    qtbot.addWidget(dialog)  # type: ignore[attr-defined]
+    assert dialog.remote_enable_check.isChecked()
+
+    dialog.remote_enable_check.setChecked(False)
+    dialog.apply_settings()
+
+    zapisana = load_config(dialog_context.paths.config_file)
+    assert zapisana.embedding.provider == "local_onnx"
+    assert zapisana.embedding.internal_api_enabled is False
+
+
 # --- aktywacja i import ----------------------------------------------------------
 
 

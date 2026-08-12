@@ -15,6 +15,7 @@ from urllib.parse import urlparse
 from finddocs.errors import NetworkPolicyError
 from finddocs.logging_setup import get_logger
 from finddocs.security.redaction import safe_url
+from finddocs.types import SourceKind
 
 log = get_logger(__name__)
 
@@ -139,6 +140,36 @@ class NetworkPolicy:
         }
 
 
+def policy_from_config(config: object) -> NetworkPolicy:
+    """Buduje polityke sieciowa z konfiguracji aplikacji.
+
+    Kategorie sa wlaczane wylacznie na podstawie jawnych ustawien. Dla zdalnego
+    API embeddingow do listy dozwolonych trafia dokladnie jeden host: ten z
+    adresu podanego w konfiguracji. Argument jest typowany jako ``object``,
+    zeby modul sieciowy nie zalezal od modulu konfiguracji.
+    """
+    policy = NetworkPolicy.offline()
+
+    sources = getattr(config, "sources", []) or []
+    if any(
+        getattr(s, "enabled", False) and getattr(s, "kind", None) is SourceKind.SHAREPOINT
+        for s in sources
+    ):
+        policy.enable(EgressCategory.MICROSOFT_GRAPH)
+
+    if getattr(config, "allow_model_download", False):
+        policy.enable(EgressCategory.MODEL_DOWNLOAD)
+
+    embedding = getattr(config, "embedding", None)
+    if embedding is not None and getattr(embedding, "internal_api_enabled", False):
+        api_url = str(getattr(embedding, "internal_api_url", "") or "")
+        host = (urlparse(api_url).hostname or "").lower()
+        if host:
+            policy.enable(EgressCategory.INTERNAL_API)
+            policy.extra_hosts[EgressCategory.INTERNAL_API] = (host,)
+    return policy
+
+
 _policy = NetworkPolicy.offline()
 
 
@@ -164,5 +195,6 @@ __all__ = [
     "NetworkPolicy",
     "check_url",
     "get_policy",
+    "policy_from_config",
     "set_policy",
 ]

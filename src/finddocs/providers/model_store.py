@@ -174,7 +174,7 @@ def probe_onnx_model(directory: Path) -> dict[str, Any]:
     import onnxruntime as ort
     from tokenizers import Tokenizer
 
-    from finddocs.providers.onnx_local import ALLOWED_EXECUTION_PROVIDERS
+    from finddocs.providers.onnx_local import CPU_EXECUTION_PROVIDERS
 
     model_path = None
     for name in ("model.int8.onnx", "model.onnx"):
@@ -197,7 +197,7 @@ def probe_onnx_model(directory: Path) -> dict[str, Any]:
     options.inter_op_num_threads = 1
     options.log_severity_level = 3
     session = ort.InferenceSession(
-        str(model_path), sess_options=options, providers=list(ALLOWED_EXECUTION_PROVIDERS)
+        str(model_path), sess_options=options, providers=list(CPU_EXECUTION_PROVIDERS)
     )
     input_names = {i.name for i in session.get_inputs()}
     encodings = tokenizer.encode_batch(["probne zdanie testowe", "druga proba"])
