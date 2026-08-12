@@ -60,9 +60,20 @@ ani zapytan poza komputer uzytkownika w konfiguracji domyslnej.
 | PySide6 | 6.11.1 | LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only | interfejs graficzny | https://pyside.org |
 | PySide6_Addons | 6.11.1 | LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only | interfejs graficzny | https://pyside.org |
 | PySide6_Essentials | 6.11.1 | LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only | interfejs graficzny | https://pyside.org |
+| py7zr | 1.1.3 | LGPL-2.1-or-later | odczyt archiwow 7z | https://py7zr.readthedocs.io/ |
+| pybcj | 1.0.8 | LGPL-2.1-or-later | zaleznosc posrednia (py7zr) | https://pypi.org/project/pybcj |
+| pycryptodomex | 3.23.0 | BSD, Public Domain | zaleznosc posrednia (py7zr) | https://www.pycryptodome.org |
+| pyppmd | 1.3.1 | LGPL-2.1-or-later | zaleznosc posrednia (py7zr) | https://pypi.org/project/pyppmd |
 | python-docx | 1.2.0 | MIT License | odczyt plikow DOCX | https://python-docx.readthedocs.org/en/latest/ |
 | python-pptx | 1.0.2 | MIT License | odczyt plikow PPTX | https://github.com/scanny/python-pptx |
+| rarfile | 4.5 | ISC License | odczyt archiwow RAR | https://github.com/markokr/rarfile |
+| texttable | 1.7.0 | MIT License | zaleznosc posrednia (py7zr) | https://github.com/foutaise/texttable/ |
 | XlsxWriter | 3.2.9 | BSD-2-Clause | zaleznosc posrednia (python-pptx) | https://github.com/jmcnamara/XlsxWriter |
+| backports.zstd | 1.6.0 | PSF-2.0 | zaleznosc posrednia (py7zr) | https://github.com/rogdham/backports.zstd |
+| brotli | 1.2.0 | MIT License | zaleznosc posrednia (py7zr) | https://github.com/google/brotli |
+| inflate64 | 1.0.4 | LGPL-2.1-or-later | zaleznosc posrednia (py7zr) | https://pypi.org/project/inflate64 |
+| multivolumefile | 0.2.3 | LGPL-2.1+ | zaleznosc posrednia (py7zr) | https://github.com/miurahr/multivolume |
+| psutil | 7.2.2 | BSD-3-Clause | zaleznosc posrednia (py7zr) | https://github.com/giampaolo/psutil |
 | pywin32 | 312 | Python Software Foundation License | DPAPI, automatyzacja Office przez COM | https://github.com/mhammond/pywin32 |
 | pywin32-ctypes | 0.2.3 | BSD-3-Clause | zaleznosc posrednia | https://github.com/enthought/pywin32-ctypes |
 | PyYAML | 6.0.3 | MIT License | zaleznosc posrednia | https://pyyaml.org/ |

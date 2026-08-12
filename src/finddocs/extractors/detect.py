@@ -52,6 +52,8 @@ EXTENSION_MIME: dict[str, str] = {
     ".pps": "application/vnd.ms-powerpoint",
     ".pot": "application/vnd.ms-powerpoint",
     ".zip": "application/zip",
+    ".7z": "application/x-7z-compressed",
+    ".rar": "application/vnd.rar",
 }
 
 #: Sygnatury binarne. Klucz to prefiks bajtow, wartosc to ogolna rodzina formatu.

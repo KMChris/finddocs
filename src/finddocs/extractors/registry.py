@@ -172,9 +172,15 @@ def build_default_registry(
     registry.register(LegacyDocOleExtractor())
     registry.register(LegacyPptOleExtractor())
     if archives_enabled:
-        from finddocs.extractors.archive import ZipArchiveExtractor
+        from finddocs.extractors.archive import (
+            RarArchiveExtractor,
+            SevenZipArchiveExtractor,
+            ZipArchiveExtractor,
+        )
 
         registry.register(ZipArchiveExtractor())
+        registry.register(SevenZipArchiveExtractor())
+        registry.register(RarArchiveExtractor())
     return registry
 
 

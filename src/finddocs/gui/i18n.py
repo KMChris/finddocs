@@ -191,11 +191,11 @@ SOURCES_OCR_PAGE_LIMIT_HINT = (
     "Skan dłuższy niż limit jest rozpoznawany tylko do tej strony, a dokument dostaje "
     "ostrzeżenie o niepełnej treści. Wyższa wartość wydłuża indeksowanie długich skanów."
 )
-SOURCES_INDEX_ARCHIVES = "Indeksuj zawartość archiwów ZIP"
+SOURCES_INDEX_ARCHIVES = "Indeksuj zawartość archiwów (ZIP, 7z, RAR)"
 SOURCES_INDEX_ARCHIVES_HINT = (
     "Po włączeniu archiwum jest rozpakowywane, a każdy plik w środku trafia do indeksu "
-    "jako osobny dokument, tak jak załącznik wiadomości. Zmiana zaczyna działać "
-    "od następnego skanowania."
+    "jako osobny dokument, tak jak załącznik wiadomości. Skompresowane archiwa RAR "
+    "wymagają narzędzia unrar albo bsdtar. Zmiana zaczyna działać od następnego skanowania."
 )
 SOURCES_INDEX_ARCHIVES_ON = "Włączono indeksowanie zawartości archiwów ZIP."
 SOURCES_INDEX_ARCHIVES_OFF = "Wyłączono indeksowanie zawartości archiwów ZIP."

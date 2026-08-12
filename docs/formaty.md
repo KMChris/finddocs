@@ -49,20 +49,26 @@ zapętlił indeksowania.
 Domyślne limity: 30 załączników na wiadomość i 100 MB łącznie. Przekroczenie
 kończy się ostrzeżeniem zapisanym przy dokumencie, nie cichym pominięciem.
 
-## Archiwa ZIP
+## Archiwa ZIP, 7z i RAR
 
-Domyślnie zawartość archiwów nie jest rozpakowywana, a plik `.zip` ma status
-`unsupported`. Po włączeniu opcji **Indeksuj zawartość archiwów ZIP** (ekran
+Domyślnie zawartość archiwów nie jest rozpakowywana, a plik archiwum ma status
+`unsupported`. Po włączeniu opcji **Indeksuj zawartość archiwów** (ekran
 Źródła i konfiguracja, sekcja Opcje indeksowania; w pliku konfiguracyjnym
 `indexing.index_archives`) archiwum jest przetwarzane tak jak wiadomość
 z załącznikami: każdy plik w środku trafia do indeksu jako osobny dokument
 podrzędny, a samo archiwum dostaje przeszukiwalny spis nazw plików.
 
-Limity: 200 wpisów i 200 MB rozpakowanej treści na archiwum. Wpisy
+| Format | Biblioteka | Uwagi |
+| --- | --- | --- |
+| `.zip` | biblioteka standardowa | pełny odczyt |
+| `.7z` | py7zr | pełny odczyt; archiwum z hasłem daje sam spis plików |
+| `.rar` | rarfile | wpisy bez kompresji czytane wprost; skompresowane wymagają narzędzia unrar, bsdtar albo 7z, bez niego zostaje spis plików z ostrzeżeniem |
+
+Limity wspólne: 200 wpisów i 200 MB rozpakowanej treści na archiwum. Wpisy
 zaszyfrowane, przekraczające `max_file_size_mb` oraz wpisy o podejrzanym
 stosunku kompresji (ochrona przed bombą dekompresyjną) są pomijane
-z ostrzeżeniem przy dokumencie. Archiwa `.7z` i `.rar` pozostają
-nieobsługiwane.
+z ostrzeżeniem przy dokumencie. Głębokość zagnieżdżenia archiwum w archiwum
+ogranicza wspólny limit dokumentów podrzędnych.
 
 ## Pliki celowo pomijane
 
@@ -70,7 +76,7 @@ nieobsługiwane.
 | --- | --- |
 | pliki tymczasowe Office (`~$*`) | to nie są dokumenty |
 | pliki większe niż `max_file_size_mb` | ochrona pamięci, domyślnie 512 MB |
-| archiwa `.zip` bez włączonej opcji indeksowania archiwów oraz `.7z`, `.rar` | zawartość nie jest rozpakowywana |
+| archiwa `.zip`, `.7z`, `.rar` bez włączonej opcji indeksowania archiwów | zawartość nie jest rozpakowywana |
 | pliki wykonywalne i binarne | nie zawierają tekstu do wyszukania |
 | pliki bez uprawnień odczytu | zapisywane jako błąd, nie pomijane po cichu |
 

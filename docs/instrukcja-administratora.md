@@ -189,10 +189,12 @@ pakiet Microsoft Office. Aplikacja sama sprawdza, czy Office jest dostępny,
 nie uruchamia makr i przerywa konwersję po `office_com_timeout_seconds`.
 Gdy Office nie ma, używany jest wbudowany czytnik OLE (poziom wsparcia niższy).
 
-`index_archives` włącza indeksowanie zawartości archiwów ZIP: każdy plik
-z archiwum trafia do indeksu jako osobny dokument podrzędny, jak załącznik
-wiadomości. Opcja jest też dostępna w GUI na ekranie Źródła i konfiguracja
-(sekcja Opcje indeksowania). Szczegóły i limity: [formaty](formaty.md).
+`index_archives` włącza indeksowanie zawartości archiwów ZIP, 7z i RAR:
+każdy plik z archiwum trafia do indeksu jako osobny dokument podrzędny,
+jak załącznik wiadomości. Opcja jest też dostępna w GUI na ekranie Źródła
+i konfiguracja (sekcja Opcje indeksowania). Skompresowane archiwa RAR
+wymagają zewnętrznego narzędzia (unrar, bsdtar albo 7z).
+Szczegóły i limity: [formaty](formaty.md).
 
 Poniżej `min_free_disk_bytes` wolnego miejsca zadanie kończy się stanem błędu
 z czytelnym komunikatem, zamiast zostawiać uszkodzony indeks.

@@ -512,6 +512,46 @@ def make_zip(docs_dir: Path) -> Callable[..., Path]:
 
 
 @pytest.fixture
+def make_7z(docs_dir: Path) -> Callable[..., Path]:
+    """Tworzy archiwum 7z z podanych wpisow, opcjonalnie z haslem."""
+    import py7zr
+
+    def _make(
+        name: str = "archiwum.7z",
+        entries: list[tuple[str, bytes]] | None = None,
+        *,
+        password: str | None = None,
+        encrypted_header: bool = False,
+    ) -> Path:
+        target = docs_dir / name
+        with py7zr.SevenZipFile(target, "w", password=password) as archive:
+            if encrypted_header:
+                archive.set_encrypted_header(True)
+            for entry_name, payload in entries or [("dokument.txt", b"Tresc dokumentu.")]:
+                archive.writestr(payload, entry_name)
+        return target
+
+    return _make
+
+
+@pytest.fixture
+def make_rar(write_file: Callable[[str, bytes], Path]) -> Callable[..., Path]:
+    """Tworzy archiwum RAR4 z wpisami bez kompresji (czytelne bez unrar)."""
+    from parser_data import build_stored_rar
+
+    def _make(
+        name: str = "archiwum.rar",
+        entries: list[tuple[str, bytes]] | None = None,
+        *,
+        encrypted_names: set[str] | None = None,
+    ) -> Path:
+        content = entries or [("dokument.txt", b"Tresc dokumentu.")]
+        return write_file(name, build_stored_rar(content, encrypted_names=encrypted_names))
+
+    return _make
+
+
+@pytest.fixture
 def make_protected_zip(docs_dir: Path) -> Callable[..., Path]:
     """Tworzy archiwum ZIP z klasycznym szyfrowaniem kazdego wpisu."""
     from finddocs.demo.generate import write_protected_zip

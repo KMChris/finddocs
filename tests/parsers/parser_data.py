@@ -16,6 +16,7 @@ Pillow oraz generatorow z ``finddocs.demo.generate``.
 from __future__ import annotations
 
 import struct
+import zlib
 from dataclasses import dataclass, field
 
 # --- wspolne dane testowe ------------------------------------------------------
@@ -443,6 +444,72 @@ def build_legacy_ppt(
     return build_ole_container(
         [(("Current User",), current_user), (("PowerPoint Document",), document)],
     )
+
+
+# --- archiwum RAR4 ---------------------------------------------------------------
+
+#: Sygnatura archiwum RAR w wersji 4.
+RAR4_MARKER = b"Rar!\x1a\x07\x00"
+
+#: Flaga naglowka pliku: wpis zabezpieczony haslem.
+RAR4_FLAG_PASSWORD = 0x0004
+
+#: Flaga naglowka pliku: za naglowkiem leza dane wpisu.
+_RAR4_FLAG_LONG_BLOCK = 0x8000
+
+#: Metoda kompresji "storing": dane zapisane bez kompresji.
+_RAR4_METHOD_STORE = 0x30
+
+
+def _rar4_block_crc(payload: bytes) -> int:
+    """CRC naglowka bloku RAR4: mlodsze 16 bitow CRC32."""
+    return zlib.crc32(payload) & 0xFFFF
+
+
+def _rar4_main_header() -> bytes:
+    body = struct.pack("<BHH", 0x73, 0x0000, 13) + b"\x00" * 6
+    return struct.pack("<H", _rar4_block_crc(body)) + body
+
+
+def _rar4_file_block(name: str, data: bytes, *, encrypted: bool = False) -> bytes:
+    """Blok pliku RAR4 z metoda storing: naglowek, nazwa i surowe dane."""
+    name_bytes = name.encode("cp437", errors="replace")
+    head_size = 7 + 25 + len(name_bytes)
+    flags = _RAR4_FLAG_LONG_BLOCK | (RAR4_FLAG_PASSWORD if encrypted else 0)
+    body = (
+        struct.pack("<BHH", 0x74, flags, head_size)
+        + struct.pack(
+            "<IIBIIBBHI",
+            len(data),  # PACK_SIZE
+            len(data),  # UNP_SIZE
+            0,  # HOST_OS
+            zlib.crc32(data) & 0xFFFFFFFF,  # FILE_CRC
+            0x5A5A5A5A,  # FTIME
+            20,  # UNP_VER
+            _RAR4_METHOD_STORE,
+            len(name_bytes),
+            0x20,  # ATTR
+        )
+        + name_bytes
+    )
+    return struct.pack("<H", _rar4_block_crc(body)) + body + data
+
+
+def build_stored_rar(
+    entries: list[tuple[str, bytes]], *, encrypted_names: set[str] | None = None
+) -> bytes:
+    """Buduje archiwum RAR4 z wpisami zapisanymi bez kompresji.
+
+    Takie wpisy czyta sama biblioteka rarfile, bez zewnetrznego narzedzia,
+    wiec test nie zalezy od zainstalowanego programu unrar. Nazwy wpisow
+    musza miescic sie w cp437 (bez polskich znakow), tresc jest dowolna.
+    """
+    marked = encrypted_names or set()
+    out = bytearray(RAR4_MARKER)
+    out += _rar4_main_header()
+    for name, data in entries:
+        out += _rar4_file_block(name, data, encrypted=name in marked)
+    return bytes(out)
 
 
 # --- strumienie PR_RTF_COMPRESSED ----------------------------------------------
