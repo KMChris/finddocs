@@ -25,6 +25,7 @@ from finddocs.errors import OcrError
 from finddocs.logging_setup import get_logger
 from finddocs.ocr.base import OcrEngine, OcrLine, OcrPageResult
 from finddocs.types import CancellationToken
+from finddocs.win_console import NO_CONSOLE_WINDOW
 
 if TYPE_CHECKING:  # pragma: no cover
     from PIL.Image import Image
@@ -112,6 +113,7 @@ class TesseractEngine(OcrEngine):
                 text=True,
                 timeout=20,
                 check=False,
+                creationflags=NO_CONSOLE_WINDOW,
             )
             match = re.search(r"tesseract\s+v?([\d.]+)", out.stdout, re.IGNORECASE)
             self._version = match.group(1) if match else out.stdout.strip().splitlines()[0]
@@ -121,6 +123,7 @@ class TesseractEngine(OcrEngine):
                 text=True,
                 timeout=20,
                 check=False,
+                creationflags=NO_CONSOLE_WINDOW,
             )
             lines = [line.strip() for line in langs.stdout.splitlines()[1:] if line.strip()]
             self._languages = lines
@@ -196,6 +199,7 @@ class TesseractEngine(OcrEngine):
                     text=True,
                     timeout=self._timeout,
                     check=False,
+                    creationflags=NO_CONSOLE_WINDOW,
                 )
             except subprocess.TimeoutExpired as exc:
                 raise OcrError(
