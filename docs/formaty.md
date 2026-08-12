@@ -21,10 +21,12 @@ Poziomy wsparcia:
 | Word | `.docx`, `.docm` | pełny | python-docx | akapity, nagłówki, tabele, właściwości dokumentu |
 | Word 97-2003 z Office | `.doc`, `.dot` | ograniczony | automatyzacja Microsoft Word | wymaga zainstalowanego Office, makra wyłączone |
 | Word 97-2003 bez Office | `.doc`, `.dot` | eksperymentalny | własny czytnik OLE | tekst z tablicy fragmentów, bez układu i tabel |
+| PowerPoint | `.pptx`, `.ppsx`, `.pptm`, `.ppsm` | pełny | python-pptx | slajdy z numeracją, tabele, notatki prelegenta, metadane |
 | Excel | `.xlsx`, `.xlsm` | pełny | openpyxl | arkusze, nagłówki kolumn, daty i liczby jako tekst |
 | Excel 97-2003 | `.xls` | dobry | xlrd | tylko odczyt, formuły jako wartości |
 | Dane rozdzielane | `.csv`, `.tsv` | pełny | biblioteka standardowa | wykrywanie separatora `;` `,` tabulator `|` i kodowania |
 | Tekst | `.txt`, `.log`, `.md`, `.json`, `.xml`, `.ini`, `.cfg`, `.yaml`, `.yml` | pełny | biblioteka standardowa | podział na akapity, wykrywanie kodowania |
+| Inne pliki tekstowe | dowolne rozszerzenie | pełny | biblioteka standardowa | kod źródłowy, skrypty i konfiguracja rozpoznawane po treści, niezależnie od rozszerzenia i typu MIME |
 | HTML | `.html`, `.htm`, `.xhtml` | pełny | `html.parser` | skrypty i style pomijane, nagłówki wiązane z akapitami |
 | RTF | `.rtf` | dobry | własny dekoder | strony kodowe cp1250 i cp1252, obrazy pomijane |
 | Wiadomość e-mail | `.eml`, `.mht`, `.mhtml` | pełny | biblioteka standardowa | nagłówki, treść tekstowa lub HTML, załączniki |
@@ -57,7 +59,7 @@ Każdy pominięty plik trafia na listę w raporcie pokrycia wraz z powodem.
 
 ## Dokumenty zabezpieczone hasłem
 
-PDF, DOCX, XLSX i DOC z hasłem otwarcia kończą się statusem
+PDF, DOCX, XLSX, PPTX i DOC z hasłem otwarcia kończą się statusem
 `password_protected` i kodem `FD-3003`. Aplikacja nie próbuje łamać ani zgadywać
 haseł. Taki dokument jest widoczny w raporcie pokrycia jako niewyszukiwalny.
 

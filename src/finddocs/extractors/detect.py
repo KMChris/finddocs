@@ -45,6 +45,9 @@ EXTENSION_MIME: dict[str, str] = {
     ".gif": "image/gif",
     ".webp": "image/webp",
     ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    ".pptm": "application/vnd.ms-powerpoint.presentation.macroEnabled.12",
+    ".ppsx": "application/vnd.openxmlformats-officedocument.presentationml.slideshow",
+    ".ppsm": "application/vnd.ms-powerpoint.slideshow.macroEnabled.12",
     ".ppt": "application/vnd.ms-powerpoint",
     ".zip": "application/zip",
 }

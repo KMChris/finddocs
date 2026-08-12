@@ -139,6 +139,7 @@ def build_default_registry(*, office_com_enabled: bool = True) -> ExtractorRegis
     from finddocs.extractors.image import ImageExtractor
     from finddocs.extractors.msg import MsgExtractor
     from finddocs.extractors.pdf import PdfExtractor
+    from finddocs.extractors.pptx import PptxExtractor
     from finddocs.extractors.rtf import RtfExtractor
     from finddocs.extractors.text import PlainTextExtractor
     from finddocs.extractors.xls_legacy import LegacyXlsExtractor
@@ -147,6 +148,7 @@ def build_default_registry(*, office_com_enabled: bool = True) -> ExtractorRegis
     registry = ExtractorRegistry()
     registry.register(PdfExtractor())
     registry.register(DocxExtractor())
+    registry.register(PptxExtractor())
     registry.register(XlsxExtractor())
     registry.register(LegacyXlsExtractor())
     registry.register(CsvExtractor())

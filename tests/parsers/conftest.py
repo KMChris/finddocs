@@ -189,6 +189,61 @@ def sample_docx(make_docx: Callable[..., Path]) -> Path:
     )
 
 
+# --- PPTX ----------------------------------------------------------------------
+
+
+@pytest.fixture
+def make_pptx(docs_dir: Path) -> Callable[..., Path]:
+    """Tworzy prezentacje PowerPoint ze slajdow tytul plus tresc."""
+    from pptx import Presentation
+    from pptx.util import Inches
+
+    def _make(
+        name: str = "prezentacja.pptx",
+        *,
+        slides: list[tuple[str | None, list[str]]] | None = None,
+        table: tuple[list[str], list[list[str]]] | None = None,
+        notes: list[str] | None = None,
+        metadata: bool = True,
+    ) -> Path:
+        presentation = Presentation()
+        title_and_content = presentation.slide_layouts[1]
+        for position, (title, paragraphs) in enumerate(slides or []):
+            slide = presentation.slides.add_slide(title_and_content)
+            if title is not None and slide.shapes.title is not None:
+                slide.shapes.title.text = title
+            body = slide.placeholders[1].text_frame
+            for index, text in enumerate(paragraphs):
+                paragraph = body.paragraphs[0] if index == 0 else body.add_paragraph()
+                paragraph.text = text
+            if notes is not None and position < len(notes):
+                slide.notes_slide.notes_text_frame.text = notes[position]
+        if table is not None:
+            slide = presentation.slides.add_slide(presentation.slide_layouts[6])
+            header, rows = table
+            shape = slide.shapes.add_table(
+                len(rows) + 1, len(header), Inches(1), Inches(1), Inches(8), Inches(3)
+            )
+            for column, label in enumerate(header):
+                shape.table.cell(0, column).text = label
+            for row_index, row in enumerate(rows, start=1):
+                for column, value in enumerate(row):
+                    shape.table.cell(row_index, column).text = value
+        if metadata:
+            properties = presentation.core_properties
+            properties.title = "Szkolenie z przelewów"
+            properties.author = "Łucja Żółw"
+            properties.subject = "Obsługa klienta"
+            properties.keywords = "przelew; szkolenie"
+            properties.created = FIXED_MOMENT
+            properties.modified = FIXED_MOMENT
+        target = docs_dir / name
+        presentation.save(str(target))
+        return target
+
+    return _make
+
+
 # --- XLSX ----------------------------------------------------------------------
 
 

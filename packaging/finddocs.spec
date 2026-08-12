@@ -64,6 +64,7 @@ hiddenimports = [
     "finddocs.gui.app",
     "finddocs.extractors.pdf",
     "finddocs.extractors.docx",
+    "finddocs.extractors.pptx",
     "finddocs.extractors.xlsx",
     "finddocs.extractors.xls_legacy",
     "finddocs.extractors.csv_table",

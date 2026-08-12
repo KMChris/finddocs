@@ -61,6 +61,8 @@ ani zapytan poza komputer uzytkownika w konfiguracji domyslnej.
 | PySide6_Addons | 6.11.1 | LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only | interfejs graficzny | https://pyside.org |
 | PySide6_Essentials | 6.11.1 | LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only | interfejs graficzny | https://pyside.org |
 | python-docx | 1.2.0 | MIT License | odczyt plikow DOCX | https://python-docx.readthedocs.org/en/latest/ |
+| python-pptx | 1.0.2 | MIT License | odczyt plikow PPTX | https://github.com/scanny/python-pptx |
+| XlsxWriter | 3.2.9 | BSD-2-Clause | zaleznosc posrednia (python-pptx) | https://github.com/jmcnamara/XlsxWriter |
 | pywin32 | 312 | Python Software Foundation License | DPAPI, automatyzacja Office przez COM | https://github.com/mhammond/pywin32 |
 | pywin32-ctypes | 0.2.3 | BSD-3-Clause | zaleznosc posrednia | https://github.com/enthought/pywin32-ctypes |
 | PyYAML | 6.0.3 | MIT License | zaleznosc posrednia | https://pyyaml.org/ |
