@@ -193,8 +193,8 @@ class SettingsView(QWidget):
         self.mica_check.setChecked(self.context.config.ui.mica)
         self.mica_check.setToolTip(i18n.SETTINGS_MICA_HINT)
         self.mica_check.toggled.connect(self._on_mica_toggled)
-        self.mica_check.setVisible(mica_supported())
         layout.addWidget(self.mica_check)
+        self.mica_check.setVisible(mica_supported())
         return box
 
     def _build_behavior_box(self) -> QWidget:

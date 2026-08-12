@@ -551,8 +551,9 @@ class EmptyState(QWidget):
         self._title = QLabel(title)
         self._title.setObjectName("SectionTitle")
         self._title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._title.setVisible(bool(title))
+        # Kolejnosc jak w PageHeader: widocznosc dopiero po wstawieniu do ukladu.
         layout.addWidget(self._title)
+        self._title.setVisible(bool(title))
 
         self._label = QLabel(message)
         self._label.setObjectName("Muted")

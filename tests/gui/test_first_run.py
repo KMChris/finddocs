@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import pytest
-from PySide6.QtWidgets import QMessageBox
+from PySide6.QtCore import QEvent, QObject
+from PySide6.QtWidgets import QApplication, QMessageBox, QWidget
 
 from finddocs.gui import i18n
 from finddocs.gui.context import AppContext
@@ -51,6 +52,43 @@ def test_startup_note_is_shown_without_model(
     # Brak modelu nie uniewaznia indeksu pelnotekstowego, wiec nie straszymy przebudowa.
     assert main_window.context.rebuild_required is False
     assert message_boxes[0].windowTitle() == i18n.STARTUP_NOTES_TITLE
+
+
+@pytest.mark.gui
+def test_no_widget_flashes_as_separate_window(
+    qtbot: object, gui_context: AppContext, gui_palette: Palette
+) -> None:
+    """Zaden widget nie moze mignac na ekranie jako osobne okno.
+
+    ``setVisible(True)`` na kontrolce bez rodzica robi z niej okno najwyzszego
+    poziomu. Kontrolka trafia potem do ukladu i okno znika, ale uzytkownik
+    widzi przy starcie migniecie. Widocznosc ustawiamy dopiero po wstawieniu
+    do ukladu, a ten test tego pilnuje.
+    """
+    application = QApplication.instance()
+    assert application is not None
+    stray: list[str] = []
+
+    class WindowSpy(QObject):
+        def eventFilter(self, watched: QObject, event: QEvent) -> bool:
+            if (
+                event.type() == QEvent.Type.Show
+                and isinstance(watched, QWidget)
+                and watched.isWindow()
+                and not isinstance(watched, MainWindow)
+            ):
+                stray.append(f"{type(watched).__name__} {watched.objectName()}")
+            return False
+
+    spy = WindowSpy()
+    application.installEventFilter(spy)
+    try:
+        window = MainWindow(gui_context, gui_palette)
+        qtbot.addWidget(window)  # type: ignore[attr-defined]
+    finally:
+        application.removeEventFilter(spy)
+
+    assert stray == []
 
 
 @pytest.mark.gui

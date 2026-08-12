@@ -62,8 +62,10 @@ class PageHeader(QWidget):
         self.meta_label = QLabel(meta)
         self.meta_label.setObjectName("PageMeta")
         self.meta_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        self.meta_label.setVisible(bool(meta))
+        # Najpierw uklad, potem widocznosc: pokazany widget bez rodzica jest dla
+        # Qt osobnym oknem i mignalby na ekranie.
         row.addWidget(self.meta_label)
+        self.meta_label.setVisible(bool(meta))
 
     def set_meta(self, text: str) -> None:
         """Ustawia informacje po prawej. Puste napis ukrywa etykiete."""

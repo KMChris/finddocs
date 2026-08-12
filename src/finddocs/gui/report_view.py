@@ -160,8 +160,8 @@ class ReportView(QWidget):
         self._set_export_enabled(False)
 
         self.completeness = Banner()
-        self.completeness.show_message(i18n.REPORT_NEEDS_REFRESH, "info")
         root.addWidget(self.completeness)
+        self.completeness.show_message(i18n.REPORT_NEEDS_REFRESH, "info")
 
         self.summary_box = QGroupBox(i18n.REPORT_SUMMARY)
         summary_layout = QVBoxLayout(self.summary_box)
