@@ -25,7 +25,7 @@ from PySide6.QtWidgets import (
 from finddocs.gui import i18n
 from finddocs.gui.context import AppContext
 from finddocs.gui.dialogs import show_error, show_warning
-from finddocs.gui.tables import configure_columns, filter_table_rows, text_item
+from finddocs.gui.tables import configure_columns, filter_table_rows, populate_rows, text_item
 from finddocs.gui.theme import SPACE_MD, SPACE_SM, accent_icon, theme_icon
 from finddocs.gui.widgets.page import Banner
 from finddocs.gui.widgets.tabs import TabPanel
@@ -182,12 +182,13 @@ class DiagnosticsView(QWidget):
 
     def _fill(self, table: QTableWidget, data: dict[str, Any]) -> None:
         rows = _flatten(data)
-        table.setRowCount(0)
-        for key, value in rows:
-            position = table.rowCount()
-            table.insertRow(position)
-            table.setItem(position, 0, text_item(key))
-            table.setItem(position, 1, text_item(value))
+        with populate_rows(table):
+            table.setRowCount(0)
+            for key, value in rows:
+                position = table.rowCount()
+                table.insertRow(position)
+                table.setItem(position, 0, text_item(key))
+                table.setItem(position, 1, text_item(value))
         filter_table_rows(table, self.table_filter.text())
 
     def _apply_table_filter(self) -> None:

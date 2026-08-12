@@ -49,7 +49,7 @@ from finddocs.gui.config_cards import (
 )
 from finddocs.gui.context import AppContext
 from finddocs.gui.dialogs import ask_yes_no, show_error, show_info, show_warning
-from finddocs.gui.tables import configure_columns, text_item
+from finddocs.gui.tables import configure_columns, populate_rows, text_item
 from finddocs.gui.theme import SPACE_MD, SPACE_SM, accent_icon, theme_icon
 from finddocs.gui.widgets.page import Banner, PageHeader, page_layout, repolish
 from finddocs.gui.widgets.tabs import TabPanel
@@ -421,31 +421,32 @@ class SourcesView(QWidget):
     def refresh(self) -> None:
         # Wypelnianie tabeli nie moze uruchamiac obslugi zmiany pola wyboru.
         self.table.blockSignals(True)
-        self.table.setRowCount(0)
-        for source in self.context.config.sources:
-            position = self.table.rowCount()
-            self.table.insertRow(position)
-            values = [
-                source.label,
-                "katalog lokalny" if source.kind is SourceKind.LOCAL_DIR else "SharePoint",
-                source.describe_location(),
-            ]
-            for column, value in enumerate(values):
-                item = text_item(value)
-                if column == 0:
-                    item.setData(SOURCE_ID_ROLE, source.source_id)
-                self.table.setItem(position, column, item)
-            toggle = QTableWidgetItem("")
-            toggle.setFlags(
-                Qt.ItemFlag.ItemIsUserCheckable
-                | Qt.ItemFlag.ItemIsEnabled
-                | Qt.ItemFlag.ItemIsSelectable
-            )
-            toggle.setCheckState(
-                Qt.CheckState.Checked if source.enabled else Qt.CheckState.Unchecked
-            )
-            toggle.setToolTip(i18n.SOURCES_ACTIVE_HINT)
-            self.table.setItem(position, 3, toggle)
+        with populate_rows(self.table):
+            self.table.setRowCount(0)
+            for source in self.context.config.sources:
+                position = self.table.rowCount()
+                self.table.insertRow(position)
+                values = [
+                    source.label,
+                    "katalog lokalny" if source.kind is SourceKind.LOCAL_DIR else "SharePoint",
+                    source.describe_location(),
+                ]
+                for column, value in enumerate(values):
+                    item = text_item(value)
+                    if column == 0:
+                        item.setData(SOURCE_ID_ROLE, source.source_id)
+                    self.table.setItem(position, column, item)
+                toggle = QTableWidgetItem("")
+                toggle.setFlags(
+                    Qt.ItemFlag.ItemIsUserCheckable
+                    | Qt.ItemFlag.ItemIsEnabled
+                    | Qt.ItemFlag.ItemIsSelectable
+                )
+                toggle.setCheckState(
+                    Qt.CheckState.Checked if source.enabled else Qt.CheckState.Unchecked
+                )
+                toggle.setToolTip(i18n.SOURCES_ACTIVE_HINT)
+                self.table.setItem(position, 3, toggle)
         self.table.blockSignals(False)
         if self.context.config.sources:
             self.empty_banner.hide_message()

@@ -36,7 +36,13 @@ from PySide6.QtWidgets import (
 from finddocs.gui import i18n
 from finddocs.gui.context import AppContext
 from finddocs.gui.dialogs import ask_yes_no, show_error, show_info, show_warning
-from finddocs.gui.tables import configure_columns, filter_table_rows, format_stamp, text_item
+from finddocs.gui.tables import (
+    configure_columns,
+    filter_table_rows,
+    format_stamp,
+    populate_rows,
+    text_item,
+)
 from finddocs.gui.theme import SPACE_SM, accent_icon, theme_icon
 from finddocs.gui.widgets.page import PageHeader, page_layout
 from finddocs.gui.widgets.stat_grid import StatGrid
@@ -459,41 +465,45 @@ class IndexingView(QWidget):
         except Exception as exc:
             log.warning("gui.errors_refresh_failed", error_type=type(exc).__name__)
             return
-        self.error_table.setRowCount(0)
-        for row in errors:
-            position = self.error_table.rowCount()
-            self.error_table.insertRow(position)
-            stage = str(row["stage"] or "")
-            values = [
-                str(row["file_name"] or ""),
-                i18n.STAGE_LABELS.get(stage, stage),
-                str(row["code"] or ""),
-                str(row["message"] or ""),
-                format_stamp(str(row["created_at"] or "")),
-            ]
-            for column, value in enumerate(values):
-                self.error_table.setItem(position, column, text_item(value))
+        with populate_rows(self.error_table):
+            self.error_table.setRowCount(0)
+            for row in errors:
+                position = self.error_table.rowCount()
+                self.error_table.insertRow(position)
+                stage = str(row["stage"] or "")
+                values = [
+                    str(row["file_name"] or ""),
+                    i18n.STAGE_LABELS.get(stage, stage),
+                    str(row["code"] or ""),
+                    str(row["message"] or ""),
+                    format_stamp(str(row["created_at"] or "")),
+                ]
+                for column, value in enumerate(values):
+                    self.error_table.setItem(position, column, text_item(value))
 
-        self.skipped_table.setRowCount(0)
         try:
             documents = index.repository.non_searchable_documents(limit=ERROR_TABLE_LIMIT)
         except Exception as exc:
             log.warning("gui.skipped_refresh_failed", error_type=type(exc).__name__)
+            with populate_rows(self.skipped_table):
+                self.skipped_table.setRowCount(0)
             self._refresh_tab_labels()
             return
-        for document in documents:
-            if document.status is DocumentStatus.PENDING:
-                continue
-            position = self.skipped_table.rowCount()
-            self.skipped_table.insertRow(position)
-            values = [
-                document.name,
-                document.logical_path,
-                i18n.STATUS_LABELS.get(document.status, document.status.value),
-                document.error_message or "",
-            ]
-            for column, value in enumerate(values):
-                self.skipped_table.setItem(position, column, text_item(value))
+        with populate_rows(self.skipped_table):
+            self.skipped_table.setRowCount(0)
+            for document in documents:
+                if document.status is DocumentStatus.PENDING:
+                    continue
+                position = self.skipped_table.rowCount()
+                self.skipped_table.insertRow(position)
+                values = [
+                    document.name,
+                    document.logical_path,
+                    i18n.STATUS_LABELS.get(document.status, document.status.value),
+                    document.error_message or "",
+                ]
+                for column, value in enumerate(values):
+                    self.skipped_table.setItem(position, column, text_item(value))
         self._refresh_tab_labels()
         self._apply_table_filter()
 

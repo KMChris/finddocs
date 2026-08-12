@@ -32,7 +32,13 @@ from PySide6.QtWidgets import (
 from finddocs.gui import i18n
 from finddocs.gui.context import AppContext
 from finddocs.gui.dialogs import show_error, show_info
-from finddocs.gui.tables import configure_columns, filter_table_rows, format_stamp, text_item
+from finddocs.gui.tables import (
+    configure_columns,
+    filter_table_rows,
+    format_stamp,
+    populate_rows,
+    text_item,
+)
 from finddocs.gui.theme import SPACE_SM, accent_icon, theme_icon
 from finddocs.gui.widgets.page import Banner, PageHeader, page_layout
 from finddocs.gui.widgets.stat_grid import StatGrid
@@ -278,19 +284,20 @@ class ReportView(QWidget):
             self.header.set_meta("")
 
     def _render_table(self, report: CoverageReport) -> None:
-        self.table.setRowCount(0)
-        for document in report.non_searchable[:NON_SEARCHABLE_LIMIT]:
-            position = self.table.rowCount()
-            self.table.insertRow(position)
-            values = [
-                document.name,
-                document.logical_path,
-                i18n.STATUS_LABELS.get(document.status, document.status.value),
-                document.error_code or "",
-                document.error_message or "",
-            ]
-            for column, value in enumerate(values):
-                self.table.setItem(position, column, text_item(value))
+        with populate_rows(self.table):
+            self.table.setRowCount(0)
+            for document in report.non_searchable[:NON_SEARCHABLE_LIMIT]:
+                position = self.table.rowCount()
+                self.table.insertRow(position)
+                values = [
+                    document.name,
+                    document.logical_path,
+                    i18n.STATUS_LABELS.get(document.status, document.status.value),
+                    document.error_code or "",
+                    document.error_message or "",
+                ]
+                for column, value in enumerate(values):
+                    self.table.setItem(position, column, text_item(value))
         filter_table_rows(self.table, self.table_filter.text())
 
     # --- eksport ----------------------------------------------------------
