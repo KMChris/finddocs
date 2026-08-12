@@ -64,6 +64,22 @@ def test_pole_wyboru_w_wierszu_przelacza_zrodlo(sources_view: SourcesView) -> No
 
 
 @pytest.mark.gui
+def test_opcja_archiwow_zapisuje_konfiguracje(sources_view: SourcesView) -> None:
+    """Pole wyboru archiwow ZIP przelacza opcje indeksowania i zapisuje ustawienia."""
+    config = sources_view.context.config
+    assert config.indexing.index_archives is False
+    assert sources_view.archives_check.isChecked() is False
+
+    sources_view.archives_check.setChecked(True)
+
+    assert config.indexing.index_archives is True
+
+    sources_view.archives_check.setChecked(False)
+
+    assert config.indexing.index_archives is False
+
+
+@pytest.mark.gui
 def test_dialog_sharepoint_oznacza_brakujace_pola(qtbot: object) -> None:
     """Walidacja dziala na miejscu: czerwone pola i podpis, bez osobnego okna."""
     dialog = SharePointDialog()

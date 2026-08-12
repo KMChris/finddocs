@@ -184,6 +184,16 @@ SOURCES_EMPTY_HINT = (
 )
 SOURCES_DEMO = "Utwórz zbiór demonstracyjny"
 SOURCES_DEMO_HINT = "Utwórz katalog z przykładowymi polskimi dokumentami i dodaj go jako źródło"
+
+SOURCES_OPTIONS_TITLE = "Opcje indeksowania"
+SOURCES_INDEX_ARCHIVES = "Indeksuj zawartość archiwów ZIP"
+SOURCES_INDEX_ARCHIVES_HINT = (
+    "Po włączeniu archiwum jest rozpakowywane, a każdy plik w środku trafia do indeksu "
+    "jako osobny dokument, tak jak załącznik wiadomości. Zmiana zaczyna działać "
+    "od następnego skanowania."
+)
+SOURCES_INDEX_ARCHIVES_ON = "Włączono indeksowanie zawartości archiwów ZIP."
+SOURCES_INDEX_ARCHIVES_OFF = "Wyłączono indeksowanie zawartości archiwów ZIP."
 SOURCES_SELECT_FIRST = "Wybierz źródło z listy."
 SOURCES_SIGN_IN = "Zaloguj do SharePoint"
 SOURCES_SIGN_OUT = "Wyloguj"

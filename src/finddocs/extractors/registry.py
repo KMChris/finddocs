@@ -126,8 +126,15 @@ class ExtractorRegistry:
         return [e.describe() for e in self._extractors]
 
 
-def build_default_registry(*, office_com_enabled: bool = True) -> ExtractorRegistry:
-    """Tworzy rejestr ze wszystkimi wbudowanymi adapterami."""
+def build_default_registry(
+    *, office_com_enabled: bool = True, archives_enabled: bool = False
+) -> ExtractorRegistry:
+    """Tworzy rejestr ze wszystkimi wbudowanymi adapterami.
+
+    Adapter archiwow ZIP jest rejestrowany wylacznie na zyczenie
+    (``indexing.index_archives``): bez niego archiwum pozostaje plikiem
+    nieobslugiwanym, jak w poprzednich wydaniach.
+    """
     from finddocs.extractors.csv_table import CsvExtractor
     from finddocs.extractors.doc_legacy import (
         LegacyDocComExtractor,
@@ -161,6 +168,10 @@ def build_default_registry(*, office_com_enabled: bool = True) -> ExtractorRegis
     if office_com_enabled:
         registry.register(LegacyDocComExtractor())
     registry.register(LegacyDocOleExtractor())
+    if archives_enabled:
+        from finddocs.extractors.archive import ZipArchiveExtractor
+
+        registry.register(ZipArchiveExtractor())
     return registry
 
 

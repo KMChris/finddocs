@@ -66,7 +66,10 @@ def make_pipeline(
         return DocumentPipeline(
             config,
             index_service,
-            build_default_registry(office_com_enabled=config.indexing.office_com_enabled),
+            build_default_registry(
+                office_com_enabled=config.indexing.office_com_enabled,
+                archives_enabled=config.indexing.index_archives,
+            ),
             OcrService(config.ocr),
         )
 
@@ -458,6 +461,113 @@ def test_zalaczniki_mozna_wylaczyc(
 
     rows = index_service.db.query_all("SELECT name FROM documents")
     assert {str(row["name"]) for row in rows} == {"wiadomosc.eml"}
+
+
+# --- archiwa ZIP -------------------------------------------------------------------
+
+
+def _write_zip(target: Path, entries: list[tuple[str, bytes]]) -> None:
+    import zipfile
+
+    with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED) as archive:
+        for name, payload in entries:
+            archive.writestr(name, payload)
+
+
+def _zip_bytes(entries: list[tuple[str, bytes]]) -> bytes:
+    import io
+    import zipfile
+
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+        for name, payload in entries:
+            archive.writestr(name, payload)
+    return buffer.getvalue()
+
+
+def test_archiwum_zip_indeksuje_zawartosc_po_wlaczeniu(
+    app_config: AppConfig,
+    make_pipeline: Callable[[AppConfig], DocumentPipeline],
+    run_document: Callable[..., object],
+    docs_root: Path,
+    index_service: IndexService,
+) -> None:
+    """Kazdy plik z archiwum trafia do indeksu jako dokument podrzedny."""
+    from finddocs.search.service import SearchService
+    from finddocs.types import SearchMode, SearchRequest
+
+    app_config.ocr.enabled = False
+    app_config.indexing.index_archives = True
+    _write_zip(
+        docs_root / "paczka.zip",
+        [
+            ("raport.txt", b"Numer rachunku 00 1234 5678 9012 3456 7890 1234."),
+            ("notatki/plan.txt", b"Plan naprawczy oddzialu na lipiec."),
+        ],
+    )
+
+    outcome = run_document(make_pipeline(app_config), docs_root, "paczka.zip")
+
+    assert outcome.status is DocumentStatus.INDEXED  # type: ignore[attr-defined]
+    rows = index_service.db.query_all(
+        "SELECT name, attachment_of, status FROM documents ORDER BY doc_id"
+    )
+    names = {str(row["name"]) for row in rows}
+    assert "raport.txt" in names
+    assert "notatki/plan.txt" in names
+    child = next(row for row in rows if str(row["name"]) == "raport.txt")
+    assert child["attachment_of"] == outcome.doc_id  # type: ignore[attr-defined]
+    assert str(child["status"]) == DocumentStatus.INDEXED.value
+
+    index_service.flush()
+    response = SearchService(index_service).search(
+        SearchRequest(query="00 1234 5678 9012 3456 7890 1234", mode=SearchMode.EXACT)
+    )
+    assert any(hit.name == "raport.txt" for hit in response.hits)
+
+
+def test_archiwum_zip_domyslnie_pozostaje_nieobslugiwane(
+    app_config: AppConfig,
+    make_pipeline: Callable[[AppConfig], DocumentPipeline],
+    run_document: Callable[..., object],
+    docs_root: Path,
+) -> None:
+    """Bez wlaczonej opcji archiwum konczy sie statusem unsupported."""
+    app_config.ocr.enabled = False
+    _write_zip(docs_root / "paczka.zip", [("raport.txt", b"Tresc raportu.")])
+
+    outcome = run_document(make_pipeline(app_config), docs_root, "paczka.zip")
+
+    assert outcome.status is DocumentStatus.UNSUPPORTED  # type: ignore[attr-defined]
+
+
+def test_zagniezdzone_archiwa_maja_limit_glebokosci(
+    app_config: AppConfig,
+    make_pipeline: Callable[[AppConfig], DocumentPipeline],
+    run_document: Callable[..., object],
+    docs_root: Path,
+    index_service: IndexService,
+) -> None:
+    """Archiwum w archiwum jest indeksowane do trzech poziomow, glebiej juz nie."""
+    app_config.ocr.enabled = False
+    app_config.indexing.index_archives = True
+    poziom3 = _zip_bytes([("poziom4.txt", b"Tresc z czwartego poziomu.")])
+    poziom2 = _zip_bytes([("poziom3.txt", b"Tresc z trzeciego poziomu."), ("p3.zip", poziom3)])
+    poziom1 = _zip_bytes([("poziom2.txt", b"Tresc z drugiego poziomu."), ("p2.zip", poziom2)])
+    _write_zip(
+        docs_root / "paczka.zip",
+        [("poziom1.txt", b"Tresc z pierwszego poziomu."), ("p1.zip", poziom1)],
+    )
+
+    outcome = run_document(make_pipeline(app_config), docs_root, "paczka.zip")
+
+    assert outcome.status is DocumentStatus.INDEXED  # type: ignore[attr-defined]
+    rows = index_service.db.query_all("SELECT name FROM documents")
+    names = {str(row["name"]) for row in rows}
+    assert {"poziom1.txt", "poziom2.txt", "poziom3.txt"} <= names
+    # p3.zip lezy na czwartym poziomie zagniezdzenia: dostaje sam spis tresci,
+    # a jego zawartosc nie jest juz rozpakowywana.
+    assert "poziom4.txt" not in names
 
 
 # --- porzadki --------------------------------------------------------------------

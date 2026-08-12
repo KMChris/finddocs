@@ -40,10 +40,27 @@ z wiadomością nadrzędną. Wyszukiwanie znajdzie zarówno wiadomość, jak i s
 załącznik, a w wyniku widać, do której wiadomości należy.
 
 Zagnieżdżona wiadomość przekazana dalej też jest załącznikiem. Głębokość
-zagnieżdżenia jest ograniczona, żeby złośliwy plik nie zapętlił indeksowania.
+zagnieżdżenia dokumentów podrzędnych jest ograniczona do trzech poziomów,
+żeby złośliwy plik (na przykład archiwum zawierające samo siebie) nie
+zapętlił indeksowania.
 
 Domyślne limity: 30 załączników na wiadomość i 100 MB łącznie. Przekroczenie
 kończy się ostrzeżeniem zapisanym przy dokumencie, nie cichym pominięciem.
+
+## Archiwa ZIP
+
+Domyślnie zawartość archiwów nie jest rozpakowywana, a plik `.zip` ma status
+`unsupported`. Po włączeniu opcji **Indeksuj zawartość archiwów ZIP** (ekran
+Źródła i konfiguracja, sekcja Opcje indeksowania; w pliku konfiguracyjnym
+`indexing.index_archives`) archiwum jest przetwarzane tak jak wiadomość
+z załącznikami: każdy plik w środku trafia do indeksu jako osobny dokument
+podrzędny, a samo archiwum dostaje przeszukiwalny spis nazw plików.
+
+Limity: 200 wpisów i 200 MB rozpakowanej treści na archiwum. Wpisy
+zaszyfrowane, przekraczające `max_file_size_mb` oraz wpisy o podejrzanym
+stosunku kompresji (ochrona przed bombą dekompresyjną) są pomijane
+z ostrzeżeniem przy dokumencie. Archiwa `.7z` i `.rar` pozostają
+nieobsługiwane.
 
 ## Pliki celowo pomijane
 
@@ -51,7 +68,7 @@ kończy się ostrzeżeniem zapisanym przy dokumencie, nie cichym pominięciem.
 | --- | --- |
 | pliki tymczasowe Office (`~$*`) | to nie są dokumenty |
 | pliki większe niż `max_file_size_mb` | ochrona pamięci, domyślnie 512 MB |
-| archiwa `.zip`, `.7z`, `.rar` | zawartość nie jest rozpakowywana |
+| archiwa `.zip` bez włączonej opcji indeksowania archiwów oraz `.7z`, `.rar` | zawartość nie jest rozpakowywana |
 | pliki wykonywalne i binarne | nie zawierają tekstu do wyszukania |
 | pliki bez uprawnień odczytu | zapisywane jako błąd, nie pomijane po cichu |
 

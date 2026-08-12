@@ -223,8 +223,36 @@ class SourcesView(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(SPACE_MD)
         layout.addWidget(self._build_sources_box())
+        layout.addWidget(self._build_indexing_options_box())
         layout.addStretch(1)
         return page
+
+    def _build_indexing_options_box(self) -> QWidget:
+        """Opcje zakresu indeksowania wspolne dla wszystkich zrodel."""
+        box = QGroupBox(i18n.SOURCES_OPTIONS_TITLE)
+        layout = QVBoxLayout(box)
+        layout.setSpacing(SPACE_SM)
+
+        self.archives_check = QCheckBox(i18n.SOURCES_INDEX_ARCHIVES)
+        self.archives_check.setChecked(self.context.config.indexing.index_archives)
+        self.archives_check.setToolTip(i18n.SOURCES_INDEX_ARCHIVES_HINT)
+        self.archives_check.toggled.connect(self._on_archives_toggled)
+        layout.addWidget(self.archives_check)
+
+        hint = QLabel(i18n.SOURCES_INDEX_ARCHIVES_HINT)
+        hint.setObjectName("Hint")
+        hint.setWordWrap(True)
+        layout.addWidget(hint)
+        return box
+
+    def _on_archives_toggled(self, checked: bool) -> None:
+        enabled = bool(checked)
+        if self.context.config.indexing.index_archives == enabled:
+            return
+        self.context.config.indexing.index_archives = enabled
+        self.context.save()
+        template = i18n.SOURCES_INDEX_ARCHIVES_ON if enabled else i18n.SOURCES_INDEX_ARCHIVES_OFF
+        self.status_message.emit(template)
 
     def _build_semantic_tab(self) -> QWidget:
         self.semantic_card = SemanticCard(self.context)

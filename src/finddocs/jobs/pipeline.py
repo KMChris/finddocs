@@ -69,6 +69,10 @@ from finddocs.types import (
 
 log = get_logger(__name__)
 
+#: Maksymalna glebokosc zagniezdzenia dokumentow podrzednych. Chroni przed
+#: zapetleniem na zlosliwych plikach, np. archiwum ZIP zawierajacym samo siebie.
+MAX_ATTACHMENT_DEPTH = 3
+
 #: Mapowanie wyjatkow ekstrakcji na status dokumentu.
 STATUS_BY_ERROR: dict[type[Exception], DocumentStatus] = {
     UnsupportedFormatError: DocumentStatus.UNSUPPORTED,
@@ -272,12 +276,14 @@ class DocumentPipeline:
         scan_id: int,
         workspace: Path,
         track_outcome: bool = True,
+        attachment_depth: int = 0,
     ) -> DocumentOutcome:
         doc_id = record.doc_id
         context = ExtractionContext(
             max_bytes=self.config.indexing.max_file_size_mb * 1024 * 1024,
             timeout_seconds=self.config.indexing.extraction_timeout_seconds,
             cancel=control,
+            extract_attachments=attachment_depth < MAX_ATTACHMENT_DEPTH,
             office_com_enabled=self.config.indexing.office_com_enabled,
             office_com_timeout_seconds=self.config.indexing.office_com_timeout_seconds,
         )
@@ -429,13 +435,14 @@ class DocumentPipeline:
             )
 
         attachments = result.attachments if result else []
-        if attachments and self.config.indexing.office_com_enabled is not None:
+        if attachments:
             self._process_attachments(
                 record=record,
                 attachments=attachments,
                 workspace=workspace,
                 control=control,
                 scan_id=scan_id,
+                depth=attachment_depth + 1,
             )
 
         for warning in warnings[:5]:
@@ -492,8 +499,9 @@ class DocumentPipeline:
         workspace: Path,
         control: JobControl,
         scan_id: int,
+        depth: int = 1,
     ) -> None:
-        """Indeksuje załączniki wiadomosci jako osobne dokumenty podrzedne."""
+        """Indeksuje załączniki i wpisy archiwow jako osobne dokumenty podrzedne."""
         for attachment in attachments:
             control.checkpoint()
             name = attachment.name
@@ -536,6 +544,7 @@ class DocumentPipeline:
                     scan_id=scan_id,
                     workspace=child_dir,
                     track_outcome=False,
+                    attachment_depth=depth,
                 )
             except JobCancelledError:
                 raise
@@ -629,4 +638,4 @@ def _safe_filename(name: str) -> str:
     return cleaned
 
 
-__all__ = ["STATUS_BY_ERROR", "DocumentOutcome", "DocumentPipeline"]
+__all__ = ["MAX_ATTACHMENT_DEPTH", "STATUS_BY_ERROR", "DocumentOutcome", "DocumentPipeline"]

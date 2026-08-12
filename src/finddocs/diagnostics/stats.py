@@ -294,7 +294,10 @@ def _credential_store_info(paths: AppPaths) -> dict[str, Any]:
 def collect_component_info(config: AppConfig) -> dict[str, Any]:
     """Zbiera stan komponentow wymiennych: parsery, silniki OCR, siec, poswiadczenia."""
     paths = config.paths()
-    registry = build_default_registry(office_com_enabled=config.indexing.office_com_enabled)
+    registry = build_default_registry(
+        office_com_enabled=config.indexing.office_com_enabled,
+        archives_enabled=config.indexing.index_archives,
+    )
     parsers = registry.describe()
 
     engines = [

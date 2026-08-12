@@ -496,6 +496,21 @@ def make_image(docs_dir: Path) -> Callable[..., Path]:
 
 
 @pytest.fixture
+def make_zip(docs_dir: Path) -> Callable[..., Path]:
+    """Tworzy zwykle archiwum ZIP z podanych wpisow."""
+    import zipfile
+
+    def _make(name: str = "archiwum.zip", entries: list[tuple[str, bytes]] | None = None) -> Path:
+        target = docs_dir / name
+        with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED) as archive:
+            for entry_name, payload in entries or [("dokument.txt", b"Tresc dokumentu.")]:
+                archive.writestr(entry_name, payload)
+        return target
+
+    return _make
+
+
+@pytest.fixture
 def make_protected_zip(docs_dir: Path) -> Callable[..., Path]:
     """Tworzy archiwum ZIP z klasycznym szyfrowaniem kazdego wpisu."""
     from finddocs.demo.generate import write_protected_zip

@@ -326,6 +326,14 @@ class IndexingSettings:
     embed_batch_chunks: int = 128
     """Górny limit fragmentów w buforze batcha. Chroni pamięć przy dużych plikach."""
 
+    index_archives: bool = False
+    """Indeksowanie zawartości archiwów ZIP.
+
+    Po włączeniu archiwum jest rozpakowywane, a każdy plik w środku trafia
+    do indeksu jako osobny dokument podrzędny, tak jak załącznik wiadomości.
+    Domyślnie wyłączone: archiwa bywają duże, a ich zawartość często dubluje
+    dokumenty leżące obok."""
+
 
 @dataclass(slots=True)
 class DiagnosticsSettings:

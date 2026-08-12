@@ -82,7 +82,8 @@ class IndexingJob:
         self.options = options or JobOptions()
         self.paths = paths or index.paths
         self.registry = registry or build_default_registry(
-            office_com_enabled=config.indexing.office_com_enabled
+            office_com_enabled=config.indexing.office_com_enabled,
+            archives_enabled=config.indexing.index_archives,
         )
         self.ocr = ocr or OcrService(
             config.ocr, repository=index.repository, model_dir=self.paths.models_dir

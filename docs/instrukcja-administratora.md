@@ -179,7 +179,8 @@ EasyOCR, RapidOCR. Szczegóły: [OCR](ocr.md).
   "extraction_timeout_seconds": 300.0,
   "max_retries_per_document": 3,
   "office_com_enabled": true,
-  "office_com_timeout_seconds": 90.0
+  "office_com_timeout_seconds": 90.0,
+  "index_archives": false
 }
 ```
 
@@ -187,6 +188,11 @@ EasyOCR, RapidOCR. Szczegóły: [OCR](ocr.md).
 pakiet Microsoft Office. Aplikacja sama sprawdza, czy Office jest dostępny,
 nie uruchamia makr i przerywa konwersję po `office_com_timeout_seconds`.
 Gdy Office nie ma, używany jest wbudowany czytnik OLE (poziom wsparcia niższy).
+
+`index_archives` włącza indeksowanie zawartości archiwów ZIP: każdy plik
+z archiwum trafia do indeksu jako osobny dokument podrzędny, jak załącznik
+wiadomości. Opcja jest też dostępna w GUI na ekranie Źródła i konfiguracja
+(sekcja Opcje indeksowania). Szczegóły i limity: [formaty](formaty.md).
 
 Poniżej `min_free_disk_bytes` wolnego miejsca zadanie kończy się stanem błędu
 z czytelnym komunikatem, zamiast zostawiać uszkodzony indeks.
