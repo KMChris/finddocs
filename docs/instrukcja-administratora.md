@@ -21,14 +21,14 @@ Skany zajmują mniej, bo indeksowany jest wynik OCR, a nie obraz.
 
 ### Instalator
 
-`FindDocs-0.2.3-instalator.exe` instaluje aplikację w profilu użytkownika
+`FindDocs-0.2.4-instalator.exe` instaluje aplikację w profilu użytkownika
 (`%LOCALAPPDATA%\Programs\FindDocs`), tworzy skrót w menu Start i opcjonalnie
 na pulpicie. Nie wymaga uprawnień administratora i nie zmienia ustawień systemu.
 
 Instalacja cicha:
 
 ```bat
-FindDocs-0.2.3-instalator.exe /VERYSILENT /CURRENTUSER /NORESTART /SUPPRESSMSGBOXES
+FindDocs-0.2.4-instalator.exe /VERYSILENT /CURRENTUSER /NORESTART /SUPPRESSMSGBOXES
 ```
 
 Przełącznik `/CURRENTUSER` jest istotny: bez niego instalator pyta o zakres
