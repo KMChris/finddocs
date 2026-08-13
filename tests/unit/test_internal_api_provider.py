@@ -48,6 +48,7 @@ def _provider(
     batch_size: int = 64,
     max_retries: int = 3,
     dimension: int = DIMENSION,
+    send_dimensions: bool = False,
 ) -> InternalApiEmbeddingProvider:
     return InternalApiEmbeddingProvider(
         BASE_URL,
@@ -61,6 +62,7 @@ def _provider(
         max_retries=max_retries,
         api_key_provider=(lambda: api_key) if api_key is not None else None,
         api_key_header=api_key_header,
+        send_dimensions=send_dimensions,
         policy=_policy(),
         transport=httpx.MockTransport(handler),
     )
@@ -154,6 +156,46 @@ def test_kontrakt_openai_wysyla_model_i_format() -> None:
         "model": "model-zdalny",
     }
     assert "kind" not in bodies[0]
+
+
+def test_domyslnie_nie_wysyla_pola_dimensions() -> None:
+    bodies: list[dict[str, Any]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        bodies.append(json.loads(request.content))
+        return httpx.Response(200, json=_ok_response(1))
+
+    _provider(handler, protocol="openai").embed_passages(["tekst"])
+    assert "dimensions" not in bodies[0]
+
+
+def test_wlaczone_zadanie_wymiaru_dokleja_pole_dimensions() -> None:
+    """Modele z Matryoshka skracaja wektor po stronie serwera."""
+    bodies: list[dict[str, Any]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        bodies.append(json.loads(request.content))
+        return httpx.Response(200, json=_ok_response(1))
+
+    provider = _provider(handler, protocol="openai", send_dimensions=True)
+    provider.embed_passages(["tekst"])
+    provider.embed_query("pytanie")
+
+    assert bodies[0]["dimensions"] == DIMENSION
+    assert bodies[1]["dimensions"] == DIMENSION
+    assert provider.describe()["zada_wymiaru"] is True
+
+
+def test_serwer_ignorujacy_dimensions_konczy_sie_bledem_wymiaru() -> None:
+    """Cicha zmiana dlugosci wektora byla najgorszym mozliwym wynikiem."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"data": [{"index": 0, "embedding": [0.1] * 99}]})
+
+    provider = _provider(handler, protocol="openai", send_dimensions=True)
+    with pytest.raises(ProviderError) as blad:
+        provider.embed_passages(["tekst"])
+    assert "wymiarze" in blad.value.user_message
 
 
 def test_kontrakt_openai_porzadkuje_wiersze_po_polu_index() -> None:

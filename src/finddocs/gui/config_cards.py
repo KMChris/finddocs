@@ -845,6 +845,12 @@ class ComputeCard(ConfigCard):
         self.remote_dimension_spin.setFixedWidth(CONTROL_WIDTH)
         form.addRow(i18n.MODEL_REMOTE_DIMENSION, self.remote_dimension_spin)
 
+        self.remote_send_dimensions_check = QCheckBox(i18n.MODEL_REMOTE_SEND_DIMENSIONS)
+        self.remote_send_dimensions_check.setChecked(embedding.internal_api_send_dimensions)
+        self.remote_send_dimensions_check.setToolTip(i18n.MODEL_REMOTE_SEND_DIMENSIONS_HINT)
+        form.addRow("", self.remote_send_dimensions_check)
+        form.addRow(_hint_label(i18n.MODEL_REMOTE_SEND_DIMENSIONS_HINT))
+
         self.remote_batch_spin = QSpinBox()
         self.remote_batch_spin.setRange(1, 1024)
         self.remote_batch_spin.setValue(embedding.internal_api_batch_size)
@@ -911,6 +917,7 @@ class ComputeCard(ConfigCard):
         self.remote_protocol_combo.setCurrentIndex(max(0, position))
         self.remote_model_edit.setText(embedding.internal_api_model)
         self.remote_dimension_spin.setValue(embedding.internal_api_dimension)
+        self.remote_send_dimensions_check.setChecked(embedding.internal_api_send_dimensions)
         self.remote_batch_spin.setValue(embedding.internal_api_batch_size)
         self.remote_query_prefix_edit.setText(embedding.query_prefix)
         self.remote_passage_prefix_edit.setText(embedding.passage_prefix)
@@ -961,10 +968,13 @@ class ComputeCard(ConfigCard):
         remote_model = self.remote_model_edit.text().strip()
         remote_dimension = int(self.remote_dimension_spin.value())
         remote_batch = int(self.remote_batch_spin.value())
+        remote_send_dimensions = self.remote_send_dimensions_check.isChecked()
         remote_identity_changed = (
             remote_protocol != embedding.internal_api_protocol
             or remote_model != embedding.internal_api_model
             or remote_dimension != embedding.internal_api_dimension
+            # Skrocenie wektora zmienia przestrzen, wiec jest czescia tozsamosci.
+            or remote_send_dimensions != embedding.internal_api_send_dimensions
         )
         if remote:
             # Przedrostki dokleja aplikacja przed wysylka, wiec dla zdalnego
@@ -989,6 +999,7 @@ class ComputeCard(ConfigCard):
             embedding.internal_api_protocol = remote_protocol
             embedding.internal_api_model = remote_model
             embedding.internal_api_dimension = remote_dimension
+            embedding.internal_api_send_dimensions = remote_send_dimensions
             embedding.internal_api_batch_size = remote_batch
             reload_needed = True
 

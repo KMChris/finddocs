@@ -170,10 +170,10 @@ def test_otwarcie_tworzy_tabele_i_rozszerzenie(store, table_name):
             (table_name,),
         ).fetchone()
         assert column is not None
-        # Zalozenie produkcyjne z _check_column_dimension: atttypmod typu vector
-        # przechowuje wprost liczbe wymiarow.
+        # Zalozenie produkcyjne z _check_column_dimension: atttypmod typu
+        # halfvec przechowuje wprost liczbe wymiarow, tak samo jak vector.
         assert int(column[0]) == DIM
-        assert column[1] == f"vector({DIM})"
+        assert column[1] == f"halfvec({DIM})"
 
 
 def test_add_search_remove_na_prawdziwym_serwerze(store):
@@ -194,8 +194,10 @@ def test_add_search_remove_na_prawdziwym_serwerze(store):
 
     assert [chunk_id for chunk_id, _ in wyniki] == [10, 30, 20]
     oczekiwane = wektory @ zapytanie
-    assert wyniki[0][1] == pytest.approx(float(oczekiwane[0]), rel=1e-6)
-    assert wyniki[1][1] == pytest.approx(float(oczekiwane[2]), rel=1e-6)
+    # Kolumna ma typ halfvec (float16), wiec podobienstwo zgadza sie do okolo
+    # trzech cyfr znaczacych. Kolejnosc wynikow pozostaje bez zmian.
+    assert wyniki[0][1] == pytest.approx(float(oczekiwane[0]), rel=1e-3)
+    assert wyniki[1][1] == pytest.approx(float(oczekiwane[2]), rel=1e-3)
 
     store.remove([10])
     assert store.count() == 2
@@ -203,15 +205,38 @@ def test_add_search_remove_na_prawdziwym_serwerze(store):
     assert store.reconstruct(10) is None
 
 
-def test_upsert_i_odtworzenie_wektora_bez_straty_precyzji(store):
+def test_upsert_i_odtworzenie_wektora_z_precyzja_float16(store):
+    """Kolumna halfvec zaokragla do float16; wartosci dokladne w tym typie wracaja bez zmian."""
     open_store(store)
-    pierwotny = np.asarray([[0.1, -2.5, 3.25, 1e-7, 123.456, -0.0625, 7.0, 0.0]], dtype="float32")
-    store.add([7], pierwotny)
-    store.add([7], pierwotny * 2.0)
+    # Same potegi dwojki i ich sumy: reprezentowalne dokladnie w float16.
+    dokladny = np.asarray([[0.5, -2.5, 3.25, 0.0, 128.0, -0.0625, 7.0, 0.0]], dtype="float32")
+    store.add([7], dokladny)
+    store.add([7], dokladny * 2.0)
 
     assert store.count() == 1
-    odtworzony = store.reconstruct(7)
-    np.testing.assert_array_equal(odtworzony, (pierwotny * 2.0)[0])
+    np.testing.assert_array_equal(store.reconstruct(7), (dokladny * 2.0)[0])
+
+    # Wartosc spoza siatki float16 wraca zaokraglona, ale w granicach typu.
+    niedokladny = np.asarray([[0.1, -2.5, 3.25, 1e-7, 123.456, -0.0625, 7.0, 0.0]], dtype="float32")
+    store.add([8], niedokladny)
+    odtworzony = store.reconstruct(8)
+    np.testing.assert_allclose(odtworzony, niedokladny[0], rtol=1e-3, atol=1e-6)
+
+
+def test_zaokraglenie_do_float16_jest_stabilne_przy_kompaktacji(store):
+    """Kompaktacja czyta wektory i zapisuje je z powrotem, wiec blad nie moze narastac."""
+    open_store(store)
+    pierwotny = np.asarray([[0.1, -2.5, 3.25, 1e-7, 123.456, -0.0625, 7.0, 0.31]], dtype="float32")
+    store.add([11], pierwotny)
+
+    poprzedni = store.reconstruct(11)
+    assert poprzedni is not None
+    for _ in range(3):
+        store.compact([11], np.asarray([poprzedni], dtype="float32"))
+        biezacy = store.reconstruct(11)
+        assert biezacy is not None
+        np.testing.assert_array_equal(biezacy, poprzedni)
+        poprzedni = biezacy
 
 
 def test_reset_compact_describe_i_rozmiar(store):
@@ -253,7 +278,9 @@ def test_duze_paczki_i_glebokie_wyszukiwanie(store):
 
     assert len(wyniki) == 600
     assert wyniki[0][0] == 18
-    assert wyniki[0][1] == pytest.approx(1.0, abs=1e-5)
+    # Kolumna halfvec zaokragla skladowe do float16, wiec samopodobienstwo
+    # wypada tuz pod 1.0. Blad rzedu 1e-3 nie zmienia kolejnosci wynikow.
+    assert wyniki[0][1] == pytest.approx(1.0, abs=1e-3)
     oceny = [score for _, score in wyniki]
     assert oceny == sorted(oceny, reverse=True)
 

@@ -126,6 +126,7 @@ class EmbeddingProfile:
     internal_api_timeout_seconds: float = 30.0
     internal_api_max_retries: int = 3
     internal_api_key_header: str = ""
+    internal_api_send_dimensions: bool = False
 
 
 #: Pola wspolne profilu i ustawien embeddingow, kopiowane przy przelaczaniu.
@@ -146,6 +147,7 @@ PROFILE_FIELDS: tuple[str, ...] = (
     "internal_api_timeout_seconds",
     "internal_api_max_retries",
     "internal_api_key_header",
+    "internal_api_send_dimensions",
 )
 
 
@@ -208,6 +210,16 @@ class EmbeddingSettings:
     internal_api_key_header: str = ""
     """Pusta wartość oznacza nagłówek Authorization: Bearer <klucz>.
     Inna wartość to nazwa nagłówka, w którym zdalne API oczekuje klucza."""
+
+    internal_api_send_dimensions: bool = False
+    """Dołącza do żądania pole ``dimensions`` z wartością wymiaru wektora.
+
+    Modele trenowane z Matryoshka (na przykład Qwen3-Embedding) potrafią zwrócić
+    skrócony wektor bez ponownego liczenia. Serwer musi to pole obsługiwać;
+    gdy je zignoruje, odpowiedź nie zgodzi się z zadeklarowanym wymiarem
+    i aplikacja zgłosi błąd. Skrócenie zmienia wektory, więc pole wchodzi
+    do skrótu zgodności i wymaga przebudowy części semantycznej.
+    """
 
     profiles: list[EmbeddingProfile] = field(default_factory=list)
     """Nazwane profile dostawcy do szybkiego przełączania (patrz apply_profile)."""
@@ -466,6 +478,11 @@ class AppConfig:
                     "internal_api_dimension": self.embedding.internal_api_dimension,
                 }
             )
+            # Ten sam wzorzec co pozostale pola warunkowe: klucz pojawia sie
+            # dopiero po wlaczeniu, zeby skroty istniejacych konfiguracji
+            # zdalnych nie zmienily sie po aktualizacji aplikacji.
+            if self.embedding.internal_api_send_dimensions:
+                payload["internal_api_dimensions_requested"] = True
         if self.vector_store.backend != "faiss":
             payload.update(
                 {

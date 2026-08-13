@@ -27,6 +27,12 @@ Obslugiwane kontrakty HTTP:
 
 Obie odpowiedzi maja postac ``{"data": [{"embedding": [...]}, ...]}``.
 
+Po wlaczeniu ``send_dimensions`` cialo zadania niesie dodatkowo pole
+``dimensions`` rowne zadeklarowanemu wymiarowi. Sluzy modelom trenowanym
+z Matryoshka (MRL), ktore potrafia zwrocic skrocony wektor. Serwer musi to
+pole obslugiwac: gdy je zignoruje, odpowiedz nie zgodzi sie z wymiarem
+i ``_parse_payload`` zglosi blad.
+
 Klucz API nigdy nie trafia do logow ani do pliku konfiguracyjnego. Provider
 otrzymuje funkcje zwracajaca klucz i odczytuje go dopiero przy wysylce.
 """
@@ -91,6 +97,7 @@ class InternalApiEmbeddingProvider(EmbeddingProvider):
         max_retries: int = 3,
         api_key_provider: Callable[[], str | None] | None = None,
         api_key_header: str = "",
+        send_dimensions: bool = False,
         policy: NetworkPolicy | None = None,
         transport: Any | None = None,
     ) -> None:
@@ -123,6 +130,7 @@ class InternalApiEmbeddingProvider(EmbeddingProvider):
         self._max_retries = max(1, max_retries)
         self._api_key_provider = api_key_provider
         self._api_key_header = api_key_header.strip()
+        self._send_dimensions = send_dimensions
         self._transport = transport
         self._client: Any | None = None
         self._info = ProviderInfo(
@@ -176,12 +184,16 @@ class InternalApiEmbeddingProvider(EmbeddingProvider):
     def _request_body(self, texts: list[str], kind: str) -> dict[str, Any]:
         if self._protocol == "openai":
             body: dict[str, Any] = {"input": texts, "encoding_format": "float"}
-            if self._model:
-                body["model"] = self._model
-            return body
-        body = {"input": texts, "kind": kind}
+        else:
+            body = {"input": texts, "kind": kind}
         if self._model:
             body["model"] = self._model
+        if self._send_dimensions:
+            # Pole standardu OpenAI. Modele z Matryoshka zwracaja wtedy wektor
+            # skrocony do zadanej dlugosci. Wartosc jest ta sama, ktora
+            # sprawdza _parse_payload, wiec zignorowanie pola przez serwer
+            # skonczy sie czytelnym bledem o niezgodnym wymiarze.
+            body["dimensions"] = self._info.dimension
         return body
 
     def _post_once(self, url: str, body: dict[str, Any]) -> Any:
@@ -298,6 +310,7 @@ class InternalApiEmbeddingProvider(EmbeddingProvider):
         data["adres"] = safe_url(self._base_url)
         data["kontrakt"] = self._protocol
         data["batch"] = self._batch_size
+        data["zada_wymiaru"] = self._send_dimensions
         data["klucz_api"] = "skonfigurowany" if self._api_key_provider is not None else "brak"
         return data
 

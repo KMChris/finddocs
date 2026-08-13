@@ -318,6 +318,13 @@ MODEL_REMOTE_PREFIX_HINT = (
 MODEL_REMOTE_MODEL = "Nazwa modelu"
 MODEL_REMOTE_DIMENSION = "Wymiar wektora"
 MODEL_REMOTE_BATCH = "Teksty w jednym żądaniu"
+MODEL_REMOTE_SEND_DIMENSIONS = "Żądaj skrócenia wektora do podanego wymiaru"
+MODEL_REMOTE_SEND_DIMENSIONS_HINT = (
+    "Dokleja do żądania pole dimensions. Modele trenowane z Matryoshka "
+    "(na przykład Qwen3-Embedding) zwracają wtedy krótszy wektor bez utraty "
+    "sensu rankingu. Serwer musi to pole obsługiwać, inaczej odpowiedź nie "
+    "zgodzi się z wymiarem. Zmiana wymaga przebudowy części semantycznej."
+)
 MODEL_REMOTE_ALLOW_HTTP = "Zezwól na http do tego komputera"
 MODEL_REMOTE_ALLOW_HTTP_HINT = (
     "Potrzebne, gdy API działa na tym komputerze bez szyfrowania, na przykład "

@@ -248,7 +248,8 @@ Pola w `settings.json` (bez klucza, ten nigdy nie jest zapisywany w pliku):
   "internal_api_batch_size": 64,
   "internal_api_timeout_seconds": 30.0,
   "internal_api_max_retries": 3,
-  "internal_api_key_header": ""
+  "internal_api_key_header": "",
+  "internal_api_send_dimensions": false
 }
 ```
 
@@ -297,6 +298,42 @@ części semantycznej indeksu.
 
 Wymiar 4096 to ponad pięć razy więcej niż w modelu MMLW (768), czyli 16 KB na
 wektor. Przy 100 tysiącach fragmentów to około 1,6 GB samych wektorów.
+
+### Skrócenie wektora (Matryoshka)
+
+Modele trenowane metodą Matryoshka (MRL), w tym Qwen3-Embedding, pozwalają
+skrócić wektor bez ponownego liczenia. Służy do tego pole `dimensions`
+standardu OpenAI. Włącza je opcja **Żądaj skrócenia wektora do podanego
+wymiaru** na karcie Obliczenia embeddingów albo `--send-dimensions`
+z wiersza poleceń. Aplikacja wysyła wtedy `dimensions` równe zadeklarowanemu
+wymiarowi wektora.
+
+Serwer musi to pole obsługiwać. Ollama obsługuje je od dawna; jeżeli serwer
+je zignoruje, odpowiedź nie zgodzi się z zadeklarowanym wymiarem i aplikacja
+zgłosi błąd, zamiast po cichu zapisać wektor innej długości.
+
+Skrócenie przydaje się przy magazynie pgvector, gdzie indeks HNSW przyjmuje
+najwyżej 4000 wymiarów. Qwen3-Embedding-8B z pełnymi 4096 nie mieści się
+w tej granicy, a skrócony do 2048 mieści się z zapasem.
+
+Koszt jakości na polskim zbiorze dokumentów korporacyjnych (20 dokumentów,
+10 zapytań), gdzie punktem odniesienia jest pełne 4096 w float32:
+
+| Wariant | Zgodność top-1 | top-3 | top-5 | Maks. błąd podobieństwa |
+| --- | --- | --- | --- | --- |
+| skrócenie do 2048 | 100% | 90% | 92% | 0,042 |
+| skrócenie do 2048 plus zapis w float16 | 100% | 90% | 92% | 0,042 |
+
+Pierwszy wynik pozostaje ten sam, przestawienia dotyczą dalszych pozycji.
+Zapis w połowicznej precyzji (`halfvec` w pgvector) nie dokłada tu nic
+mierzalnego. Pole wchodzi do skrótu zgodności wektorów, więc jego włączenie
+albo wyłączenie wymaga przebudowy części semantycznej indeksu.
+
+Przykład pełnej konfiguracji Qwen3 skróconego do 2048 z bazą pgvector:
+
+```bash
+finddocs model api --url http://127.0.0.1:11434/v1 --protocol openai --model qwen3-embedding:8b --dimension 2048 --batch 32 --send-dimensions --allow-http-localhost --enable
+```
 
 ### Zgodność indeksu
 

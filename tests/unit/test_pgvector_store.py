@@ -69,8 +69,10 @@ class FakeServer:
         self.can_create_extension = True
         self.fail_connect = False
         self.broken = False
+        self.extension_version = "0.8.6"
         self.tables = {}
         self.dims = {}
+        self.column_types = {}
         self.meta = {}
         self.connects = []
 
@@ -126,8 +128,6 @@ class FakeConnection:
         s = " ".join(sql.split())
         if s.startswith("SELECT set_config"):
             return FakeCursor([])
-        if s == "SELECT 1 FROM pg_extension WHERE extname = 'vector'":
-            return FakeCursor([(1,)] if self.server.extension else [])
         if s == "CREATE EXTENSION IF NOT EXISTS vector":
             if not self.server.can_create_extension:
                 raise FakeProgrammingError("permission denied")
@@ -138,9 +138,10 @@ class FakeConnection:
             if "(key text" in s:
                 self.server.meta.setdefault(name, {})
             elif name not in self.server.tables:
-                dimension = int(re.search(r"vector\((\d+)\)", s).group(1))
+                match = re.search(r"embedding (halfvec|vector)\((\d+)\)", s)
                 self.server.tables[name] = {}
-                self.server.dims[name] = dimension
+                self.server.column_types[name] = match.group(1)
+                self.server.dims[name] = int(match.group(2))
             return FakeCursor([])
         if s.startswith("CREATE INDEX"):
             return FakeCursor([])
@@ -150,7 +151,9 @@ class FakeConnection:
         if s.startswith("SELECT a.atttypmod"):
             name = f'"{params[0]}"."{params[1]}"'
             dimension = self.server.dims.get(name)
-            return FakeCursor([(dimension,)] if dimension is not None else [])
+            if dimension is None:
+                return FakeCursor([])
+            return FakeCursor([(dimension, self.server.column_types.get(name, "halfvec"))])
         if s.startswith("INSERT INTO") and "__meta" in s:
             name = _QUALIFIED.search(s).group(0)
             key, value = params
@@ -194,7 +197,7 @@ class FakeConnection:
         if s == "SHOW server_version":
             return FakeCursor([("16.4",)])
         if s.startswith("SELECT extversion"):
-            return FakeCursor([("0.8.1",)] if self.server.extension else [])
+            return FakeCursor([(self.server.extension_version,)] if self.server.extension else [])
         raise AssertionError(f"nieobslugiwane SQL w tescie: {s}")
 
 
@@ -383,6 +386,54 @@ def test_otwarcie_z_innym_wymiarem_jest_odrzucane():
         open_store(server, dimension=DIM + 1)
 
 
+def test_tabela_ze_starym_typem_vector_wymaga_przebudowy():
+    """Indeksy sprzed przejscia na halfvec nie moga byc czytane po cichu."""
+    server = FakeServer()
+    open_store(server).close()
+    name = '"public"."wektory_test"'
+    # Migawka sprzed zmiany: metadane bez klucza vector_type i kolumna vector.
+    del server.meta['"public"."wektory_test__meta"']["vector_type"]
+    server.column_types[name] = "vector"
+
+    with pytest.raises(IndexIncompatibleError) as blad:
+        open_store(server)
+
+    assert "vector" in blad.value.user_message
+    assert "przebudowa" in blad.value.user_message.lower()
+
+
+def test_nowa_tabela_zapisuje_typ_halfvec_w_metadanych():
+    server = FakeServer()
+    store = open_store(server)
+    store.close()
+
+    meta = server.meta['"public"."wektory_test__meta"']
+    assert meta["vector_type"] == "halfvec"
+    assert server.column_types['"public"."wektory_test"'] == "halfvec"
+
+
+def test_za_stare_pgvector_daje_czytelny_blad():
+    """Typ halfvec pojawil sie w pgvector 0.7.0."""
+    server = FakeServer()
+    server.extension_version = "0.6.2"
+
+    with pytest.raises(ConfigurationError) as blad:
+        open_store(server)
+
+    assert "0.6.2" in blad.value.user_message
+    assert "0.7.0" in blad.value.user_message
+
+
+def test_nietypowa_wersja_rozszerzenia_nie_blokuje_pracy():
+    """Nieczytelny numer wersji przepuszczamy zamiast blokowac dzialajaca baze."""
+    server = FakeServer()
+    server.extension_version = "0.8.6-custom"
+    open_store(server).close()
+
+    server.extension_version = "wersja-nieznana"
+    open_store(server).close()
+
+
 def test_obca_tabela_o_innym_wymiarze_jest_odrzucana():
     server = FakeServer()
     name = '"public"."wektory_test"'
@@ -507,7 +558,7 @@ def test_ping_zwraca_wersje_serwera_i_rozszerzenia():
     wynik = store.ping()
 
     assert wynik["wersja_serwera"] == "16.4"
-    assert wynik["pgvector"] == "0.8.1"
+    assert wynik["pgvector"] == "0.8.6"
     # Probne polaczenie nie zostaje otwarte na stale.
     assert not store.is_open
 

@@ -63,6 +63,17 @@ MAX_EF_SEARCH = 1000
 #: Liczba wierszy wstawianych jedna paczka.
 INSERT_BATCH_ROWS = 500
 
+#: Typ kolumny wektora. ``halfvec`` (polowa precyzji) przyjmuje w indeksie HNSW
+#: do 4000 wymiarow, podczas gdy ``vector`` konczy sie na 2000. Wektory sa
+#: znormalizowane L2, wiec float16 wystarcza, a tabela zajmuje polowe miejsca.
+VECTOR_COLUMN_TYPE = "halfvec"
+
+#: Klasa operatorow HNSW dla iloczynu skalarnego przy typie ``halfvec``.
+VECTOR_OPS_CLASS = "halfvec_ip_ops"
+
+#: Najstarsza wersja pgvector z typem ``halfvec``.
+MIN_PGVECTOR_VERSION = (0, 7, 0)
+
 #: Identyfikator SQL bez cudzyslowow. Limit 57 znakow zostawia miejsce na
 #: przyrostek ``__meta`` w granicach 63 znakow PostgreSQL.
 _IDENTIFIER_RE = re.compile(r"^[a-z_][a-z0-9_]{0,56}$")
@@ -98,10 +109,17 @@ def _timestamp() -> str:
 
 
 class PgVectorStore:
-    """Magazyn wektorow fragmentow w tabeli PostgreSQL z typem ``vector``.
+    """Magazyn wektorow fragmentow w tabeli PostgreSQL z typem ``halfvec``.
 
     Implementuje protokol ``finddocs.indexing.base.VectorIndex``. Obok tabeli
     danych zyje tabela ``<nazwa>__meta`` z metadanymi zgodnosci.
+
+    Kolumna ma typ ``halfvec`` (float16), bo indeks HNSW przyjmuje dla niego do
+    4000 wymiarow zamiast 2000 przy typie ``vector``. Wektory sa znormalizowane
+    L2, wiec polowa precyzji nie psuje rankingu, a tabela zajmuje polowe miejsca.
+    Typ kolumny trafia do metadanych (``vector_type``): tabele zapisane starsza
+    wersja aplikacji sa odrzucane z zadaniem przebudowy, zamiast byc czytane
+    niewlasciwym rzutowaniem.
     """
 
     def __init__(
@@ -298,19 +316,49 @@ class PgVectorStore:
 
     def _ensure_extension(self) -> None:
         conn = self._require_conn()
-        row = conn.execute("SELECT 1 FROM pg_extension WHERE extname = 'vector'").fetchone()
-        if row is not None:
+        row = conn.execute(
+            "SELECT extversion FROM pg_extension WHERE extname = 'vector'"
+        ).fetchone()
+        if row is None:
+            driver = self._load_driver()
+            try:
+                conn.execute("CREATE EXTENSION IF NOT EXISTS vector")
+            except driver.Error as exc:
+                raise ConfigurationError(
+                    "Baza PostgreSQL nie ma zainstalowanego rozszerzenia pgvector, "
+                    "a bieżący użytkownik nie może go utworzyć. Poproś administratora "
+                    "bazy o wykonanie polecenia CREATE EXTENSION vector.",
+                    cause=exc,
+                ) from exc
+            row = conn.execute(
+                "SELECT extversion FROM pg_extension WHERE extname = 'vector'"
+            ).fetchone()
+        self._check_extension_version(str(row[0]) if row else "")
+
+    def _check_extension_version(self, version: str) -> None:
+        """Sprawdza, czy pgvector zna typ ``halfvec`` (od 0.7.0).
+
+        Nieczytelny numer wersji przepuszczamy: lepiej pozwolic serwerowi
+        odpowiedziec bledem na CREATE TABLE niz blokowac dzialajaca baze
+        z powodu nietypowego formatu wersji.
+        """
+        parts: list[int] = []
+        for piece in version.split(".")[:3]:
+            digits = "".join(c for c in piece if c.isdigit())
+            if not digits:
+                return
+            parts.append(int(digits))
+        if not parts:
             return
-        driver = self._load_driver()
-        try:
-            conn.execute("CREATE EXTENSION IF NOT EXISTS vector")
-        except driver.Error as exc:
+        while len(parts) < 3:
+            parts.append(0)
+        if tuple(parts) < MIN_PGVECTOR_VERSION:
+            wymagana = ".".join(str(number) for number in MIN_PGVECTOR_VERSION)
             raise ConfigurationError(
-                "Baza PostgreSQL nie ma zainstalowanego rozszerzenia pgvector, "
-                "a bieżący użytkownik nie może go utworzyć. Poproś administratora "
-                "bazy o wykonanie polecenia CREATE EXTENSION vector.",
-                cause=exc,
-            ) from exc
+                f"Rozszerzenie pgvector w bazie ma wersję {version}, a magazyn "
+                f"wektorów wymaga co najmniej {wymagana} (typ halfvec). "
+                "Poproś administratora bazy o aktualizację rozszerzenia."
+            )
 
     def _ensure_meta_table(self) -> None:
         self._require_conn().execute(
@@ -322,26 +370,29 @@ class PgVectorStore:
         conn = self._require_conn()
         conn.execute(
             f"CREATE TABLE IF NOT EXISTS {self._qualified} "
-            f"(chunk_id bigint PRIMARY KEY, embedding vector({dimension}) NOT NULL)"
+            f"(chunk_id bigint PRIMARY KEY, "
+            f"embedding {VECTOR_COLUMN_TYPE}({dimension}) NOT NULL)"
         )
         conn.execute(
             f'CREATE INDEX IF NOT EXISTS "{self._table}__embedding_idx" '
-            f"ON {self._qualified} USING hnsw (embedding vector_ip_ops) "
+            f"ON {self._qualified} USING hnsw (embedding {VECTOR_OPS_CLASS}) "
             f"WITH (m = {HNSW_M}, ef_construction = {HNSW_EF_CONSTRUCTION})"
         )
 
     def _check_column_dimension(self, dimension: int) -> None:
-        """Porownuje wymiar kolumny w bazie z wymiarem modelu.
+        """Porownuje kolumne w bazie z biezacym modelem: typ i wymiar.
 
-        Chroni przed tabela utworzona poza aplikacja albo dla innego modelu.
-        Dla typu vector atttypmod przechowuje wprost liczbe wymiarow.
+        Chroni przed tabela utworzona poza aplikacja, dla innego modelu albo
+        przez starsza wersje FindDocs (typ ``vector`` zamiast ``halfvec``).
+        Dla obu typow atttypmod przechowuje wprost liczbe wymiarow.
         """
         row = (
             self._require_conn()
             .execute(
-                "SELECT a.atttypmod FROM pg_attribute a "
+                "SELECT a.atttypmod, t.typname FROM pg_attribute a "
                 "JOIN pg_class c ON c.oid = a.attrelid "
                 "JOIN pg_namespace n ON n.oid = c.relnamespace "
+                "JOIN pg_type t ON t.oid = a.atttypid "
                 "WHERE n.nspname = %s AND c.relname = %s AND a.attname = 'embedding'",
                 (self._schema, self._table),
             )
@@ -354,6 +405,13 @@ class PgVectorStore:
             raise IndexIncompatibleError(
                 f"Tabela wektorów w bazie ma wymiar {stored}, a wybrany model "
                 f"tworzy wektory o wymiarze {dimension}."
+            )
+        stored_type = str(row[1] or "")
+        if stored_type and stored_type != VECTOR_COLUMN_TYPE:
+            raise IndexIncompatibleError(
+                f"Tabela wektorów w bazie używa typu kolumny '{stored_type}', "
+                f"a bieżąca wersja aplikacji zapisuje typ '{VECTOR_COLUMN_TYPE}'. "
+                "Wymagana jest przebudowa części semantycznej indeksu."
             )
 
     # --- metadane zgodnosci ----------------------------------------------------
@@ -382,6 +440,7 @@ class PgVectorStore:
             "vector_compat_hash": vector_compat_hash,
             "metric": "inner_product",
             "index_type": "hnsw",
+            "vector_type": VECTOR_COLUMN_TYPE,
             "created_at": _timestamp(),
         }
         conn = self._require_conn()
@@ -407,6 +466,16 @@ class PgVectorStore:
             raise IndexIncompatibleError(
                 f"Indeks wektorowy w bazie ma wymiar {stored_dimension}, "
                 f"a wybrany model tworzy wektory o wymiarze {dimension}."
+            )
+        # Tabele sprzed przejscia na halfvec nie maja tego klucza. Brak wartosci
+        # oznacza wiec stary typ vector, ktorego nie da sie czytac biezacym
+        # rzutowaniem, a nie tabele bez metadanych.
+        stored_type = stored.get("vector_type", "vector")
+        if stored_type != VECTOR_COLUMN_TYPE:
+            raise IndexIncompatibleError(
+                f"Indeks wektorowy w bazie zapisano typem '{stored_type}', "
+                f"a bieżąca wersja aplikacji używa typu '{VECTOR_COLUMN_TYPE}'. "
+                "Wymagana jest przebudowa części semantycznej indeksu."
             )
         if stored.get("vector_compat_hash", "") != vector_compat_hash:
             raise IndexIncompatibleError(
@@ -465,7 +534,7 @@ class PgVectorStore:
                     for start in range(0, len(rows), INSERT_BATCH_ROWS):
                         cursor.executemany(
                             f"INSERT INTO {self._qualified} (chunk_id, embedding) "
-                            "VALUES (%s, %s::vector) "
+                            f"VALUES (%s, %s::{VECTOR_COLUMN_TYPE}) "
                             "ON CONFLICT (chunk_id) DO UPDATE SET embedding = EXCLUDED.embedding",
                             rows[start : start + INSERT_BATCH_ROWS],
                         )
@@ -502,9 +571,9 @@ class PgVectorStore:
                 with conn.transaction():
                     conn.execute("SELECT set_config('hnsw.ef_search', %s, true)", (str(ef_search),))
                     rows = conn.execute(
-                        f"SELECT chunk_id, (embedding <#> %s::vector) * -1.0 "
+                        f"SELECT chunk_id, (embedding <#> %s::{VECTOR_COLUMN_TYPE}) * -1.0 "
                         f"FROM {self._qualified} "
-                        "ORDER BY embedding <#> %s::vector LIMIT %s",
+                        f"ORDER BY embedding <#> %s::{VECTOR_COLUMN_TYPE} LIMIT %s",
                         (literal, literal, wanted),
                     ).fetchall()
         return [(int(chunk_id), float(score)) for chunk_id, score in rows]

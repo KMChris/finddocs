@@ -53,8 +53,7 @@ wewnętrzny organizacji, a nie zasób publiczny.
 
 ## Wymagania po stronie serwera
 
-* PostgreSQL z zainstalowanym rozszerzeniem [pgvector](https://github.com/pgvector/pgvector)
-  w wersji z indeksem HNSW (0.5.0 lub nowszej).
+* PostgreSQL z zainstalowanym rozszerzeniem [pgvector](https://github.com/pgvector/pgvector).
 * Konto z prawem tworzenia tabel we wskazanym schemacie. Jeżeli rozszerzenia
   nie ma, aplikacja spróbuje wykonać `CREATE EXTENSION IF NOT EXISTS vector`;
   zwykle wymaga to uprawnień administratora bazy, więc lepiej przygotować
@@ -63,20 +62,48 @@ wewnętrzny organizacji, a nie zasób publiczny.
   tabelę nadpisywałyby swoje wektory, bo identyfikatory fragmentów są lokalne.
   Przy wielu użytkownikach na jednym serwerze należy rozdzielić tabele
   (np. `wektory_jkowalski`) albo schematy.
-* Model musi tworzyć wektory o wymiarze **nie większym niż 2000**. Indeks HNSW
-  w pgvector nie przyjmuje więcej dla typu `vector`, a aplikacja zakłada ten
-  typ i ten indeks. Przy większym wymiarze tworzenie indeksu kończy się błędem
-  serwera `column cannot have more than 2000 dimensions for hnsw index`.
-  Zmierzone na pgvector 0.8.6: 2000 przechodzi, 2001 już nie. Typ `halfvec`
-  podniósłby granicę do 4000, ale aplikacja go nie używa. Modele o większym
-  wymiarze (na przykład Qwen3-Embedding-8B z wymiarem 4096) działają wyłącznie
-  z magazynem FAISS, który takiego ograniczenia nie ma.
+* pgvector w wersji **0.7.0 lub nowszej**, bo kolumna ma typ `halfvec`.
+  Starsze rozszerzenie kończy się czytelnym błędem przy otwieraniu indeksu.
+* Model musi tworzyć wektory o wymiarze **nie większym niż 4000**. Tyle
+  przyjmuje indeks HNSW dla typu `halfvec` (dla typu `vector` granica wynosi
+  2000, dlatego aplikacja go nie używa). Zmierzone na pgvector 0.8.6:
+  `halfvec(4000)` przechodzi, `halfvec(4096)` kończy się błędem serwera
+  `column cannot have more than 4000 dimensions for hnsw index`.
+  Model o większym wymiarze wymaga albo magazynu FAISS, który nie ma tego
+  ograniczenia, albo skrócenia wektora po stronie dostawcy embeddingów
+  (opcja **Żądaj skrócenia wektora**, opisana w
+  [embeddingi na GPU i zdalne API](embeddingi-gpu-api.md)).
 
 Aplikacja tworzy w bazie dwie tabele: `<tabela>` z parami
-(`chunk_id bigint`, `embedding vector(wymiar)`) oraz `<tabela>__meta`
+(`chunk_id bigint`, `embedding halfvec(wymiar)`) oraz `<tabela>__meta`
 z metadanymi zgodności, a także indeks HNSW z metryką iloczynu skalarnego
-(`vector_ip_ops`), o parametrach zgodnych z lokalnym FAISS (m = 32,
+(`halfvec_ip_ops`), o parametrach zgodnych z lokalnym FAISS (m = 32,
 ef_construction = 80).
+
+### Precyzja połowiczna
+
+Kolumna ma typ `halfvec`, czyli float16. Powody są dwa: indeks HNSW przyjmuje
+wtedy do 4000 wymiarów zamiast 2000, a tabela zajmuje połowę miejsca. Wektory
+są znormalizowane L2, więc zakres float16 jest dla nich z zapasem wystarczający.
+
+Koszt jakości jest pomijalny. Pomiar na polskim zbiorze dokumentów
+korporacyjnych (20 dokumentów, 10 zapytań, model Qwen3-Embedding-8B),
+gdzie punktem odniesienia jest float32:
+
+| Wariant | Zgodność top-1 | top-3 | top-5 | Maks. błąd podobieństwa |
+| --- | --- | --- | --- | --- |
+| float16 zamiast float32 | 100% | 100% | 100% | 0,00002 |
+
+Maksymalny błąd pojedynczej składowej wyniósł 5,75e-05. Odczyt wektora
+(`reconstruct`) zwraca wartość zaokrągloną do float16, a nie pierwotną
+float32. Kompaktacja indeksu czyta i zapisuje te same wartości, więc
+zaokrąglenie jest stabilne i nie narasta przy kolejnych przebiegach;
+pilnuje tego test integracyjny.
+
+Tabele zapisane wcześniejszą wersją aplikacji miały typ `vector`. Metadane
+niosą teraz klucz `vector_type`, a jego brak albo inna wartość powoduje
+odrzucenie indeksu z żądaniem przebudowy, zamiast czytania danych
+niewłaściwym rzutowaniem.
 
 ## Instalacja sterownika
 

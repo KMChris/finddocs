@@ -87,6 +87,7 @@ def create_provider(
             max_retries=settings.internal_api_max_retries,
             api_key_provider=_api_key_provider(credentials_dir),
             api_key_header=settings.internal_api_key_header,
+            send_dimensions=settings.internal_api_send_dimensions,
         )
     raise ConfigurationError(f"Nieznany dostawca embeddingów: {settings.provider}")
 

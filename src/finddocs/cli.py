@@ -715,6 +715,12 @@ def cmd_model_api(args: argparse.Namespace) -> int:
         embedding.internal_api_timeout_seconds = max(1.0, args.timeout)
     if args.retries is not None:
         embedding.internal_api_max_retries = max(1, args.retries)
+    if (
+        args.send_dimensions is not None
+        and bool(args.send_dimensions) != embedding.internal_api_send_dimensions
+    ):
+        embedding.internal_api_send_dimensions = bool(args.send_dimensions)
+        changed_identity = True
     if args.allow_http_localhost is not None:
         config.allow_plain_http_localhost = bool(args.allow_http_localhost)
 
@@ -744,6 +750,7 @@ def cmd_model_api(args: argparse.Namespace) -> int:
         "kontrakt": embedding.internal_api_protocol,
         "model": embedding.internal_api_model or "(nie podano)",
         "wymiar": embedding.internal_api_dimension,
+        "zada_wymiaru": embedding.internal_api_send_dimensions,
         "teksty_w_zadaniu": embedding.internal_api_batch_size,
         "naglowek_klucza": embedding.internal_api_key_header or "Authorization: Bearer",
         "http_do_localhost": config.allow_plain_http_localhost,
@@ -1094,6 +1101,20 @@ def build_parser() -> argparse.ArgumentParser:
     )
     model_api.add_argument("--timeout", type=float, help="limit czasu żądania w sekundach")
     model_api.add_argument("--retries", type=int, help="liczba prób przy błędach przejściowych")
+    model_api.add_argument(
+        "--send-dimensions",
+        dest="send_dimensions",
+        action="store_true",
+        default=None,
+        help="żądaj skrócenia wektora do podanego wymiaru (pole dimensions)",
+    )
+    model_api.add_argument(
+        "--no-send-dimensions",
+        dest="send_dimensions",
+        action="store_false",
+        default=None,
+        help="nie wysyłaj pola dimensions",
+    )
     model_api.add_argument(
         "--allow-http-localhost",
         dest="allow_http_localhost",

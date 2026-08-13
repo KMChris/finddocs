@@ -84,6 +84,35 @@ def test_stara_konfiguracja_bez_zgody_na_http_dostaje_wylaczona():
     assert config_from_dict(dane).allow_plain_http_localhost is False
 
 
+def test_zadanie_wymiaru_wchodzi_do_skrotu_dopiero_po_wlaczeniu():
+    """Skroty istniejacych konfiguracji zdalnych nie moga zmienic sie po aktualizacji."""
+    bazowa = AppConfig()
+    bazowa.embedding.provider = "internal_api"
+    bazowa.embedding.internal_api_model = "qwen3-embedding:8b"
+    bazowa.embedding.internal_api_dimension = 2048
+
+    wylaczona = AppConfig()
+    wylaczona.embedding.provider = "internal_api"
+    wylaczona.embedding.internal_api_model = "qwen3-embedding:8b"
+    wylaczona.embedding.internal_api_dimension = 2048
+    wylaczona.embedding.internal_api_send_dimensions = False
+    assert wylaczona.vector_compat_hash() == bazowa.vector_compat_hash()
+
+    wlaczona = AppConfig()
+    wlaczona.embedding.provider = "internal_api"
+    wlaczona.embedding.internal_api_model = "qwen3-embedding:8b"
+    wlaczona.embedding.internal_api_dimension = 2048
+    wlaczona.embedding.internal_api_send_dimensions = True
+    assert wlaczona.vector_compat_hash() != bazowa.vector_compat_hash()
+
+
+def test_zadanie_wymiaru_nie_dotyczy_modelu_lokalnego():
+    zmieniona = AppConfig()
+    zmieniona.embedding.internal_api_send_dimensions = True
+
+    assert zmieniona.vector_compat_hash() == AppConfig().vector_compat_hash()
+
+
 def test_zgoda_na_http_nie_zmienia_skrotow_zgodnosci():
     """Zgoda dotyczy transportu, nie tresci wektorow: indeks zostaje wazny."""
     zmieniona = AppConfig()
