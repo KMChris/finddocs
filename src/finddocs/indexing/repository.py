@@ -161,6 +161,7 @@ class Repository:
                 "SELECT COUNT(*) FROM documents WHERE source_id = ?", (source_id,), 0
             )
         )
+        self._delete_source_errors(source_id)
         self.db.execute("DELETE FROM documents WHERE source_id = ?", (source_id,))
         self.db.execute("DELETE FROM sources WHERE source_id = ?", (source_id,))
         self.db.execute("DELETE FROM scan_checkpoints WHERE source_id = ?", (source_id,))
@@ -391,7 +392,58 @@ class Repository:
             chunk_ids.extend(self.delete_document(child))
         self.db.execute("DELETE FROM chunks WHERE doc_id = ?", (doc_id,))
         self.db.execute("DELETE FROM documents WHERE doc_id = ?", (doc_id,))
+        # Bez tego dziennik trzymalby bledy plikow, ktorych juz nie ma w indeksie,
+        # a uzytkownik nie mialby jak ich stamtad usunac.
+        self.clear_document_errors(doc_id)
         return chunk_ids
+
+    def requeue_documents(self, doc_ids: Iterable[int]) -> int:
+        """Kieruje wskazane dokumenty do ponownego przetworzenia.
+
+        Dokument wraca do stanu ``pending`` i traci slad po nieudanej probie:
+        wpisy dziennika, kod bledu oraz klucz zmiany, ktory blokowal ponawianie
+        niezmienionego pliku. Zwraca liczbe zmienionych dokumentow.
+        """
+        ids = [int(value) for value in doc_ids]
+        if not ids:
+            return 0
+        placeholders = ",".join("?" * len(ids))
+        self.db.execute(f"DELETE FROM error_log WHERE doc_id IN ({placeholders})", ids)
+        cursor = self.db.execute(
+            f"""
+            UPDATE documents SET
+                status = ?, error_code = NULL, error_message = NULL,
+                change_key = NULL, normalization_version = 0, chunking_version = 0
+            WHERE doc_id IN ({placeholders})
+            """,
+            [DocumentStatus.PENDING.value, *ids],
+        )
+        return int(cursor.rowcount or 0)
+
+    def reset_source_problems(self, source_id: str) -> int:
+        """Zapomina nieudane proby zrodla przed pelnym przeindeksowaniem.
+
+        Pelne przeindeksowanie liczy wszystko od nowa, wiec lista bledow i lista
+        plikow poza indeksem musza zaczac sie od pustej. Wpis wraca dopiero
+        wtedy, gdy ten sam plik znowu sie nie uda. Zwraca liczbe dokumentow
+        skierowanych do ponownego przetworzenia.
+        """
+        self._delete_source_errors(source_id)
+        cursor = self.db.execute(
+            """
+            UPDATE documents SET
+                status = ?, error_code = NULL, error_message = NULL,
+                change_key = NULL, normalization_version = 0, chunking_version = 0
+            WHERE source_id = ? AND status NOT IN (?, ?)
+            """,
+            (
+                DocumentStatus.PENDING.value,
+                source_id,
+                DocumentStatus.INDEXED.value,
+                DocumentStatus.PARTIAL.value,
+            ),
+        )
+        return int(cursor.rowcount or 0)
 
     def delete_chunks(self, doc_id: int) -> list[int]:
         """Usuwa same fragmenty dokumentu. Zwraca identyfikatory usunietych wektorow."""
@@ -649,8 +701,38 @@ class Repository:
         rows = self.db.query_all("SELECT code, COUNT(*) AS n FROM error_log GROUP BY code")
         return {str(r["code"]): int(r["n"]) for r in rows}
 
-    def clear_errors(self) -> None:
+    def clear_errors(self) -> int:
+        """Czysci caly dziennik. Zwraca liczbe usunietych wpisow."""
+        count = int(self.db.query_scalar("SELECT COUNT(*) FROM error_log", (), 0))
         self.db.execute("DELETE FROM error_log")
+        return count
+
+    def clear_document_errors(self, doc_id: int) -> None:
+        """Usuwa wpisy dziennika dotyczace jednego dokumentu.
+
+        Dziennik opisuje ostatnia probe przetworzenia pliku, a nie cala jego
+        historie. Kazda kolejna proba zaczyna sie od usuniecia sladu po
+        poprzedniej, inaczej lista rosla bez konca i pokazywala bledy plikow
+        dawno poprawnie zaindeksowanych.
+        """
+        self.db.execute("DELETE FROM error_log WHERE doc_id = ?", (doc_id,))
+
+    def delete_errors(self, error_ids: Iterable[int]) -> int:
+        """Usuwa wskazane wpisy dziennika. Zwraca liczbe usunietych."""
+        ids = [int(value) for value in error_ids]
+        if not ids:
+            return 0
+        placeholders = ",".join("?" * len(ids))
+        cursor = self.db.execute(f"DELETE FROM error_log WHERE id IN ({placeholders})", ids)
+        return int(cursor.rowcount or 0)
+
+    def _delete_source_errors(self, source_id: str) -> None:
+        """Usuwa wpisy dziennika zrodla, takze te podpiete pod jego dokumenty."""
+        self.db.execute(
+            "DELETE FROM error_log WHERE source_id = ? "
+            "OR doc_id IN (SELECT doc_id FROM documents WHERE source_id = ?)",
+            (source_id, source_id),
+        )
 
     # --- zadania ----------------------------------------------------------
 
@@ -805,17 +887,29 @@ class Repository:
             return 0, 0
         return int(row["docs"]), int(row["pages"])
 
-    def non_searchable_documents(self, limit: int = 5000) -> list[NonSearchableDocument]:
-        rows = self.db.query_all(
-            """
-            SELECT doc_id, name, logical_path, status, error_code, error_message, extension
+    def non_searchable_documents(
+        self, limit: int = 5000, *, include_pending: bool = True
+    ) -> list[NonSearchableDocument]:
+        """Dokumenty, ktorych nie da sie wyszukac, wraz z powodem.
+
+        ``include_pending`` steruje dokumentami czekajacymi na przetworzenie.
+        Raport pokrycia je liczy, bo w danej chwili faktycznie nie sa
+        wyszukiwalne. Lista problemow w interfejsie ich nie pokazuje: czekanie
+        w kolejce nie jest problemem do rozwiazania przez uzytkownika.
+        """
+        sql = """
+            SELECT doc_id, name, logical_path, status, error_code, error_message,
+                   extension, last_attempt_at
             FROM documents
             WHERE status NOT IN ('indexed', 'partial')
-            ORDER BY status, name
-            LIMIT ?
-            """,
-            (limit,),
-        )
+        """
+        params: list[Any] = []
+        if not include_pending:
+            sql += " AND status <> ?"
+            params.append(DocumentStatus.PENDING.value)
+        sql += " ORDER BY status, name LIMIT ?"
+        params.append(limit)
+        rows = self.db.query_all(sql, params)
         return [
             NonSearchableDocument(
                 doc_id=int(r["doc_id"]),
@@ -825,6 +919,7 @@ class Repository:
                 error_code=r["error_code"],
                 error_message=r["error_message"],
                 extension=str(r["extension"] or ""),
+                last_attempt_at=from_iso(r["last_attempt_at"]),
             )
             for r in rows
         ]

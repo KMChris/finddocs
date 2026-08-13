@@ -227,6 +227,91 @@ def test_uszkodzony_plik_nie_zatrzymuje_procesu_i_trafia_do_raportu(
     assert index_service.repository.recent_errors()
 
 
+# --- slady po nieudanych probach -------------------------------------------------
+
+
+def test_pelne_przeindeksowanie_zapomina_stare_bledy(
+    indexing_config: Callable[..., AppConfig],
+    index_service: IndexService,
+    run_job: Callable[..., ProgressSnapshot],
+    tmp_path: Path,
+) -> None:
+    """Naprawiony plik znika z obu list, bo pelny przebieg zaczyna od pustej."""
+    root = write_corpus(tmp_path / "zrodlo", CORPUS)
+    uszkodzony = root / "uszkodzony.pdf"
+    uszkodzony.write_bytes(b"%PDF-1.7\nto nie jest poprawny plik PDF\n")
+    config = indexing_config(root)
+
+    run_job(config, index_service, kind=JobKind.FULL_INDEX, force_reindex=True)
+    assert [d.name for d in index_service.repository.non_searchable_documents()] == [
+        "uszkodzony.pdf"
+    ]
+    assert index_service.repository.recent_errors()
+
+    uszkodzony.unlink()
+    run_job(config, index_service, kind=JobKind.FULL_INDEX, force_reindex=True)
+
+    assert index_service.repository.non_searchable_documents() == []
+    assert index_service.repository.recent_errors() == []
+
+
+def test_powtorzony_blad_wraca_na_liste_bez_duplikatow(
+    indexing_config: Callable[..., AppConfig],
+    index_service: IndexService,
+    run_job: Callable[..., ProgressSnapshot],
+    tmp_path: Path,
+) -> None:
+    """Ten sam plik psuje sie raz po raz, ale zostawia jeden wpis, nie stos."""
+    root = write_corpus(tmp_path / "zrodlo", CORPUS)
+    (root / "uszkodzony.pdf").write_bytes(b"%PDF-1.7\nto nie jest poprawny plik PDF\n")
+    config = indexing_config(root)
+
+    run_job(config, index_service, kind=JobKind.FULL_INDEX, force_reindex=True)
+    po_pierwszym = index_service.repository.recent_errors()
+    run_job(config, index_service, kind=JobKind.FULL_INDEX, force_reindex=True)
+    po_drugim = index_service.repository.recent_errors()
+
+    assert len(po_pierwszym) == 1
+    assert len(po_drugim) == 1
+    assert [d.name for d in index_service.repository.non_searchable_documents()] == [
+        "uszkodzony.pdf"
+    ]
+
+
+def test_wpis_skierowany_do_ponownego_przetworzenia_znika_i_wraca(
+    indexing_config: Callable[..., AppConfig],
+    index_service: IndexService,
+    run_job: Callable[..., ProgressSnapshot],
+    tmp_path: Path,
+) -> None:
+    """Usuniecie wpisu z listy oddaje plik do ponownego skanowania.
+
+    Bez wyczyszczenia klucza zmiany kolejne skanowanie uznaloby niezmieniony
+    plik za zalatwiony i wpis nigdy by nie wrocil ani nie zostal potwierdzony.
+    """
+    root = write_corpus(tmp_path / "zrodlo", CORPUS)
+    (root / "uszkodzony.pdf").write_bytes(b"%PDF-1.7\nto nie jest poprawny plik PDF\n")
+    config = indexing_config(root)
+    run_job(config, index_service, kind=JobKind.FULL_INDEX, force_reindex=True)
+    repository = index_service.repository
+    doc_id = repository.non_searchable_documents()[0].doc_id
+
+    with index_service.db.transaction():
+        assert repository.requeue_documents([doc_id]) == 1
+
+    assert repository.recent_errors() == []
+    assert repository.non_searchable_documents(include_pending=False) == []
+    record = repository.get_document(doc_id)
+    assert record is not None
+    assert record.status is DocumentStatus.PENDING
+
+    snapshot = run_job(config, index_service, kind=JobKind.RESCAN)
+
+    assert snapshot.failed == 1
+    assert len(repository.recent_errors()) == 1
+    assert [d.name for d in repository.non_searchable_documents()] == ["uszkodzony.pdf"]
+
+
 # --- checkpointy -----------------------------------------------------------------
 
 

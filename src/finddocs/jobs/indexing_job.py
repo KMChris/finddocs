@@ -168,6 +168,11 @@ class IndexingJob:
             clear_context()
         return self.snapshot
 
+    @property
+    def is_full_reindex(self) -> bool:
+        """Czy zadanie liczy zbior od nowa, nie tylko zmiany."""
+        return self.options.kind is JobKind.FULL_INDEX or self.options.force_reindex
+
     # --- pojedyncze zrodlo ------------------------------------------------
 
     def _run_source(self, source: SourceConfig) -> None:
@@ -188,6 +193,8 @@ class IndexingJob:
             )
 
             checkpoint = repository.get_checkpoint(source.source_id, self.job_id)
+            if checkpoint is None and self.is_full_reindex:
+                self._forget_previous_problems(source)
             scan_id = (
                 int(checkpoint["scan_id"]) if checkpoint is not None else repository.next_scan_id()
             )
@@ -274,7 +281,7 @@ class IndexingJob:
                 self.index.repository.mark_source_scanned(
                     source.source_id,
                     scan_id,
-                    full=self.options.kind is JobKind.FULL_INDEX or self.options.force_reindex,
+                    full=self.is_full_reindex,
                 )
             self.index.repository.clear_checkpoint(source.source_id, self.job_id)
         finally:
@@ -312,6 +319,20 @@ class IndexingJob:
             self._batcher.discard()
 
     # --- pomocnicze -------------------------------------------------------
+
+    def _forget_previous_problems(self, source: SourceConfig) -> None:
+        """Kasuje slad po nieudanych probach przed pelnym przeindeksowaniem.
+
+        Pelne przeindeksowanie sprawdza kazdy plik od nowa, wiec stare bledy
+        i pliki poza indeksem nie moga w nim zostawac: opisywalyby stan sprzed
+        przebiegu. Wpis wraca na liste dopiero wtedy, gdy ten sam plik znowu
+        sie nie uda. Czyszczenie dotyczy tylko skanowanego zrodla i tylko
+        pierwszego przebiegu zadania, zeby wznowienie nie skasowalo bledow
+        zapisanych chwile wczesniej przez to samo zadanie.
+        """
+        with self.index.db.transaction():
+            requeued = self.index.repository.reset_source_problems(source.source_id)
+        log.info("job.problems_reset", source_id=source.source_id, requeued=requeued)
 
     def _selected_sources(self) -> list[SourceConfig]:
         wanted = set(self.options.source_ids)

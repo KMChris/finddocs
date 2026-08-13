@@ -646,6 +646,8 @@ class NonSearchableDocument:
     error_code: str | None
     error_message: str | None
     extension: str
+    last_attempt_at: _dt.datetime | None = None
+    """Czas ostatniej próby przetworzenia pliku."""
 
 
 # --- protokoly -----------------------------------------------------------------

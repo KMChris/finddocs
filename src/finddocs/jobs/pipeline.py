@@ -159,6 +159,11 @@ class DocumentPipeline:
         if record is None:
             return DocumentOutcome(doc_id=doc_id, status=DocumentStatus.ERROR)
 
+        # Dziennik opisuje ostatnia probe, nie cala historie pliku. Nowa proba
+        # zaczyna sie od skasowania sladu po poprzedniej, wiec plik naprawiony
+        # znika z listy bledow sam, a plik wciaz wadliwy ma tam jeden wpis.
+        self.index.repository.clear_document_errors(doc_id)
+
         if item.extra.get("too_large"):
             self._fail(
                 doc_id,
@@ -516,6 +521,7 @@ class DocumentPipeline:
             if not name or not data:
                 continue
             child_id = self.index.repository.create_attachment_document(record, name, mime, scan_id)
+            self.index.repository.clear_document_errors(child_id)
             child_dir = workspace / f"att-{child_id}"
             child_dir.mkdir(parents=True, exist_ok=True)
             safe_name = _safe_filename(name)
