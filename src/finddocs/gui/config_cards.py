@@ -1392,6 +1392,15 @@ class OcrCard(ConfigCard):
         self.ocr_url_edit.setPlaceholderText(i18n.OCR_REMOTE_URL_PLACEHOLDER)
         form.addRow(i18n.OCR_REMOTE_URL, self.ocr_url_edit)
 
+        # Ta sama opcja co na karcie obliczen, bo ustawienie jest jedno dla calej
+        # aplikacji. Bez niej serwer OCR na tym komputerze (typowe wdrozenie
+        # kontenera) bylby nieosiagalny z interfejsu przy lokalnych embeddingach.
+        self.ocr_allow_http_check = QCheckBox(i18n.OCR_REMOTE_ALLOW_HTTP)
+        self.ocr_allow_http_check.setChecked(self.context.config.allow_plain_http_localhost)
+        self.ocr_allow_http_check.setToolTip(i18n.OCR_REMOTE_ALLOW_HTTP_HINT)
+        form.addRow("", self.ocr_allow_http_check)
+        form.addRow(_hint_label(i18n.OCR_REMOTE_ALLOW_HTTP_HINT))
+
         self.ocr_model_edit = QLineEdit(ocr.remote_api_model)
         form.addRow(i18n.OCR_REMOTE_MODEL, self.ocr_model_edit)
 
@@ -1480,9 +1489,19 @@ class OcrCard(ConfigCard):
         ocr.remote_api_key_header = self.ocr_key_header_edit.text().strip()
         ocr.remote_api_timeout_seconds = float(self.ocr_timeout_spin.value())
         ocr.remote_api_max_retries = int(self.ocr_retries_spin.value())
+        self.context.config.allow_plain_http_localhost = self.ocr_allow_http_check.isChecked()
         # Silnik OCR jest wybierany przy uruchomieniu zadania indeksowania,
         # wiec otwarty indeks nie wymaga ponownego otwarcia.
         self._finish_apply([], reload_needed=False)
+
+    def refresh_from_config(self) -> None:
+        """Uzgadnia z konfiguracja pola zmieniane poza ta karta.
+
+        Zgoda na http do tego komputera jest ustawieniem calej aplikacji i ma
+        wlasna kontrolke takze na karcie obliczen. Bez tego uzgodnienia zapis
+        karty OCR cofnalby zmiane zrobiona tam.
+        """
+        self.ocr_allow_http_check.setChecked(self.context.config.allow_plain_http_localhost)
 
     # --- klucz API ------------------------------------------------------------
 
@@ -1550,7 +1569,7 @@ class OcrCard(ConfigCard):
             remote_api_timeout_seconds=float(self.ocr_timeout_spin.value()),
             remote_api_max_retries=int(self.ocr_retries_spin.value()),
         )
-        allow_http_localhost = self.context.config.allow_plain_http_localhost
+        allow_http_localhost = self.ocr_allow_http_check.isChecked()
         config_dir = self.context.paths.config_dir
         self._set_busy(True)
         self.ocr_test_label.setText(i18n.OCR_REMOTE_TEST_RUNNING)

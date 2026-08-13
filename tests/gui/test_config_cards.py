@@ -722,6 +722,47 @@ def test_wlaczenie_zdalnego_ocr_bez_adresu_daje_ostrzezenie(
 
 
 @pytest.mark.gui
+def test_zgoda_na_http_do_localhosta_dziala_z_karty_ocr(
+    qtbot: object, card_context: AppContext
+) -> None:
+    """Serwer OCR na tym komputerze bywa bez TLS, a zgoda musi byc w zasiegu karty."""
+    card = OcrCard(card_context)
+    qtbot.addWidget(card)  # type: ignore[attr-defined]
+
+    position = card.ocr_engine_combo.findData("remote_api")
+    card.ocr_engine_combo.setCurrentIndex(position)
+    card.ocr_url_edit.setText("http://127.0.0.1:8868")
+    card.ocr_allow_http_check.setChecked(True)
+    card.apply_settings()
+
+    zapisana = load_config(card_context.paths.config_file)
+    assert zapisana.allow_plain_http_localhost is True
+    policy = policy_from_config(zapisana)
+    assert policy.check("http://127.0.0.1:8868/ocr", EgressCategory.OCR_API) == "127.0.0.1"
+
+
+@pytest.mark.gui
+def test_karta_ocr_czyta_zgode_na_http_z_konfiguracji(
+    qtbot: object, card_context: AppContext
+) -> None:
+    """Ustawienie jest wspolne z karta obliczen, wiec zapis nie moze go cofnac."""
+    card = OcrCard(card_context)
+    qtbot.addWidget(card)  # type: ignore[attr-defined]
+    assert card.ocr_allow_http_check.isChecked() is False
+
+    # Zmiana zrobiona poza ta karta, na przyklad na karcie obliczen.
+    card_context.config.allow_plain_http_localhost = True
+    card.refresh_from_config()
+
+    position = card.ocr_engine_combo.findData("remote_api")
+    card.ocr_engine_combo.setCurrentIndex(position)
+    card.ocr_url_edit.setText("http://127.0.0.1:8868")
+    card.apply_settings()
+
+    assert load_config(card_context.paths.config_file).allow_plain_http_localhost is True
+
+
+@pytest.mark.gui
 def test_powrot_na_silnik_lokalny_zamyka_zgode_na_wysylke(
     qtbot: object, card_context: AppContext
 ) -> None:

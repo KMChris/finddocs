@@ -96,9 +96,16 @@ Ekran **Źródła i konfiguracja**, zakładka **Rozpoznawanie tekstu**:
 
 1. wybierz silnik **Zdalny serwer na GPU**;
 2. wpisz adres serwera;
-3. wpisz nazwę modelu (domyślnie `PP-OCRv6_medium`);
-4. jeśli serwer wymaga klucza, wklej go i naciśnij **Zapisz klucz**;
-5. naciśnij **Przetestuj połączenie**, a potem **Zastosuj**.
+3. dla serwera na tym samym komputerze zaznacz **Zezwól na http do tego
+   komputera** (to samo ustawienie widać na karcie obliczeń zdalnego API
+   embeddingów, bo jest wspólne dla aplikacji);
+4. wpisz nazwę modelu (domyślnie `PP-OCRv6_medium`);
+5. jeśli serwer wymaga klucza, wklej go i naciśnij **Zapisz klucz**;
+6. naciśnij **Przetestuj połączenie**, a potem **Zastosuj**.
+
+Dla kontenera z `deploy/ppocr` uruchomionego na tym komputerze wpisz adres
+`http://127.0.0.1:8868`, model `PP-OCRv6_medium`, resztę zostaw domyślnie:
+nagłówek klucza pusty, limit czasu 120 s, liczba prób 3, klucz API niepotrzebny.
 
 Test wysyła mały, sztuczny obraz przez ten sam kontrakt, którego używa
 indeksowanie. Żaden dokument użytkownika nie opuszcza przy tym komputera.

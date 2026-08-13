@@ -409,6 +409,13 @@ OCR_ENGINE_HINT = (
 )
 OCR_REMOTE_URL = "Adres serwera"
 OCR_REMOTE_URL_PLACEHOLDER = "np. https://ocr.firma.local"
+OCR_REMOTE_ALLOW_HTTP = "Zezwól na http do tego komputera"
+OCR_REMOTE_ALLOW_HTTP_HINT = (
+    "Potrzebne, gdy serwer OCR działa na tym komputerze bez szyfrowania, na "
+    "przykład kontener pod adresem http://127.0.0.1:8868. Taki ruch nie opuszcza "
+    "komputera. Adresy innych serwerów nadal wymagają https. To samo ustawienie "
+    "widać na karcie obliczeń zdalnego API embeddingów."
+)
 OCR_REMOTE_MODEL = "Model na serwerze"
 OCR_REMOTE_MODEL_HINT = (
     "Nazwa modelu wchodzi do klucza pamięci podręcznej OCR. Po zmianie modelu na "

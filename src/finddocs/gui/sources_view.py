@@ -512,6 +512,9 @@ class SourcesView(QWidget):
         self.profile_card.refresh()
         self.model_card.refresh_models()
         self.model_card.setVisible(self.context.config.embedding.provider == "local_onnx")
+        # Zgoda na http do tego komputera jest jedna dla aplikacji i ma kontrolke
+        # na dwoch kartach, wiec karta OCR musi ja przeczytac ponownie.
+        self.ocr_card.refresh_from_config()
 
     # --- akcje ------------------------------------------------------------
 
