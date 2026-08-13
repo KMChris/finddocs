@@ -304,7 +304,10 @@ organizacji** wysyła treść fragmentów do API wskazanego przez organizację.
 Dla modelu lokalnego karta ustawia urządzenie obliczeń (procesor albo kartę
 graficzną) i wielkość paczek. Dla zdalnego API: adres, kontrakt, nazwę modelu,
 wymiar wektora oraz klucz API, przechowywany w magazynie poświadczeń, nigdy
-w pliku konfiguracyjnym. Zmiana dostawcy wymaga przebudowy części semantycznej
+w pliku konfiguracyjnym. Adresy zdalne muszą używać https; pole wyboru
+**Zezwól na http do tego komputera** dopuszcza połączenie bez szyfrowania
+wyłącznie do usługi działającej na tej samej maszynie, na przykład lokalnego
+serwera modeli. Zmiana dostawcy wymaga przebudowy części semantycznej
 indeksu. Szczegóły w dokumencie
 [embeddingi na GPU i zdalne API](embeddingi-gpu-api.md).
 

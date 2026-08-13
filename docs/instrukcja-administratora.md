@@ -259,9 +259,16 @@ Domyślnie każdy ruch wychodzący jest zablokowany. Kategorie włącza się
 | `model_download` | po ustawieniu `allow_model_download` | `huggingface.co`, `cdn-lfs.huggingface.co`, `*.hf.co` |
 | `internal_api` | po włączeniu zdalnego API embeddingów | wyłącznie host z adresu podanego w konfiguracji |
 
-Dozwolony jest wyłącznie protokół HTTPS. Lista jest wpisana w kod
-(`src/finddocs/security/network.py`) i widoczna na ekranie **Diagnostyka**.
-Aplikacja nie zawiera żadnej telemetrii.
+Dla serwerów zdalnych dozwolony jest wyłącznie protokół HTTPS. Lista jest
+wpisana w kod (`src/finddocs/security/network.py`) i widoczna na ekranie
+**Diagnostyka**. Aplikacja nie zawiera żadnej telemetrii.
+
+Wyjątkiem jest usługa działająca na tym samym komputerze (`localhost`,
+`127.0.0.1`, `::1`). Zwykłe HTTP do niej wymaga włączenia opcji
+`allow_plain_http_localhost` (w GUI pole wyboru **Zezwól na http do tego
+komputera**, z wiersza poleceń `finddocs model api --allow-http-localhost`).
+Potrzebują tego lokalne serwery modeli, na przykład Ollama. Adresy zdalne
+pozostają objęte wymaganiem HTTPS niezależnie od tej opcji.
 
 Jeżeli w organizacji działa serwer proxy, ustaw zmienne `HTTPS_PROXY`
 i `NO_PROXY` w profilu użytkownika. Aplikacja korzysta z biblioteki `httpx`,

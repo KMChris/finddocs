@@ -50,13 +50,23 @@ def _load(args: argparse.Namespace) -> AppConfig:
     return config
 
 
-def _open_index(config: AppConfig, *, load_provider: bool = True) -> Any:
-    from finddocs.indexing.service import IndexService
+def _apply_policy(config: AppConfig) -> None:
+    """Ustawia polityke sieciowa procesu z konfiguracji.
+
+    CLI stosuje te sama polityke co GUI: bez tego zdalne API embeddingow
+    i SharePoint bylyby blokowane przez domyslny tryb offline. Diagnostyka
+    wola to osobno, zeby opis polityki nie pokazywal stanu offline dla
+    konfiguracji, ktora faktycznie wypuszcza ruch.
+    """
     from finddocs.security.network import policy_from_config, set_policy
 
-    # CLI stosuje te sama polityke sieciowa co GUI: bez tego zdalne API
-    # embeddingow i SharePoint bylyby blokowane przez domyslny tryb offline.
     set_policy(policy_from_config(config))
+
+
+def _open_index(config: AppConfig, *, load_provider: bool = True) -> Any:
+    from finddocs.indexing.service import IndexService
+
+    _apply_policy(config)
     service = IndexService(config)
     service.open(load_provider=load_provider)
     return service
@@ -367,6 +377,9 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     )
 
     config = _load(args)
+    # Opis polityki czytany jest z globalnego stanu procesu, wiec trzeba ja
+    # ustawic przed zebraniem informacji o komponentach.
+    _apply_policy(config)
     print(f"{APP_NAME} {APP_VERSION}")
     print()
     print("Srodowisko")
@@ -702,6 +715,8 @@ def cmd_model_api(args: argparse.Namespace) -> int:
         embedding.internal_api_timeout_seconds = max(1.0, args.timeout)
     if args.retries is not None:
         embedding.internal_api_max_retries = max(1, args.retries)
+    if args.allow_http_localhost is not None:
+        config.allow_plain_http_localhost = bool(args.allow_http_localhost)
 
     if args.enable and args.disable:
         print("Opcje --enable i --disable wykluczają się.", file=sys.stderr)
@@ -731,12 +746,18 @@ def cmd_model_api(args: argparse.Namespace) -> int:
         "wymiar": embedding.internal_api_dimension,
         "teksty_w_zadaniu": embedding.internal_api_batch_size,
         "naglowek_klucza": embedding.internal_api_key_header or "Authorization: Bearer",
+        "http_do_localhost": config.allow_plain_http_localhost,
     }
     _print(data, as_json=args.json)
     if embedding.internal_api_enabled:
         print()
         print("Uwaga: treść fragmentów dokumentów będzie wysyłana na wskazany adres.")
-        print("Połączenia są ograniczone do hosta z adresu API, wyłącznie przez https.")
+        print("Połączenia są ograniczone do hosta z adresu API.")
+        if config.allow_plain_http_localhost:
+            print("Zwykłe http jest dozwolone tylko dla tego komputera (localhost).")
+        else:
+            print("Wymagane jest https; dla API na tym komputerze użyj")
+            print("  finddocs model api --allow-http-localhost")
     if changed_identity:
         print()
         print("Zmiana dostawcy embeddingów wymaga przebudowy części semantycznej:")
@@ -1073,6 +1094,20 @@ def build_parser() -> argparse.ArgumentParser:
     )
     model_api.add_argument("--timeout", type=float, help="limit czasu żądania w sekundach")
     model_api.add_argument("--retries", type=int, help="liczba prób przy błędach przejściowych")
+    model_api.add_argument(
+        "--allow-http-localhost",
+        dest="allow_http_localhost",
+        action="store_true",
+        default=None,
+        help="zezwól na http bez TLS, gdy API działa na tym komputerze",
+    )
+    model_api.add_argument(
+        "--no-allow-http-localhost",
+        dest="allow_http_localhost",
+        action="store_false",
+        default=None,
+        help="cofnij zgodę na http do tego komputera",
+    )
     model_api.set_defaults(func=cmd_model_api)
 
     model_profile = model_sub.add_parser(

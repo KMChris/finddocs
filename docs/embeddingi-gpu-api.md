@@ -175,8 +175,12 @@ wysyłania dokumentów do publicznych usług chmurowych.
 
 * Dostawca jest domyślnie wyłączony. Włączenie wymaga podania adresu i jawnego
   przełączenia; sam wpis adresu niczego nie uruchamia.
-* Polityka sieciowa dopuszcza wyłącznie host z podanego adresu i wyłącznie
-  HTTPS. Żaden inny host nie przejdzie, nawet po włączeniu kategorii.
+* Polityka sieciowa dopuszcza wyłącznie host z podanego adresu. Żaden inny host
+  nie przejdzie, nawet po włączeniu kategorii.
+* Serwery zdalne wymagają HTTPS bez wyjątków. Zwykłe HTTP jest możliwe wyłącznie
+  do tego samego komputera (`localhost`, `127.0.0.1`, `::1`) i wyłącznie po
+  jawnym włączeniu opcji, bo taki ruch nie opuszcza maszyny. Opis niżej,
+  w części o lokalnym serwerze modeli.
 * Klucz API trafia do Menedżera poświadczeń Windows (albo DPAPI), nigdy do
   pliku konfiguracyjnego ani logów.
 * Treść fragmentów i zapytań nie jest logowana. W logu pojawiają się tylko
@@ -247,6 +251,52 @@ Pola w `settings.json` (bez klucza, ten nigdy nie jest zapisywany w pliku):
   "internal_api_key_header": ""
 }
 ```
+
+Zgoda na zwykłe HTTP do tego komputera leży poza sekcją `embedding`, bo dotyczy
+polityki sieciowej całej aplikacji:
+
+```json
+"allow_plain_http_localhost": false
+```
+
+### Lokalny serwer modeli (Ollama, LM Studio, llama.cpp)
+
+Serwer uruchomiony na tym samym komputerze zwykle nie wystawia TLS, a wymaganie
+HTTPS dotyczy serwerów zdalnych. Dla adresu lokalnego trzeba więc jednorazowo
+zezwolić na zwykłe HTTP:
+
+* w GUI: karta **Obliczenia embeddingów**, dostawca **Zdalne API organizacji**,
+  pole wyboru **Zezwól na http do tego komputera**;
+* z wiersza poleceń: `finddocs model api --allow-http-localhost`
+  (cofnięcie: `--no-allow-http-localhost`).
+
+Zgoda obejmuje wyłącznie `localhost`, `127.0.0.1` i `::1`. Adres dowolnego
+innego serwera nadal wymaga HTTPS, niezależnie od tego ustawienia. Stan opcji
+widać na ekranie diagnostyki w polu `http_do_localhost` polityki sieciowej.
+
+Przykład dla Ollamy z modelem `qwen3-embedding:8b` (kontrakt `openai`, wymiar
+4096, brak klucza API):
+
+```bash
+finddocs model api --url http://127.0.0.1:11434/v1 --protocol openai --model qwen3-embedding:8b --dimension 4096 --batch 32 --allow-http-localhost --enable
+```
+
+Model instaluje się po stronie Ollamy poleceniem `ollama pull qwen3-embedding:8b`.
+Qwen3-Embedding jest asymetryczny: treść idzie bez przedrostka, a zapytanie
+z instrukcją. Pole przedrostka zapytania w GUI jest jednoliniowe, więc zamiast
+zalecanego złamania wiersza przed `Query:` wpisuje się wszystko w jednej linii,
+co w pomiarach dało praktycznie ten sam wynik:
+
+```
+Instruct: Given a search query, retrieve relevant passages from the document collection Query: 
+```
+
+Przedrostek kończy się spacją. Przedrostek treści zostaje pusty. Oba pola
+wchodzą do skrótu zgodności wektorów, więc ich zmiana wymaga przebudowy
+części semantycznej indeksu.
+
+Wymiar 4096 to ponad pięć razy więcej niż w modelu MMLW (768), czyli 16 KB na
+wektor. Przy 100 tysiącach fragmentów to około 1,6 GB samych wektorów.
 
 ### Zgodność indeksu
 

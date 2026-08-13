@@ -97,6 +97,74 @@ def test_model_remove_wymaga_potwierdzenia(tmp_home: AppPaths) -> None:
     assert not directory.parent.exists()
 
 
+def test_model_api_domyslnie_bez_zgody_na_http(
+    tmp_home: AppPaths, capsys: pytest.CaptureFixture[str]
+) -> None:
+    assert main(["--json", "model", "api"]) == EXIT_OK
+    assert json.loads(capsys.readouterr().out)["http_do_localhost"] is False
+    assert load_config(tmp_home.config_file).allow_plain_http_localhost is False
+
+
+def test_model_api_zgoda_na_http_do_localhost(
+    tmp_home: AppPaths, capsys: pytest.CaptureFixture[str]
+) -> None:
+    kod = main(
+        [
+            "model",
+            "api",
+            "--url",
+            "http://127.0.0.1:11434/v1",
+            "--model",
+            "qwen3-embedding:8b",
+            "--dimension",
+            "4096",
+            "--allow-http-localhost",
+            "--enable",
+        ]
+    )
+
+    assert kod == EXIT_OK
+    out = capsys.readouterr().out
+    assert "tylko dla tego komputera" in out
+    config = load_config(tmp_home.config_file)
+    assert config.allow_plain_http_localhost is True
+    assert config.embedding.provider == "internal_api"
+    assert config.embedding.internal_api_dimension == 4096
+
+    assert main(["model", "api", "--no-allow-http-localhost"]) == EXIT_OK
+    assert "Wymagane jest https" in capsys.readouterr().out
+    assert load_config(tmp_home.config_file).allow_plain_http_localhost is False
+
+
+def test_doctor_pokazuje_faktyczna_polityke_sieciowa(
+    tmp_home: AppPaths, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Opis polityki nie moze pokazywac offline, gdy konfiguracja wypuszcza ruch."""
+    kod = main(
+        [
+            "model",
+            "api",
+            "--url",
+            "http://127.0.0.1:11434/v1",
+            "--model",
+            "model-zdalny",
+            "--dimension",
+            "8",
+            "--allow-http-localhost",
+            "--enable",
+        ]
+    )
+    assert kod == EXIT_OK
+    capsys.readouterr()
+
+    assert main(["doctor"]) == EXIT_OK
+    out = capsys.readouterr().out
+
+    assert "'kategorie_wlaczone': ['internal_api']" in out
+    assert "'http_do_localhost': True" in out
+    assert "'internal_api': ['127.0.0.1']" in out
+
+
 def test_model_context_pokazuje_stan_domyslny(
     tmp_home: AppPaths, capsys: pytest.CaptureFixture[str]
 ) -> None:

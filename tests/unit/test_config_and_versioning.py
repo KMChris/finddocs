@@ -67,6 +67,32 @@ def test_zapis_i_odczyt_konfiguracji(tmp_home):
     assert odczytana.sources[0].local.root_path == "C:/dane/dokumenty"
 
 
+def test_zgoda_na_http_do_localhost_przezywa_zapis_i_odczyt(tmp_home):
+    config = AppConfig(data_root=str(tmp_home.root))
+    assert config.allow_plain_http_localhost is False
+    config.allow_plain_http_localhost = True
+
+    odczytana = load_config(save_config(config, tmp_home.config_file))
+
+    assert odczytana.allow_plain_http_localhost is True
+
+
+def test_stara_konfiguracja_bez_zgody_na_http_dostaje_wylaczona():
+    dane = config_to_dict(AppConfig())
+    del dane["allow_plain_http_localhost"]
+
+    assert config_from_dict(dane).allow_plain_http_localhost is False
+
+
+def test_zgoda_na_http_nie_zmienia_skrotow_zgodnosci():
+    """Zgoda dotyczy transportu, nie tresci wektorow: indeks zostaje wazny."""
+    zmieniona = AppConfig()
+    zmieniona.allow_plain_http_localhost = True
+
+    assert zmieniona.index_compat_hash() == AppConfig().index_compat_hash()
+    assert zmieniona.vector_compat_hash() == AppConfig().vector_compat_hash()
+
+
 def test_zapis_jest_atomowy_i_nie_zostawia_pliku_tymczasowego(tmp_home):
     config = AppConfig(data_root=str(tmp_home.root))
     sciezka = save_config(config, tmp_home.config_file)

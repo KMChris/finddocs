@@ -366,6 +366,54 @@ def test_przedrostki_zdalnego_api_zapisuja_sie_i_wymagaja_przebudowy(
     assert any(i18n.MODEL_REBUILD_REQUIRED in box.text() for box in message_boxes)
 
 
+@pytest.mark.gui
+def test_zgoda_na_http_do_localhost_zapisuje_sie_i_wchodzi_do_polityki(
+    qtbot: object, card_context: AppContext, message_boxes: list[QMessageBox]
+) -> None:
+    """Lokalny serwer modeli bez TLS wymaga jawnej zgody na karcie obliczeń."""
+    from finddocs.security.network import EgressCategory, get_policy
+
+    card = ComputeCard(card_context)
+    qtbot.addWidget(card)  # type: ignore[attr-defined]
+    assert not card.remote_allow_http_check.isChecked()
+
+    card.set_provider(True)
+    card.remote_url_edit.setText("http://127.0.0.1:11434/v1")
+    card.remote_model_edit.setText("qwen3-embedding:8b")
+    card.remote_dimension_spin.setValue(4096)
+    card.remote_allow_http_check.setChecked(True)
+    card.apply_settings()
+
+    zapisana = load_config(card_context.paths.config_file)
+    assert zapisana.allow_plain_http_localhost is True
+    # Zapis karty przebudowuje polityke procesu, wiec adres jest juz dozwolony.
+    host = get_policy().check("http://127.0.0.1:11434/v1/embeddings", EgressCategory.INTERNAL_API)
+    assert host == "127.0.0.1"
+
+
+@pytest.mark.gui
+def test_cofniecie_zgody_na_http_zamyka_polityke(
+    qtbot: object, card_context: AppContext, message_boxes: list[QMessageBox]
+) -> None:
+    from finddocs.errors import NetworkPolicyError
+    from finddocs.security.network import EgressCategory, get_policy
+
+    card_context.config.allow_plain_http_localhost = True
+    card_context.config.embedding.internal_api_enabled = True
+    card_context.config.embedding.internal_api_url = "http://127.0.0.1:11434/v1"
+
+    card = ComputeCard(card_context)
+    qtbot.addWidget(card)  # type: ignore[attr-defined]
+    assert card.remote_allow_http_check.isChecked()
+
+    card.remote_allow_http_check.setChecked(False)
+    card.apply_settings()
+
+    assert load_config(card_context.paths.config_file).allow_plain_http_localhost is False
+    with pytest.raises(NetworkPolicyError):
+        get_policy().check("http://127.0.0.1:11434/v1/embeddings", EgressCategory.INTERNAL_API)
+
+
 # --- karta profili ----------------------------------------------------------------
 
 

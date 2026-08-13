@@ -255,6 +255,47 @@ def test_polityka_wymusza_https_dla_zdalnego_api() -> None:
         policy.check("http://embeddingi.example.com/embeddings", EgressCategory.INTERNAL_API)
 
 
+def test_polityka_domyslnie_odrzuca_http_do_localhost() -> None:
+    config = AppConfig()
+    config.embedding.internal_api_enabled = True
+    config.embedding.internal_api_url = "http://127.0.0.1:11434/v1"
+
+    policy = policy_from_config(config)
+
+    assert not policy.allow_plain_http_localhost
+    with pytest.raises(NetworkPolicyError):
+        policy.check("http://127.0.0.1:11434/v1/embeddings", EgressCategory.INTERNAL_API)
+
+
+def test_zgoda_dopuszcza_http_do_localhost() -> None:
+    config = AppConfig()
+    config.allow_plain_http_localhost = True
+    config.embedding.internal_api_enabled = True
+    config.embedding.internal_api_url = "http://127.0.0.1:11434/v1"
+
+    policy = policy_from_config(config)
+
+    assert policy.check("http://127.0.0.1:11434/v1/embeddings", EgressCategory.INTERNAL_API) == (
+        "127.0.0.1"
+    )
+    assert policy.check("http://localhost:11434/v1/embeddings", EgressCategory.INTERNAL_API) == (
+        "localhost"
+    )
+
+
+def test_zgoda_na_localhost_nie_dotyczy_serwerow_zdalnych() -> None:
+    """Zgoda na http obejmuje wylacznie ten komputer, nigdy hostow zdalnych."""
+    config = AppConfig()
+    config.allow_plain_http_localhost = True
+    config.embedding.internal_api_enabled = True
+    config.embedding.internal_api_url = "http://embeddingi.example.com/v1"
+
+    policy = policy_from_config(config)
+
+    with pytest.raises(NetworkPolicyError):
+        policy.check("http://embeddingi.example.com/v1/embeddings", EgressCategory.INTERNAL_API)
+
+
 def test_wylaczenie_api_wylacza_kategorie_w_nowej_polityce() -> None:
     config = AppConfig()
     config.embedding.internal_api_enabled = True

@@ -66,6 +66,12 @@ class NetworkPolicy:
     enabled_categories: set[EgressCategory] = field(default_factory=set)
     extra_hosts: dict[EgressCategory, tuple[str, ...]] = field(default_factory=dict)
     allow_plain_http_localhost: bool = False
+    """Dopuszcza http bez TLS, ale wylacznie do hostow z ``LOCAL_HOSTS``.
+
+    Ustawiane z konfiguracji (``allow_plain_http_localhost``). Sluzy lokalnym
+    serwerom modeli, ktore nie wystawiaja TLS. Na hosty zdalne nie ma wplywu:
+    tam wymaganie https jest bezwarunkowe.
+    """
 
     @classmethod
     def offline(cls) -> NetworkPolicy:
@@ -89,6 +95,10 @@ class NetworkPolicy:
 
         Rzuca ``NetworkPolicyError``, gdy kategoria jest wylaczona, schemat nie jest
         https albo host nie pasuje do listy dozwolonych wzorcow.
+
+        Hosty lokalne sa rozpatrywane osobno, bo takie polaczenie nie opuszcza
+        komputera: https jest dozwolone zawsze, a zwykle http dopiero po
+        wlaczeniu ``allow_plain_http_localhost``.
         """
         parsed = urlparse(url)
         host = (parsed.hostname or "").lower()
@@ -166,6 +176,7 @@ class NetworkPolicy:
             "kategorie_wylaczone": sorted(
                 c.value for c in EgressCategory if c not in self.enabled_categories
             ),
+            "http_do_localhost": self.allow_plain_http_localhost,
             "dozwolone_hosty": {
                 c.value: list(self.allowed_hosts(c))
                 for c in EgressCategory
@@ -183,6 +194,7 @@ def policy_from_config(config: object) -> NetworkPolicy:
     zeby modul sieciowy nie zalezal od modulu konfiguracji.
     """
     policy = NetworkPolicy.offline()
+    policy.allow_plain_http_localhost = bool(getattr(config, "allow_plain_http_localhost", False))
 
     sources = getattr(config, "sources", []) or []
     if any(

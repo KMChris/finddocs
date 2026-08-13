@@ -398,6 +398,15 @@ class AppConfig:
     allow_model_download: bool = False
     """Pobieranie modeli wymaga jawnej zgody użytkownika."""
 
+    allow_plain_http_localhost: bool = False
+    """Zezwolenie na zwykłe http do usługi działającej na tym samym komputerze.
+
+    Potrzebne, gdy dostawca embeddingów to lokalny serwer bez TLS (na przykład
+    Ollama na porcie 11434). Taki ruch nie opuszcza komputera, ale zgoda jest
+    świadoma i domyślnie wyłączona. Adresy spoza listy hostów lokalnych nadal
+    wymagają https, niezależnie od tego ustawienia.
+    """
+
     # --- zgodnosc indeksu -------------------------------------------------
 
     def index_compat_payload(self) -> dict[str, Any]:

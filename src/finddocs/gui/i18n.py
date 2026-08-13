@@ -318,6 +318,12 @@ MODEL_REMOTE_PREFIX_HINT = (
 MODEL_REMOTE_MODEL = "Nazwa modelu"
 MODEL_REMOTE_DIMENSION = "Wymiar wektora"
 MODEL_REMOTE_BATCH = "Teksty w jednym żądaniu"
+MODEL_REMOTE_ALLOW_HTTP = "Zezwól na http do tego komputera"
+MODEL_REMOTE_ALLOW_HTTP_HINT = (
+    "Potrzebne, gdy API działa na tym komputerze bez szyfrowania, na przykład "
+    "Ollama pod adresem http://127.0.0.1:11434/v1. Taki ruch nie opuszcza "
+    "komputera. Adresy innych serwerów nadal wymagają https."
+)
 MODEL_REMOTE_KEY = "Klucz API"
 MODEL_REMOTE_KEY_PLACEHOLDER = "wklej klucz, aby go zapisać"
 MODEL_REMOTE_KEY_SAVE = "Zapisz klucz"
@@ -330,7 +336,8 @@ MODEL_REMOTE_KEY_EMPTY = "Wklej klucz w pole powyżej, zanim go zapiszesz."
 MODEL_REMOTE_HINT = (
     "Treść fragmentów dokumentów będzie wysyłana na wskazany adres w celu policzenia "
     "embeddingów. Włączaj wyłącznie dla API zaakceptowanego przez organizację. "
-    "Połączenia są ograniczone do hosta z podanego adresu i wyłącznie przez https."
+    "Połączenia są ograniczone do hosta z podanego adresu, a serwery zdalne "
+    "wymagają https."
 )
 MODEL_REMOTE_URL_REQUIRED = "Podaj adres zdalnego API, zanim je włączysz."
 MODEL_VECTOR_BOX = "Magazyn wektorów"

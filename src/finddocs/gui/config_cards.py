@@ -822,6 +822,12 @@ class ComputeCard(ConfigCard):
         self.remote_url_edit.setPlaceholderText(i18n.MODEL_REMOTE_URL_PLACEHOLDER)
         form.addRow(i18n.MODEL_REMOTE_URL, self.remote_url_edit)
 
+        self.remote_allow_http_check = QCheckBox(i18n.MODEL_REMOTE_ALLOW_HTTP)
+        self.remote_allow_http_check.setChecked(self.context.config.allow_plain_http_localhost)
+        self.remote_allow_http_check.setToolTip(i18n.MODEL_REMOTE_ALLOW_HTTP_HINT)
+        form.addRow("", self.remote_allow_http_check)
+        form.addRow(_hint_label(i18n.MODEL_REMOTE_ALLOW_HTTP_HINT))
+
         self.remote_protocol_combo = QComboBox()
         for value, label in _PROTOCOL_CHOICES:
             self.remote_protocol_combo.addItem(label, value)
@@ -900,6 +906,7 @@ class ComputeCard(ConfigCard):
         self.batch_spin.setValue(embedding.batch_size)
         self.batch_docs_spin.setValue(self.context.config.indexing.embed_batch_documents)
         self.remote_url_edit.setText(embedding.internal_api_url)
+        self.remote_allow_http_check.setChecked(self.context.config.allow_plain_http_localhost)
         position = self.remote_protocol_combo.findData(embedding.internal_api_protocol)
         self.remote_protocol_combo.setCurrentIndex(max(0, position))
         self.remote_model_edit.setText(embedding.internal_api_model)
@@ -941,6 +948,14 @@ class ComputeCard(ConfigCard):
         batch_docs = int(self.batch_docs_spin.value())
         if batch_docs != self.context.config.indexing.embed_batch_documents:
             self.context.config.indexing.embed_batch_documents = batch_docs
+
+        # Zgoda na http do localhost nie zmienia wektorow, wiec nie wchodzi do
+        # tozsamosci przestrzeni; wymaga tylko ponownego otwarcia dostawcy,
+        # bo polityka sieciowa powstaje na nowo przy zapisie konfiguracji.
+        allow_http = self.remote_allow_http_check.isChecked()
+        if allow_http != self.context.config.allow_plain_http_localhost:
+            self.context.config.allow_plain_http_localhost = allow_http
+            reload_needed = True
 
         remote_protocol = str(self.remote_protocol_combo.currentData())
         remote_model = self.remote_model_edit.text().strip()

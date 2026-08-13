@@ -40,8 +40,14 @@ jest włączona (`NetworkPolicy.offline()`). Dozwolone są wyłącznie:
 | `model_download` | `huggingface.co`, `cdn-lfs.huggingface.co`, `*.hf.co` | po jawnej zgodzie w konfiguracji |
 | `internal_api` | lista pusta | tylko po podaniu adresu w konfiguracji |
 
-Wyłącznie HTTPS. Adres spoza listy kończy się błędem `FD-1005`, także gdy podał
-go serwer w odpowiedzi.
+Dla serwerów zdalnych wyłącznie HTTPS. Adres spoza listy kończy się błędem
+`FD-1005`, także gdy podał go serwer w odpowiedzi.
+
+Jedyny wyjątek od HTTPS dotyczy tego samego komputera (`localhost`, `127.0.0.1`,
+`::1`) i wymaga jawnego włączenia opcji `allow_plain_http_localhost`. Służy
+lokalnym serwerom modeli, które nie wystawiają TLS. Taki ruch nie opuszcza
+maszyny, więc nie zwiększa powierzchni wycieku; opcja jest domyślnie wyłączona,
+a jej stan widać na ekranie **Diagnostyka**. Na hosty zdalne nie ma wpływu.
 
 **Kontrola: brak telemetrii.** Aplikacja nie wysyła żadnych zdarzeń o użyciu.
 Nie ma kodu, który by to robił, i nie ma zależności, która by to robiła za nas.
