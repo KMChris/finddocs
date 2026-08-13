@@ -63,6 +63,14 @@ wewnętrzny organizacji, a nie zasób publiczny.
   tabelę nadpisywałyby swoje wektory, bo identyfikatory fragmentów są lokalne.
   Przy wielu użytkownikach na jednym serwerze należy rozdzielić tabele
   (np. `wektory_jkowalski`) albo schematy.
+* Model musi tworzyć wektory o wymiarze **nie większym niż 2000**. Indeks HNSW
+  w pgvector nie przyjmuje więcej dla typu `vector`, a aplikacja zakłada ten
+  typ i ten indeks. Przy większym wymiarze tworzenie indeksu kończy się błędem
+  serwera `column cannot have more than 2000 dimensions for hnsw index`.
+  Zmierzone na pgvector 0.8.6: 2000 przechodzi, 2001 już nie. Typ `halfvec`
+  podniósłby granicę do 4000, ale aplikacja go nie używa. Modele o większym
+  wymiarze (na przykład Qwen3-Embedding-8B z wymiarem 4096) działają wyłącznie
+  z magazynem FAISS, który takiego ograniczenia nie ma.
 
 Aplikacja tworzy w bazie dwie tabele: `<tabela>` z parami
 (`chunk_id bigint`, `embedding vector(wymiar)`) oraz `<tabela>__meta`
