@@ -19,6 +19,12 @@ services:
     environment:
       HF_HUB_OFFLINE: "1"
     shm_size: "2gb"
+    # Limit pamieci hosta. Zmierzony szczyt kontenera przy indeksowaniu to
+    # 1,8 GB, wiec 4 GB zostawia zapas, a jednoczesnie nie pozwala serwerowi
+    # zjesc calego RAM maszyny. Rowny limit wymiany wylacza swap kontenera:
+    # zamiana stron w maszynie WSL potrafi zawiesic caly system.
+    mem_limit: "4g"
+    memswap_limit: "4g"
     deploy:
       resources:
         reservations:

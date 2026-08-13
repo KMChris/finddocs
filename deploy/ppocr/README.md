@@ -11,6 +11,8 @@ Opis funkcji od strony aplikacji: [docs/ocr-gpu-api.md](../../docs/ocr-gpu-api.m
 * Docker z obsługą GPU (Docker Desktop z WSL2 albo NVIDIA Container Toolkit).
 * Karta NVIDIA i sterownik od wersji 550.54.14 (CUDA 12.6).
 * Około 20 GB miejsca na obraz i 6 GB pamięci karty przy pracy.
+* Około 2 GB pamięci operacyjnej. `compose.yaml` ogranicza kontener do 4 GB
+  bez pamięci wymiany, żeby serwer nie wygłodził systemu operacyjnego.
 
 ## Uruchomienie
 

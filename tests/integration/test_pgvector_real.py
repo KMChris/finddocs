@@ -5,7 +5,11 @@ i zmiennych srodowiskowych. Serwer do prob mozna uruchomic w kontenerze:
 
     docker run -d --name finddocs-pg-test -e POSTGRES_USER=finddocs \
       -e POSTGRES_PASSWORD=finddocs-test-haslo -e POSTGRES_DB=wyszukiwarka \
-      -p 54329:5432 pgvector/pgvector:pg17
+      -p 54329:5432 --memory 1g --memory-swap 1g pgvector/pgvector:pg17
+
+Limit pamieci jest czescia polecenia celowo: kontener bez limitu moze rosnac
+do calego RAM maszyny wirtualnej Dockera, a serwer w tych testach zajmuje
+kilkadziesiat MB. Rowny limit wymiany wylacza swap kontenera.
 
 a potem uruchomic testy tak:
 
