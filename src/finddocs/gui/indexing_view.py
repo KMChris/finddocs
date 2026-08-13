@@ -684,7 +684,13 @@ class IndexingView(QWidget):
         except Exception as exc:
             log.warning("gui.list_counts_failed", error_type=type(exc).__name__)
             return
-        if errors == self.error_table.rowCount() and problems == self.problems_table.rowCount():
+        # Tabela pokazuje najwyzej ERROR_TABLE_LIMIT wierszy, wiec porownanie
+        # z surowa liczba wpisow kazalo by przebudowywac ja bez konca, gdy
+        # w bazie jest ich wiecej niz miejsca na liscie.
+        if (
+            min(errors, ERROR_TABLE_LIMIT) == self.error_table.rowCount()
+            and min(problems, ERROR_TABLE_LIMIT) == self.problems_table.rowCount()
+        ):
             return
         self.refresh_tables()
 
