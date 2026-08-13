@@ -780,6 +780,7 @@ class ComputeCard(ConfigCard):
         layout.addWidget(self.local_panel)
         self.remote_panel = self._build_remote_panel()
         layout.addWidget(self.remote_panel)
+        layout.addLayout(self._build_shared_form())
         layout.addLayout(self._apply_row(self.apply_settings))
         self._show_provider_panels()
 
@@ -820,6 +821,23 @@ class ComputeCard(ConfigCard):
 
         form.addRow(_hint_label(i18n.MODEL_DEVICE_HINT))
         return panel
+
+    def _build_shared_form(self) -> QFormLayout:
+        """Ustawienia wspolne obu dostawcow: rownoleglosc przygotowania dokumentow."""
+        form = QFormLayout()
+        form.setContentsMargins(0, 0, 0, 0)
+        form.setHorizontalSpacing(16)
+        form.setVerticalSpacing(10)
+
+        self.parallel_docs_spin = QSpinBox()
+        self.parallel_docs_spin.setRange(0, 8)
+        self.parallel_docs_spin.setSpecialValueText(i18n.MODEL_PARALLEL_DOCS_AUTO)
+        self.parallel_docs_spin.setValue(self.context.config.indexing.parallel_documents)
+        self.parallel_docs_spin.setToolTip(i18n.MODEL_PARALLEL_DOCS_HINT)
+        self.parallel_docs_spin.setFixedWidth(CONTROL_WIDTH)
+        form.addRow(i18n.MODEL_PARALLEL_DOCS_LABEL, self.parallel_docs_spin)
+        form.addRow(_hint_label(i18n.MODEL_PARALLEL_DOCS_HINT))
+        return form
 
     def _build_remote_panel(self) -> QWidget:
         panel = QWidget()
@@ -922,6 +940,7 @@ class ComputeCard(ConfigCard):
         self.device_combo.setCurrentIndex(max(0, position))
         self.batch_spin.setValue(embedding.batch_size)
         self.batch_docs_spin.setValue(self.context.config.indexing.embed_batch_documents)
+        self.parallel_docs_spin.setValue(self.context.config.indexing.parallel_documents)
         self.remote_url_edit.setText(embedding.internal_api_url)
         self.remote_allow_http_check.setChecked(self.context.config.allow_plain_http_localhost)
         position = self.remote_protocol_combo.findData(embedding.internal_api_protocol)
@@ -966,6 +985,10 @@ class ComputeCard(ConfigCard):
         batch_docs = int(self.batch_docs_spin.value())
         if batch_docs != self.context.config.indexing.embed_batch_documents:
             self.context.config.indexing.embed_batch_documents = batch_docs
+
+        parallel_docs = int(self.parallel_docs_spin.value())
+        if parallel_docs != self.context.config.indexing.parallel_documents:
+            self.context.config.indexing.parallel_documents = parallel_docs
 
         # Zgoda na http do localhost nie zmienia wektorow, wiec nie wchodzi do
         # tozsamosci przestrzeni; wymaga tylko ponownego otwarcia dostawcy,

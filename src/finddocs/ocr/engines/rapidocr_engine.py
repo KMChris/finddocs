@@ -104,6 +104,9 @@ class RapidOcrEngine(OcrEngine):
     priority = 60
     supports_rotation = True
     provides_confidence = True
+    #: Jedna wspolna instancja potoku RapidOCR z buforami w pamieci:
+    #: rownoczesne wywolania nie sa zadeklarowane jako bezpieczne.
+    concurrent_safe = False
 
     def __init__(self, *, use_angle_cls: bool = True, text_score: float = 0.5) -> None:
         self._engine: Any | None = None

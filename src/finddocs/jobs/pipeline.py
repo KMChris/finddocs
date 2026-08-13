@@ -109,6 +109,24 @@ class DocumentOutcome:
         return self.status in {DocumentStatus.INDEXED, DocumentStatus.PARTIAL}
 
 
+@dataclass(slots=True)
+class PreparedWrite:
+    """Dokument przygotowany do zapisu: fragmenty, teksty do osadzenia, wynik.
+
+    Powstaje w trybie zbierania (``collect``), w ktorym watek roboczy wykonuje
+    pobranie, ekstrakcje, OCR i fragmentacje, ale nie dotyka indeksu. Zapis
+    (przez batcher embeddingow albo bezposrednio) wykonuje pozniej watek
+    zadania metoda ``DocumentPipeline.deliver``, w kolejnosci wykrywania
+    plikow. Dzieki temu anulowanie zadania odcina dokumenty w spojnym
+    prefiksie, tak samo jak przy przetwarzaniu sekwencyjnym.
+    """
+
+    payload: DocumentPayload
+    embed_texts: list[str]
+    outcome: DocumentOutcome
+    tracked: bool
+
+
 class DocumentPipeline:
     """Przetwarza pojedyncze dokumenty i zapisuje je do indeksu."""
 
@@ -152,8 +170,15 @@ class DocumentPipeline:
         workspace: Path,
         control: JobControl,
         scan_id: int,
+        collect: list[PreparedWrite] | None = None,
     ) -> DocumentOutcome:
-        """Przetwarza dokument. Nie rzuca wyjatkow poza anulowaniem."""
+        """Przetwarza dokument. Nie rzuca wyjatkow poza anulowaniem.
+
+        Z lista ``collect`` metoda niczego nie zapisuje do indeksu: dokument
+        i jego zalaczniki laduja w liscie jako ``PreparedWrite``, a zapis
+        wykonuje pozniej watek zadania przez ``deliver``. Bez listy zapis
+        idzie od razu, jak dotychczas.
+        """
         control.checkpoint()
         record = self.index.repository.get_document(doc_id)
         if record is None:
@@ -209,6 +234,7 @@ class DocumentPipeline:
                 control=control,
                 scan_id=scan_id,
                 workspace=workspace,
+                collect=collect,
             )
         except (JobCancelledError, StorageSpaceError):
             raise
@@ -282,6 +308,7 @@ class DocumentPipeline:
         workspace: Path,
         track_outcome: bool = True,
         attachment_depth: int = 0,
+        collect: list[PreparedWrite] | None = None,
     ) -> DocumentOutcome:
         doc_id = record.doc_id
         context = ExtractionContext(
@@ -412,40 +439,26 @@ class DocumentPipeline:
             header = document_context_header(item.name, item.logical_path, library=item.library)
             embed_texts = enrich_passages(embed_texts, header)
 
-        # Tryb batchowy: fragmenty czekaja na wspolne embeddingi, a zapis
-        # wykona batcher. Bez semantyki bufor nie ma czego grupowac, wiec
-        # dokument idzie od razu zwykla sciezka.
-        batcher = self.batcher if self.index.semantic_available else None
-        if batcher is not None:
-            outcome = DocumentOutcome(
-                doc_id=doc_id,
-                status=DocumentStatus.INDEXED,
-                chunks=len(chunks),
-                used_ocr=ocr_pages > 0,
-                ocr_pages=ocr_pages,
-                bytes_processed=size,
-                warnings=warnings,
-                deferred=True,
-            )
-            batcher.submit(
-                payload,
-                embed_texts,
-                outcome,
-                tracked=track_outcome,
-                control=control,
-            )
+        outcome = DocumentOutcome(
+            doc_id=doc_id,
+            status=DocumentStatus.INDEXED,
+            chunks=len(chunks),
+            used_ocr=ocr_pages > 0,
+            ocr_pages=ocr_pages,
+            bytes_processed=size,
+            warnings=warnings,
+            deferred=True,
+        )
+        prepared = PreparedWrite(
+            payload=payload,
+            embed_texts=embed_texts,
+            outcome=outcome,
+            tracked=track_outcome,
+        )
+        if collect is not None:
+            collect.append(prepared)
         else:
-            payload.embeddings = self._embed(embed_texts, control)
-            write = self.index.writer.write_document(payload)
-            outcome = DocumentOutcome(
-                doc_id=doc_id,
-                status=write.status,
-                chunks=write.chunk_count,
-                used_ocr=ocr_pages > 0,
-                ocr_pages=ocr_pages,
-                bytes_processed=size,
-                warnings=warnings,
-            )
+            self.deliver(prepared, control)
 
         attachments = result.attachments if result else []
         if attachments:
@@ -456,6 +469,7 @@ class DocumentPipeline:
                 control=control,
                 scan_id=scan_id,
                 depth=attachment_depth + 1,
+                collect=collect,
             )
 
         for warning in warnings[:5]:
@@ -490,6 +504,69 @@ class DocumentPipeline:
         sections = self.ocr.to_sections(ocr_result)
         return sections, ocr_result.page_count, ocr_result.confidence, ocr_result.warnings
 
+    def deliver(self, prepared: PreparedWrite, control: JobControl) -> None:
+        """Zapisuje przygotowany dokument: przez batcher albo bezposrednio.
+
+        Wolane w watku zadania, takze dla dokumentow przygotowanych przez
+        watki robocze. Sciezka z batcherem tylko przekazuje fragmenty do
+        wspolnego osadzenia (wynik pozostaje odroczony do oproznienia
+        bufora), sciezka bezposrednia liczy embeddingi i zapisuje od razu.
+        """
+        batcher = self.batcher if self.index.semantic_available else None
+        if batcher is not None:
+            batcher.submit(
+                prepared.payload,
+                prepared.embed_texts,
+                prepared.outcome,
+                tracked=prepared.tracked,
+                control=control,
+            )
+            return
+        prepared.payload.embeddings = self._embed(prepared.embed_texts, control)
+        write = self.index.writer.write_document(prepared.payload)
+        prepared.outcome.status = write.status
+        prepared.outcome.chunks = write.chunk_count
+        prepared.outcome.deferred = False
+
+    def deliver_collected(
+        self,
+        item: SourceItem,
+        doc_id: int,
+        prepared: list[PreparedWrite],
+        outcome: DocumentOutcome,
+        control: JobControl,
+    ) -> DocumentOutcome:
+        """Zapisuje dokumenty przygotowane w trybie ``collect``.
+
+        Obsluga bledow odpowiada koncowce ``process``: blad zapisu oznacza
+        status bledu dokumentu, nie przerwanie calego zadania.
+        """
+        try:
+            for entry in prepared:
+                self.deliver(entry, control)
+        except (JobCancelledError, StorageSpaceError):
+            raise
+        except FindDocsError as exc:
+            status = STATUS_BY_ERROR.get(type(exc), DocumentStatus.ERROR)
+            self._fail(doc_id, status, exc.code, exc.user_message, stage="process", item=item)
+            return DocumentOutcome(
+                doc_id=doc_id,
+                status=status,
+                error_code=exc.code,
+                error_message=exc.user_message,
+            )
+        except Exception as exc:
+            log.error("pipeline.unexpected_error", doc_id=doc_id, error_type=type(exc).__name__)
+            message = f"Nieoczekiwany błąd przetwarzania: {type(exc).__name__}."
+            self._fail(doc_id, DocumentStatus.ERROR, "FD-3000", message, stage="process", item=item)
+            return DocumentOutcome(
+                doc_id=doc_id,
+                status=DocumentStatus.ERROR,
+                error_code="FD-3000",
+                error_message=message,
+            )
+        return outcome
+
     def _embed(self, texts: list[str], control: JobControl) -> np.ndarray | None:
         if not self.index.semantic_available or self.index.provider is None:
             return None
@@ -511,6 +588,7 @@ class DocumentPipeline:
         control: JobControl,
         scan_id: int,
         depth: int = 1,
+        collect: list[PreparedWrite] | None = None,
     ) -> None:
         """Indeksuje załączniki i wpisy archiwow jako osobne dokumenty podrzedne."""
         for attachment in attachments:
@@ -557,6 +635,7 @@ class DocumentPipeline:
                     workspace=child_dir,
                     track_outcome=False,
                     attachment_depth=depth,
+                    collect=collect,
                 )
             except JobCancelledError:
                 raise
@@ -650,4 +729,10 @@ def _safe_filename(name: str) -> str:
     return cleaned
 
 
-__all__ = ["MAX_ATTACHMENT_DEPTH", "STATUS_BY_ERROR", "DocumentOutcome", "DocumentPipeline"]
+__all__ = [
+    "MAX_ATTACHMENT_DEPTH",
+    "STATUS_BY_ERROR",
+    "DocumentOutcome",
+    "DocumentPipeline",
+    "PreparedWrite",
+]

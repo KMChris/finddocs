@@ -88,6 +88,11 @@ class OcrEngine(ABC):
     #: Czy silnik zwraca miare pewnosci rozpoznania.
     provides_confidence: bool = False
 
+    #: Czy ``recognize`` moze byc wolane rownoczesnie z kilku watkow.
+    #: Silniki oparte o wspolna sesje modelu w pamieci deklaruja falsz,
+    #: a usluga OCR serializuje wtedy ich wywolania.
+    concurrent_safe: bool = True
+
     @abstractmethod
     def is_available(self) -> bool:
         """Czy silnik da sie uruchomic w tym systemie."""

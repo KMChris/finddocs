@@ -271,6 +271,7 @@ def test_zmiana_urzadzenia_i_batcha_zapisuje_konfiguracje(
     card.device_combo.setCurrentIndex(position)
     card.batch_spin.setValue(64)
     card.batch_docs_spin.setValue(16)
+    card.parallel_docs_spin.setValue(4)
     card.apply_settings()
 
     assert zgloszenia == [True]
@@ -278,6 +279,7 @@ def test_zmiana_urzadzenia_i_batcha_zapisuje_konfiguracje(
     assert zapisana.embedding.device == "dml"
     assert zapisana.embedding.batch_size == 64
     assert zapisana.indexing.embed_batch_documents == 16
+    assert zapisana.indexing.parallel_documents == 4
 
 
 @pytest.mark.gui

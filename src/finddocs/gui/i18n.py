@@ -305,6 +305,14 @@ MODEL_BATCH_DOCS_HINT = (
     "Podczas indeksowania fragmenty kolejnych dokumentów są zbierane i osadzane "
     "jednym wywołaniem modelu. Wartość 1 wyłącza wspólne osadzanie."
 )
+MODEL_PARALLEL_DOCS_LABEL = "Dokumenty przetwarzane równocześnie"
+MODEL_PARALLEL_DOCS_AUTO = "automatycznie"
+MODEL_PARALLEL_DOCS_HINT = (
+    "Ile dokumentów jest równocześnie pobieranych, odczytywanych i przygotowywanych "
+    "do osadzenia podczas indeksowania. Ustawienie automatyczne dobiera wartość do "
+    "liczby rdzeni procesora. Wartość 1 przetwarza pliki po jednym, jak dotychczas. "
+    "Dotyczy źródeł lokalnych; zapis do indeksu zawsze idzie w jednym wątku."
+)
 MODEL_REMOTE_URL = "Adres API"
 MODEL_REMOTE_URL_PLACEHOLDER = "https://api.example.com/v1"
 MODEL_REMOTE_PROTOCOL = "Kontrakt"

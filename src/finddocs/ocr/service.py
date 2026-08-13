@@ -9,6 +9,7 @@ wiec ponowne skanowanie niezmienionego pliku nie uruchamia OCR jeszcze raz.
 from __future__ import annotations
 
 import math
+import threading
 import time
 from collections.abc import Iterator
 from dataclasses import dataclass
@@ -173,11 +174,21 @@ class OcrService:
         self._engines = build_engines(settings, model_dir, credentials_dir=credentials_dir)
         self._selected: OcrEngine | None = None
         self.warnings: list[str] = []
+        self._select_lock = threading.Lock()
+        #: Serializuje wywolania silnikow, ktore nie deklaruja bezpieczenstwa
+        #: rownoczesnego (wspolna sesja modelu w pamieci).
+        self._recognize_lock = threading.Lock()
 
     # --- wybor silnika ----------------------------------------------------
 
     @property
     def engine(self) -> OcrEngine:
+        if self._selected is not None:
+            return self._selected
+        with self._select_lock:
+            return self._select_engine()
+
+    def _select_engine(self) -> OcrEngine:
         if self._selected is not None:
             return self._selected
         problems: list[str] = []
@@ -305,9 +316,9 @@ class OcrService:
             deadline = self.settings.page_timeout_seconds
             page_started = time.monotonic()
             try:
-                page_result = engine.recognize(
+                page_result = self._recognize(
+                    engine,
                     image,
-                    languages=list(self.settings.languages),
                     page=page_number,
                     cancel=cancel,
                 )
@@ -349,6 +360,21 @@ class OcrService:
         )
         self._store_cache(content_sha256, result)
         return result
+
+    def _recognize(
+        self,
+        engine: OcrEngine,
+        image: Image,
+        *,
+        page: int,
+        cancel: CancellationToken | None,
+    ) -> OcrPageResult:
+        """Wywoluje silnik, serializujac te bez bezpiecznej rownoczesnosci."""
+        languages = list(self.settings.languages)
+        if engine.concurrent_safe:
+            return engine.recognize(image, languages=languages, page=page, cancel=cancel)
+        with self._recognize_lock:
+            return engine.recognize(image, languages=languages, page=page, cancel=cancel)
 
     def to_sections(
         self, result: OcrDocumentResult, *, start_order: int = 0

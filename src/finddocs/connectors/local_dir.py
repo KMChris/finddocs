@@ -140,6 +140,11 @@ class LocalDirectoryConnector(SourceConnector):
 
     kind = SourceKind.LOCAL_DIR
 
+    #: ``fetch`` czyta wylacznie pola niezmienne po konstrukcji i pisze do
+    #: katalogu roboczego wlasnego dokumentu, wiec rownolegle pobieranie
+    #: z kilku watkow jest bezpieczne.
+    supports_parallel_fetch = True
+
     def __init__(
         self,
         source_id: str,

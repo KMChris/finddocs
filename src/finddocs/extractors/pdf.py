@@ -12,6 +12,7 @@ from __future__ import annotations
 import datetime as _dt
 import math
 import re
+import threading
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -49,6 +50,12 @@ MIN_RENDER_SCALE: float = 0.01
 
 #: Liczba punktow PDF przypadajaca na cal.
 POINTS_PER_INCH: float = 72.0
+
+#: Biblioteka pdfium nie jest bezpieczna watkowo, takze dla roznych dokumentow.
+#: Kazde wejscie do niej (otwarcie, tekst, rasteryzacja, introspekcja) przechodzi
+#: przez te wspolna blokade. Przy jednym watku koszt jest pomijalny, a przy
+#: rownoleglym indeksowaniu praca na plikach PDF po prostu sie serializuje.
+PDFIUM_LOCK = threading.RLock()
 
 #: Fragmenty komunikatow pdfium wskazujace na haslo albo nieobslugiwane szyfrowanie.
 _PASSWORD_MARKERS: tuple[str, ...] = ("password", "security")
@@ -183,6 +190,10 @@ class PdfExtractor(Extractor):
     def extract(self, path: Path, context: ExtractionContext) -> ExtractionResult:
         """Wyciaga tekst i metadane z pliku PDF."""
         context.checkpoint()
+        with PDFIUM_LOCK:
+            return self._extract_impl(path, context)
+
+    def _extract_impl(self, path: Path, context: ExtractionContext) -> ExtractionResult:
         result = ExtractionResult(
             parser_name=self.name,
             support_level=self.support_level,
@@ -365,38 +376,41 @@ def render_pdf_page(
         )
 
     image: Image.Image
-    pdf = _open_document(path)
-    try:
-        page_count = len(pdf)
-        if page_index >= page_count:
-            raise ExtractionError(
-                f"Plik PDF ma {page_count} stron, zadano strony {page_index + 1}.",
-                details={"plik": path.name, "strona": page_index + 1},
-            )
+    with PDFIUM_LOCK:
+        pdf = _open_document(path)
         try:
-            width_pt, height_pt = pdf.get_page_size(page_index)
-            scale = _fit_scale(float(width_pt), float(height_pt), dpi=dpi, max_pixels=max_pixels)
-            page = pdf[page_index]
+            page_count = len(pdf)
+            if page_index >= page_count:
+                raise ExtractionError(
+                    f"Plik PDF ma {page_count} stron, zadano strony {page_index + 1}.",
+                    details={"plik": path.name, "strona": page_index + 1},
+                )
             try:
-                bitmap = page.render(scale=scale, draw_annots=True, may_draw_forms=False)
+                width_pt, height_pt = pdf.get_page_size(page_index)
+                scale = _fit_scale(
+                    float(width_pt), float(height_pt), dpi=dpi, max_pixels=max_pixels
+                )
+                page = pdf[page_index]
                 try:
-                    raw_image = bitmap.to_pil()
-                    if raw_image.mode in {"L", "RGB"}:
-                        image = raw_image.copy()
-                    else:
-                        image = raw_image.convert("RGB")
+                    bitmap = page.render(scale=scale, draw_annots=True, may_draw_forms=False)
+                    try:
+                        raw_image = bitmap.to_pil()
+                        if raw_image.mode in {"L", "RGB"}:
+                            image = raw_image.copy()
+                        else:
+                            image = raw_image.convert("RGB")
+                    finally:
+                        bitmap.close()
                 finally:
-                    bitmap.close()
-            finally:
-                page.close()
-        except (pdfium.PdfiumError, OSError, ValueError) as exc:
-            raise CorruptedFileError(
-                f"Nie udało się zrasteryzować strony {page_index + 1} pliku PDF.",
-                details={"plik": path.name, "strona": page_index + 1},
-                cause=exc,
-            ) from exc
-    finally:
-        pdf.close()
+                    page.close()
+            except (pdfium.PdfiumError, OSError, ValueError) as exc:
+                raise CorruptedFileError(
+                    f"Nie udało się zrasteryzować strony {page_index + 1} pliku PDF.",
+                    details={"plik": path.name, "strona": page_index + 1},
+                    cause=exc,
+                ) from exc
+        finally:
+            pdf.close()
     return image
 
 
@@ -411,43 +425,45 @@ def pdf_page_image_dpi(path: Path, page_index: int) -> float | None:
     przesylu i rozpoznawania.
     """
     best: float | None = None
-    try:
-        pdf = _open_document(path)
-    except Exception:
-        return None
-    try:
-        if page_index < 0 or page_index >= len(pdf):
-            return None
-        page = pdf[page_index]
+    with PDFIUM_LOCK:
         try:
-            for obj in page.get_objects():
-                if obj.type != pdfium_c.FPDF_PAGEOBJ_IMAGE:
-                    return None
-                left, bottom, right, top = obj.get_bounds()
-                width_inch = (float(right) - float(left)) / POINTS_PER_INCH
-                height_inch = (float(top) - float(bottom)) / POINTS_PER_INCH
-                if width_inch <= 0 or height_inch <= 0:
-                    continue
-                px_width, px_height = obj.get_px_size()
-                candidate = max(px_width / width_inch, px_height / height_inch)
-                if candidate > 0:
-                    best = candidate if best is None else max(best, candidate)
+            pdf = _open_document(path)
+        except Exception:
+            return None
+        try:
+            if page_index < 0 or page_index >= len(pdf):
+                return None
+            page = pdf[page_index]
+            try:
+                for obj in page.get_objects():
+                    if obj.type != pdfium_c.FPDF_PAGEOBJ_IMAGE:
+                        return None
+                    left, bottom, right, top = obj.get_bounds()
+                    width_inch = (float(right) - float(left)) / POINTS_PER_INCH
+                    height_inch = (float(top) - float(bottom)) / POINTS_PER_INCH
+                    if width_inch <= 0 or height_inch <= 0:
+                        continue
+                    px_width, px_height = obj.get_px_size()
+                    candidate = max(px_width / width_inch, px_height / height_inch)
+                    if candidate > 0:
+                        best = candidate if best is None else max(best, candidate)
+            finally:
+                page.close()
+        except Exception:
+            return None
         finally:
-            page.close()
-    except Exception:
-        return None
-    finally:
-        pdf.close()
+            pdf.close()
     return best
 
 
 def pdf_page_count(path: Path) -> int:
     """Zwraca liczbe stron dokumentu PDF."""
-    pdf = _open_document(path)
-    try:
-        return len(pdf)
-    finally:
-        pdf.close()
+    with PDFIUM_LOCK:
+        pdf = _open_document(path)
+        try:
+            return len(pdf)
+        finally:
+            pdf.close()
 
 
 __all__ = [

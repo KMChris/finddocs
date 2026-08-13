@@ -370,6 +370,19 @@ class IndexingSettings:
     embed_batch_chunks: int = 128
     """Górny limit fragmentów w buforze batcha. Chroni pamięć przy dużych plikach."""
 
+    parallel_documents: int = 0
+    """Liczba dokumentów przetwarzanych równocześnie (pobieranie, odczyt, OCR).
+
+    Wartość 0 oznacza dobór automatyczny na podstawie liczby rdzeni procesora.
+    Wartość 1 przywraca przetwarzanie po jednym dokumencie. Równoległość
+    obejmuje pobieranie pliku, wykrywanie typu, odczyt treści, OCR
+    i fragmentację; zapis do indeksu oraz liczniki postępu pozostają
+    w jednym wątku zadania, w kolejności wykrywania plików. Checkpoint
+    powstaje dopiero po domknięciu wszystkich wcześniejszych dokumentów,
+    więc bardzo małe checkpoint_every ogranicza zysk z równoległości.
+    Źródła, których konektor nie deklaruje bezpiecznego pobierania
+    równoległego (SharePoint), są przetwarzane po jednym dokumencie."""
+
     index_archives: bool = False
     """Indeksowanie zawartości archiwów ZIP.
 

@@ -495,3 +495,146 @@ def test_blad_zapisu_nie_zostawia_dokumentu_w_polowicznym_stanie(
     assert raport.orphan_chunks == 0
     assert raport.is_healthy is True
     assert exact_search_count(index_service, "wiewiorka") == 1
+
+
+# --- przetwarzanie rownolegle ----------------------------------------------------
+
+
+def duzy_korpus(root: Path, count: int = 20) -> tuple[Path, dict[str, str]]:
+    """Zbior malych plikow tekstowych o unikalnych slowach rozpoznawczych."""
+    pliki = {
+        f"plik-{numer:02d}.txt": (
+            f"Notatka numer {numer} z przegladu procedur wewnetrznych.\n"
+            f"Slowo rozpoznawcze tego dokumentu to znacznik{numer:02d}unikat.\n"
+        )
+        for numer in range(count)
+    }
+    return write_corpus(root, pliki), pliki
+
+
+def test_rownolegle_indeksowanie_przetwarza_wszystkie_pliki(
+    indexing_config: Callable[..., AppConfig],
+    index_service: IndexService,
+    run_job: Callable[..., ProgressSnapshot],
+    document_statuses: Callable[[IndexService], dict[str, str]],
+    exact_search_count: Callable[[IndexService, str], int],
+    tmp_path: Path,
+) -> None:
+    """Pula watkow daje ten sam wynik co przetwarzanie po jednym pliku."""
+    root, pliki = duzy_korpus(tmp_path / "zrodlo")
+    config = indexing_config(root)
+    config.indexing.parallel_documents = 4
+    config.indexing.checkpoint_every = 5
+
+    snapshot = run_job(config, index_service)
+
+    assert snapshot.state is JobState.COMPLETED
+    assert snapshot.processed == len(pliki)
+    assert snapshot.failed == 0
+    assert document_statuses(index_service) == dict.fromkeys(pliki, DocumentStatus.INDEXED.value)
+    assert exact_search_count(index_service, "znacznik07unikat") == 1
+    assert exact_search_count(index_service, "znacznik19unikat") == 1
+
+    powtorne = run_job(config, index_service, kind=JobKind.RESCAN)
+    assert powtorne.state is JobState.COMPLETED
+    assert powtorne.processed == 0
+    assert powtorne.unchanged == len(pliki)
+
+
+def test_rownolegle_przeindeksowanie_zgadza_sie_z_sekwencyjnym(
+    indexing_config: Callable[..., AppConfig],
+    index_service: IndexService,
+    run_job: Callable[..., ProgressSnapshot],
+    document_statuses: Callable[[IndexService], dict[str, str]],
+    exact_search_count: Callable[[IndexService, str], int],
+    tmp_path: Path,
+) -> None:
+    """Pelne przeindeksowanie sekwencyjne po rownoleglym niczego nie zmienia."""
+    root, pliki = duzy_korpus(tmp_path / "zrodlo", count=12)
+    config = indexing_config(root)
+    config.indexing.parallel_documents = 4
+
+    rownolegle = run_job(config, index_service)
+    assert rownolegle.state is JobState.COMPLETED
+    stany_rownolegle = document_statuses(index_service)
+
+    config.indexing.parallel_documents = 1
+    sekwencyjne = run_job(config, index_service, force_reindex=True)
+
+    assert sekwencyjne.state is JobState.COMPLETED
+    assert sekwencyjne.processed == len(pliki)
+    assert document_statuses(index_service) == stany_rownolegle
+    for numer in range(len(pliki)):
+        assert exact_search_count(index_service, f"znacznik{numer:02d}unikat") == 1
+
+
+def test_rownolegle_anulowanie_wznawia_sie_bez_podwojnej_pracy(
+    indexing_config: Callable[..., AppConfig],
+    index_service: IndexService,
+    run_job: Callable[..., ProgressSnapshot],
+    document_statuses: Callable[[IndexService], dict[str, str]],
+    source_id: str,
+    tmp_path: Path,
+) -> None:
+    """Anulowanie w trakcie pracy puli zostawia checkpoint spojny z zapisami."""
+    root, pliki = duzy_korpus(tmp_path / "zrodlo")
+    config = indexing_config(root)
+    config.indexing.parallel_documents = 4
+    config.indexing.checkpoint_every = 3
+
+    control = JobControl()
+
+    def przerwij(snapshot: ProgressSnapshot) -> None:
+        if snapshot.processed >= 5:
+            control.cancel()
+
+    pierwszy = run_job(
+        config,
+        index_service,
+        control=control,
+        on_progress=przerwij,
+        resume_job_id="zadanie-rownolegle",
+    )
+
+    assert pierwszy.state is JobState.CANCELLED
+    assert pierwszy.processed == 5
+    checkpoint = index_service.repository.get_checkpoint(source_id, "zadanie-rownolegle")
+    assert checkpoint is not None
+    # Ostatni checkpoint padl po trzecim dokumencie (wielokrotnosc progu 3).
+    assert int(checkpoint["processed"]) == 3
+
+    drugi = run_job(
+        config,
+        index_service,
+        control=JobControl(),
+        resume_job_id="zadanie-rownolegle",
+    )
+
+    assert drugi.state is JobState.COMPLETED
+    # Dokumenty domkniete po checkpoincie, a przed anulowaniem, wracaja jako
+    # niezmienione; reszta jest przetwarzana. Nic nie liczy sie podwojnie.
+    assert drugi.processed + drugi.unchanged == len(pliki)
+    assert document_statuses(index_service) == dict.fromkeys(pliki, DocumentStatus.INDEXED.value)
+    proby = index_service.db.query_all("SELECT attempt_count FROM documents")
+    assert {int(row["attempt_count"]) for row in proby} == {1}
+
+
+def test_konektor_bez_zgody_na_rownoleglosc_dziala_po_jednym(
+    indexing_config: Callable[..., AppConfig],
+    index_service: IndexService,
+    run_job: Callable[..., ProgressSnapshot],
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Konektor bez deklaracji bezpieczenstwa jest przetwarzany sekwencyjnie."""
+    from finddocs.connectors.local_dir import LocalDirectoryConnector
+
+    root, pliki = duzy_korpus(tmp_path / "zrodlo", count=6)
+    config = indexing_config(root)
+    config.indexing.parallel_documents = 4
+    monkeypatch.setattr(LocalDirectoryConnector, "supports_parallel_fetch", False)
+
+    snapshot = run_job(config, index_service)
+
+    assert snapshot.state is JobState.COMPLETED
+    assert snapshot.processed == len(pliki)

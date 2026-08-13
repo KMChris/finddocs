@@ -31,7 +31,12 @@ from finddocs.errors import (
     PasswordProtectedError,
     UnsupportedFormatError,
 )
-from finddocs.extractors.base import ExtractionContext, Extractor
+from finddocs.extractors.base import (
+    OFFICE_COM_LOCK,
+    ExtractionContext,
+    Extractor,
+    acquire_office_com,
+)
 from finddocs.extractors.office_com import (
     BOGUS_OFFICE_KEY,
     DEFAULT_COM_TIMEOUT,
@@ -200,23 +205,27 @@ class LegacyDocComExtractor(Extractor):
         context.checkpoint()
 
         state = _ComCallState()
-        thread = threading.Thread(
-            target=self._run_word,
-            args=(path, state),
-            name="finddocs-doc-com",
-            daemon=True,
-        )
-        thread.start()
-        timeout = float(context.office_com_timeout_seconds)
-        if timeout <= 0:
-            timeout = DEFAULT_COM_TIMEOUT
-        thread.join(timeout)
-        if thread.is_alive():
-            self._force_quit(state)
-            raise ExtractionTimeoutError(
-                f"Microsoft Word nie odczytał dokumentu w ciągu {timeout:.0f} s.",
-                details={"parser": self.name, "plik": path.name},
+        acquire_office_com(context)
+        try:
+            thread = threading.Thread(
+                target=self._run_word,
+                args=(path, state),
+                name="finddocs-doc-com",
+                daemon=True,
             )
+            thread.start()
+            timeout = float(context.office_com_timeout_seconds)
+            if timeout <= 0:
+                timeout = DEFAULT_COM_TIMEOUT
+            thread.join(timeout)
+            if thread.is_alive():
+                self._force_quit(state)
+                raise ExtractionTimeoutError(
+                    f"Microsoft Word nie odczytał dokumentu w ciągu {timeout:.0f} s.",
+                    details={"parser": self.name, "plik": path.name},
+                )
+        finally:
+            OFFICE_COM_LOCK.release()
         if state.error is not None:
             if isinstance(state.error, FindDocsError):
                 raise state.error

@@ -9,8 +9,11 @@ wiec zamkniecie aplikacji albo restart systemu kosztuje najwyzej te kilkanascie.
 from __future__ import annotations
 
 import datetime as _dt
+import os
 import shutil
 import uuid
+from collections import deque
+from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -27,7 +30,7 @@ from finddocs.extractors.registry import ExtractorRegistry, build_default_regist
 from finddocs.indexing.service import IndexService
 from finddocs.jobs.control import JobControl
 from finddocs.jobs.embed_batch import EmbeddingBatcher
-from finddocs.jobs.pipeline import DocumentPipeline
+from finddocs.jobs.pipeline import DocumentOutcome, DocumentPipeline, PreparedWrite
 from finddocs.logging_setup import bind_context, clear_context, get_logger
 from finddocs.ocr.service import OcrService
 from finddocs.types import (
@@ -36,6 +39,7 @@ from finddocs.types import (
     JobState,
     ProgressSink,
     ProgressSnapshot,
+    SourceItem,
     SourceKind,
 )
 from finddocs.version import CHUNKING_VERSION, NORMALIZATION_VERSION
@@ -47,6 +51,21 @@ DEFAULT_CHECKPOINT_EVERY = 20
 
 #: Co ile dokumentow odswiezamy postep w interfejsie.
 PROGRESS_EVERY = 1
+
+#: Twardy sufit liczby watkow przetwarzania dokumentow. Powyzej tej wartosci
+#: rosnie tylko rywalizacja o dysk, procesor i blokade pdfium.
+MAX_PARALLEL_DOCUMENTS = 8
+
+
+@dataclass(slots=True)
+class _PendingItem:
+    """Dokument przygotowywany w puli watkow, z migawka kursora enumeracji."""
+
+    future: Future[tuple[DocumentOutcome, list[PreparedWrite]]]
+    item: SourceItem
+    doc_id: int
+    cursor: ScanCursor
+    discovered: int
 
 
 @dataclass(slots=True)
@@ -116,6 +135,7 @@ class IndexingJob:
             config, index, self.registry, self.ocr, batcher=self._batcher
         )
         self._workspace: Path | None = None
+        self._since_checkpoint = 0
         self._started = _dt.datetime.now().astimezone()
 
     # --- uruchomienie -----------------------------------------------------
@@ -213,72 +233,11 @@ class IndexingJob:
             self.snapshot.processed = max(self.snapshot.processed, processed_before)
 
             self._emit("indeksowanie", f"Indeksowanie źródła: {source.label}")
-            discovered = 0
-            since_checkpoint = 0
-
-            for item in connector.iter_items(cursor=cursor, cancel=self.control):
-                self.control.checkpoint()
-                discovered += 1
-                self.snapshot.discovered += 1
-                self.snapshot.current_file = item.logical_path
-
-                local_path = None
-                if source.kind is SourceKind.LOCAL_DIR:
-                    resolver = getattr(connector, "local_path", None)
-                    if callable(resolver):
-                        local_path = str(resolver(item))
-
-                with self.index.db.transaction():
-                    doc_id = self.index.repository.register_item(item, scan_id, local_path)
-
-                if not self._needs_processing(doc_id, item):
-                    self.snapshot.unchanged += 1
-                    with self.index.db.transaction():
-                        self.index.repository.mark_unchanged(doc_id, scan_id)
-                    self._emit_progress()
-                    continue
-
-                try:
-                    outcome = self._pipeline.process(
-                        connector,
-                        item,
-                        doc_id,
-                        workspace=self._require_workspace(),
-                        control=self.control,
-                        scan_id=scan_id,
-                    )
-                except (JobCancelledError, StorageSpaceError):
-                    raise
-                except Exception as exc:
-                    log.error(
-                        "job.document_failed",
-                        doc_id=doc_id,
-                        error_type=type(exc).__name__,
-                    )
-                    self.snapshot.failed += 1
-                    self.index.repository.log_error(
-                        stage="pipeline",
-                        code="FD-8002",
-                        doc_id=doc_id,
-                        file_name=item.name,
-                        source_id=source.source_id,
-                        message=f"Błąd przetwarzania: {type(exc).__name__}",
-                    )
-                    self._emit_progress()
-                    continue
-                if not outcome.deferred:
-                    self._apply_outcome(outcome)
-                self._drain_embedding_outcomes()
-                since_checkpoint += 1
-
-                if since_checkpoint >= self.config.indexing.checkpoint_every:
-                    # Bufor batchera musi byc pusty przed checkpointem, inaczej
-                    # licznik przetworzonych dokumentow wyprzedzilby zapisy.
-                    self._flush_embeddings()
-                    self._save_checkpoint(source, scan_id, connector.cursor(), discovered)
-                    since_checkpoint = 0
-                self._guard_temp_space()
-                self._emit_progress()
+            workers = self._worker_count(connector)
+            if workers > 1:
+                discovered = self._index_items_parallel(source, connector, scan_id, cursor, workers)
+            else:
+                discovered = self._index_items_sequential(source, connector, scan_id, cursor)
 
             self.snapshot.discovery_complete = True
             self._flush_embeddings()
@@ -296,6 +255,252 @@ class IndexingJob:
             self.index.repository.clear_checkpoint(source.source_id, self.job_id)
         finally:
             connector.close()
+
+    # --- przetwarzanie pozycji zrodla ------------------------------------
+
+    def _index_items_sequential(
+        self,
+        source: SourceConfig,
+        connector: SourceConnector,
+        scan_id: int,
+        cursor: ScanCursor | None,
+    ) -> int:
+        """Przetwarza pozycje po jednej, w watku zadania. Zwraca liczbe wykrytych."""
+        discovered = 0
+        since_checkpoint = 0
+        for item in connector.iter_items(cursor=cursor, cancel=self.control):
+            self.control.checkpoint()
+            discovered += 1
+            self.snapshot.discovered += 1
+            self.snapshot.current_file = item.logical_path
+            doc_id = self._admit_item(connector, source, item, scan_id)
+            if doc_id is None:
+                self._emit_progress()
+                continue
+
+            try:
+                outcome = self._pipeline.process(
+                    connector,
+                    item,
+                    doc_id,
+                    workspace=self._require_workspace(),
+                    control=self.control,
+                    scan_id=scan_id,
+                )
+            except (JobCancelledError, StorageSpaceError):
+                raise
+            except Exception as exc:
+                self._note_document_crash(doc_id, item, exc)
+                continue
+            if not outcome.deferred:
+                self._apply_outcome(outcome)
+            self._drain_embedding_outcomes()
+            since_checkpoint += 1
+
+            if since_checkpoint >= self.config.indexing.checkpoint_every:
+                # Bufor batchera musi byc pusty przed checkpointem, inaczej
+                # licznik przetworzonych dokumentow wyprzedzilby zapisy.
+                self._flush_embeddings()
+                self._save_checkpoint(source, scan_id, connector.cursor(), discovered)
+                since_checkpoint = 0
+            self._guard_temp_space()
+            self._emit_progress()
+        return discovered
+
+    def _index_items_parallel(
+        self,
+        source: SourceConfig,
+        connector: SourceConnector,
+        scan_id: int,
+        cursor: ScanCursor | None,
+        workers: int,
+    ) -> int:
+        """Przetwarza pozycje zrodla w puli watkow. Zwraca liczbe wykrytych.
+
+        Watki robocze wykonuja pobranie, ekstrakcje, OCR i fragmentacje,
+        niczego nie zapisujac (tryb ``collect`` potoku). Wyniki odbiera watek
+        zadania w kolejnosci wykrywania plikow i dopiero on zapisuje dokumenty,
+        wiec liczniki, checkpointy i anulowanie zachowuja sie tak samo jak
+        przy przetwarzaniu sekwencyjnym. Kazda pozycja niesie migawke kursora
+        z chwili wykrycia, wiec checkpoint po dokumencie ``k`` obejmuje
+        dokladnie dokumenty domkniete, takze gdy enumeracja pobiegla dalej.
+        """
+        discovered = 0
+        self._since_checkpoint = 0
+        workspace = self._require_workspace()
+        pending: deque[_PendingItem] = deque()
+        limit = workers * 2
+
+        with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="finddocs-doc") as pool:
+            try:
+                for item in connector.iter_items(cursor=cursor, cancel=self.control):
+                    self.control.checkpoint()
+                    discovered += 1
+                    self.snapshot.discovered += 1
+                    self.snapshot.current_file = item.logical_path
+                    doc_id = self._admit_item(connector, source, item, scan_id)
+                    if doc_id is None:
+                        self._emit_progress()
+                        continue
+                    pending.append(
+                        _PendingItem(
+                            future=pool.submit(
+                                self._prepare_document,
+                                connector,
+                                item,
+                                doc_id,
+                                scan_id,
+                                workspace,
+                            ),
+                            item=item,
+                            doc_id=doc_id,
+                            cursor=connector.cursor(),
+                            discovered=discovered,
+                        )
+                    )
+
+                    # Ograniczenie liczby dokumentow w locie: pamiec i katalog
+                    # tymczasowy nie rosna z rozmiarem zrodla.
+                    while len(pending) > limit:
+                        self._apply_head(pending, source, scan_id, wait=True)
+                    while pending and pending[0].future.done():
+                        self._apply_head(pending, source, scan_id, wait=False)
+                    self._guard_temp_space()
+                    self._emit_progress()
+
+                while pending:
+                    self._apply_head(pending, source, scan_id, wait=True)
+            finally:
+                # Anulowanie albo blad: dokumenty czekajace w kolejce nie
+                # startuja, a trwajace koncza sie na najblizszym punkcie
+                # kontrolnym i zostana przetworzone przy nastepnym skanowaniu.
+                for entry in pending:
+                    entry.future.cancel()
+                pool.shutdown(wait=True, cancel_futures=True)
+        return discovered
+
+    def _admit_item(
+        self,
+        connector: SourceConnector,
+        source: SourceConfig,
+        item: SourceItem,
+        scan_id: int,
+    ) -> int | None:
+        """Rejestruje pozycje w bazie. Zwraca doc_id albo None dla niezmienionej."""
+        local_path = None
+        if source.kind is SourceKind.LOCAL_DIR:
+            resolver = getattr(connector, "local_path", None)
+            if callable(resolver):
+                local_path = str(resolver(item))
+
+        with self.index.db.transaction():
+            doc_id = self.index.repository.register_item(item, scan_id, local_path)
+
+        if not self._needs_processing(doc_id, item):
+            self.snapshot.unchanged += 1
+            with self.index.db.transaction():
+                self.index.repository.mark_unchanged(doc_id, scan_id)
+            return None
+        return int(doc_id)
+
+    def _prepare_document(
+        self,
+        connector: SourceConnector,
+        item: SourceItem,
+        doc_id: int,
+        scan_id: int,
+        workspace: Path,
+    ) -> tuple[DocumentOutcome, list[PreparedWrite]]:
+        """Cialo watku roboczego: przygotowuje dokument bez zapisu do indeksu."""
+        bind_context(job_id=self.job_id, job_kind=self.options.kind.value)
+        try:
+            prepared: list[PreparedWrite] = []
+            outcome = self._pipeline.process(
+                connector,
+                item,
+                doc_id,
+                workspace=workspace,
+                control=self.control,
+                scan_id=scan_id,
+                collect=prepared,
+            )
+            return outcome, prepared
+        finally:
+            clear_context()
+
+    def _apply_head(
+        self,
+        pending: deque[_PendingItem],
+        source: SourceConfig,
+        scan_id: int,
+        *,
+        wait: bool,
+    ) -> bool:
+        """Odbiera najstarszy dokument z puli i zapisuje go w watku zadania.
+
+        Punkt kontrolny przed kazdym zapisem daje anulowaniu te sama
+        ziarnistosc, co przetwarzanie sekwencyjne: po anulowaniu zaden
+        kolejny dokument nie zostaje domkniety ani policzony. Checkpoint
+        zapisuje migawke kursora dostarczonego dokumentu, wiec wznowienie
+        wraca dokladnie do pierwszej niedomknietej pozycji.
+        """
+        self.control.checkpoint()
+        head = pending[0]
+        if not wait and not head.future.done():
+            return False
+        pending.popleft()
+        try:
+            outcome, prepared = head.future.result()
+        except (JobCancelledError, StorageSpaceError):
+            raise
+        except Exception as exc:
+            self._note_document_crash(head.doc_id, head.item, exc)
+            return True
+        outcome = self._pipeline.deliver_collected(
+            head.item, head.doc_id, prepared, outcome, self.control
+        )
+        if not outcome.deferred:
+            self._apply_outcome(outcome)
+        self._drain_embedding_outcomes()
+        self._since_checkpoint += 1
+        if self._since_checkpoint >= self.config.indexing.checkpoint_every:
+            # Bufor batchera musi byc pusty przed checkpointem, inaczej
+            # licznik przetworzonych dokumentow wyprzedzilby zapisy.
+            self._flush_embeddings()
+            self._save_checkpoint(source, scan_id, head.cursor, head.discovered)
+            self._since_checkpoint = 0
+        self._emit_progress()
+        return True
+
+    def _note_document_crash(self, doc_id: int, item: SourceItem, exc: Exception) -> None:
+        """Notuje dokument, ktorego przetwarzanie przerwal nieoczekiwany wyjatek."""
+        log.error(
+            "job.document_failed",
+            doc_id=doc_id,
+            error_type=type(exc).__name__,
+        )
+        self.snapshot.failed += 1
+        self.index.repository.log_error(
+            stage="pipeline",
+            code="FD-8002",
+            doc_id=doc_id,
+            file_name=item.name,
+            source_id=item.source_id,
+            message=f"Błąd przetwarzania: {type(exc).__name__}",
+        )
+        self._emit_progress()
+
+    def _worker_count(self, connector: SourceConnector) -> int:
+        """Dobiera liczbe watkow przetwarzania dla konektora."""
+        if not connector.supports_parallel_fetch:
+            return 1
+        configured = self.config.indexing.parallel_documents
+        if configured > 1:
+            return min(configured, MAX_PARALLEL_DOCUMENTS)
+        if configured == 0:
+            cores = os.cpu_count() or 4
+            return max(1, min(4, cores // 2))
+        return 1
 
     # --- batchowanie embeddingow -----------------------------------------
 

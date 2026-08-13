@@ -146,9 +146,23 @@ class AppPaths:
         return sum(p.stat().st_size for p in self.index_dir.rglob("*") if p.is_file())
 
     def temp_size_bytes(self) -> int:
+        """Laczny rozmiar przestrzeni tymczasowej.
+
+        Pliki robocze znikaja rownolegle z pomiarem (watki przetwarzania
+        sprzataja swoje katalogi), wiec wpis, ktorego nie da sie juz odczytac,
+        jest po prostu pomijany.
+        """
         if not self.temp_dir.exists():
             return 0
-        return sum(p.stat().st_size for p in self.temp_dir.rglob("*") if p.is_file())
+        total = 0
+        for root, _dirs, files in os.walk(self.temp_dir):
+            base = Path(root)
+            for name in files:
+                try:
+                    total += (base / name).stat().st_size
+                except OSError:
+                    continue
+        return total
 
     def new_temp_workspace(self, prefix: str = "fd-") -> Path:
         """Tworzy izolowany katalog roboczy w przestrzeni tymczasowej aplikacji."""

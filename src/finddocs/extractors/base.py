@@ -10,6 +10,7 @@ wyjatek z ``finddocs.errors``, dzieki czemu raport pokrycia moze go skategoryzow
 
 from __future__ import annotations
 
+import threading
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -20,6 +21,18 @@ from finddocs.types import (
     ExtractionResult,
     SupportLevel,
 )
+
+#: Wspolna blokada automatyzacji COM pakietu Office. Kazde wywolanie uruchamia
+#: osobny proces Worda albo PowerPointa, ale rownoczesny start kilku instancji
+#: Office bywa zawodny (okna licencji, rywalizacja o profil), wiec sesje ida
+#: po jednej. Nabywanie przez ``acquire_office_com`` reaguje na anulowanie.
+OFFICE_COM_LOCK = threading.Lock()
+
+
+def acquire_office_com(context: ExtractionContext) -> None:
+    """Zajmuje blokade COM, przerywajac czekanie po anulowaniu zadania."""
+    while not OFFICE_COM_LOCK.acquire(timeout=0.5):
+        context.checkpoint()
 
 
 @dataclass(slots=True)
@@ -101,4 +114,4 @@ class Extractor(ABC):
         }
 
 
-__all__ = ["ExtractionContext", "Extractor"]
+__all__ = ["OFFICE_COM_LOCK", "ExtractionContext", "Extractor", "acquire_office_com"]

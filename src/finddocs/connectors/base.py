@@ -77,6 +77,12 @@ class SourceConnector(ABC):
     #: Etykieta pokazywana uzytkownikowi.
     label: str
 
+    #: Czy ``fetch`` moze byc wolane rownoczesnie z kilku watkow, takze w trakcie
+    #: trwajacej enumeracji ``iter_items``. Domyslnie nie: konektor sieciowy
+    #: wspoldzieli sesje i tokeny, wiec rownoleglosc wymaga jawnej deklaracji
+    #: po sprawdzeniu bezpieczenstwa watkowego implementacji.
+    supports_parallel_fetch: bool = False
+
     @abstractmethod
     def test_connection(self) -> ConnectionStatus:
         """Sprawdza, czy zrodlo jest osiagalne i skonfigurowane poprawnie."""

@@ -40,6 +40,9 @@ class EasyOcrEngine(OcrEngine):
     priority = 80
     supports_rotation = True
     provides_confidence = True
+    #: Jeden wspolny obiekt Reader z modelem w pamieci: rownoczesne
+    #: wywolania nie sa zadeklarowane jako bezpieczne.
+    concurrent_safe = False
 
     def __init__(self, *, model_dir: Path | None = None, allow_download: bool = False) -> None:
         self._reader: Any | None = None
