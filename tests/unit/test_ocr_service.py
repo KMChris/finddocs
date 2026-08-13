@@ -339,6 +339,89 @@ def test_rozdzielczosc_jest_ograniczana(
     assert result.dpi == oczekiwane
 
 
+class SizeCapturingEngine(FakeEngine):
+    """Silnik zapisujacy rozmiary otrzymanych obrazow."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.sizes: list[tuple[int, int]] = []
+
+    def recognize(
+        self,
+        image: Image,
+        *,
+        languages: list[str],
+        page: int = 1,
+        cancel: CancellationToken | None = None,
+    ) -> OcrPageResult:
+        self.sizes.append(image.size)
+        return super().recognize(image, languages=languages, page=page, cancel=cancel)
+
+
+def test_czysty_skan_nie_jest_renderowany_powyzej_wlasnej_rozdzielczosci(
+    ocr_settings: OcrSettings, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Strona PDF bedaca jednym obrazem trafia do silnika w skali obrazu.
+
+    Obraz 420x594 px na stronie A4 to okolo 51 dpi. Rasteryzacja przy
+    ustawionych 200 dpi tworzylaby prawie czterokrotnie wiekszy obraz bez
+    zadnej nowej informacji, wiec render jest ograniczany do skali skanu.
+    """
+    import io
+
+    from finddocs.demo.generate import build_image_pdf, render_scan_image
+
+    image = render_scan_image(["Pierwsza linia skanu", "Druga linia"], width=420, height=594)
+    buffer = io.BytesIO()
+    image.save(buffer, format="JPEG", quality=80)
+    target = tmp_path / "skan.pdf"
+    target.write_bytes(build_image_pdf(buffer.getvalue(), width=image.width, height=image.height))
+
+    engine = SizeCapturingEngine()
+    monkeypatch.setattr(
+        ocr_service, "build_engines", lambda settings, model_dir=None, **kwargs: [engine]
+    )
+    service = OcrService(ocr_settings)
+    pdf_info = FileTypeInfo(mime_type="application/pdf", extension=".pdf", detected_by="magic")
+
+    service.run(target, pdf_info)
+
+    assert len(engine.sizes) == 1
+    width, height = engine.sizes[0]
+    # Rozmiar odpowiada obrazowi zrodlowemu (z zapasem na zaokraglenie skali),
+    # a nie rasteryzacji 200 dpi (okolo 1653 px szerokosci).
+    assert 415 <= width <= 440
+    assert 585 <= height <= 620
+
+
+def test_strona_tekstowa_renderuje_sie_w_ustawionym_dpi(
+    ocr_settings: OcrSettings, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Strona z warstwa tekstowa nie dostaje ograniczenia do skali obrazow."""
+    import datetime as dt
+
+    from finddocs.demo.generate import build_text_pdf
+
+    target = tmp_path / "tekst.pdf"
+    target.write_bytes(
+        build_text_pdf("Tytul", ["Tresc " * 40], created=dt.datetime(2015, 1, 1, tzinfo=dt.UTC))
+    )
+
+    engine = SizeCapturingEngine()
+    monkeypatch.setattr(
+        ocr_service, "build_engines", lambda settings, model_dir=None, **kwargs: [engine]
+    )
+    service = OcrService(ocr_settings)
+    pdf_info = FileTypeInfo(mime_type="application/pdf", extension=".pdf", detected_by="magic")
+
+    service.run(target, pdf_info)
+
+    assert len(engine.sizes) == 1
+    width, _height = engine.sizes[0]
+    # Strona A4 przy 200 dpi ma okolo 1653 px szerokosci.
+    assert width > 1500
+
+
 # --- sekcje ----------------------------------------------------------------------
 
 

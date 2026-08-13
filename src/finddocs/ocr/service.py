@@ -8,6 +8,7 @@ wiec ponowne skanowanie niezmienionego pliku nie uruchamia OCR jeszcze raz.
 
 from __future__ import annotations
 
+import math
 import time
 from collections.abc import Iterator
 from dataclasses import dataclass
@@ -227,7 +228,11 @@ class OcrService:
     ) -> Iterator[tuple[int, Image]]:
         dpi = max(MIN_RENDER_DPI, min(MAX_RENDER_DPI, self.settings.render_dpi))
         if info.mime_type == "application/pdf":
-            from finddocs.extractors.pdf import pdf_page_count, render_pdf_page
+            from finddocs.extractors.pdf import (
+                pdf_page_count,
+                pdf_page_image_dpi,
+                render_pdf_page,
+            )
 
             total = pdf_page_count(path)
             wanted = pages or list(range(1, total + 1))
@@ -236,10 +241,20 @@ class OcrService:
                     raise OcrCancelledError()
                 if page < 1 or page > total:
                     continue
+                # Strona bedaca czystym skanem nie zyskuje na rasteryzacji
+                # powyzej wlasnej rozdzielczosci osadzonego obrazu, a kazdy
+                # nadmiarowy piksel kosztuje przy kodowaniu, przesyle
+                # i rozpoznawaniu. Ograniczenie dotyczy tylko stron zlozonych
+                # z samych obrazow; strony z inna trescia renderuja sie jak
+                # dotychczas.
+                page_dpi = dpi
+                native = pdf_page_image_dpi(path, page - 1)
+                if native is not None and native < page_dpi:
+                    page_dpi = max(1, math.ceil(native))
                 yield (
                     page,
                     render_pdf_page(
-                        path, page - 1, dpi=dpi, max_pixels=self.settings.max_image_pixels
+                        path, page - 1, dpi=page_dpi, max_pixels=self.settings.max_image_pixels
                     ),
                 )
             return

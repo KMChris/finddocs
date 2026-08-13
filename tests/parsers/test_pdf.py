@@ -16,6 +16,7 @@ from finddocs.extractors.pdf import (
     PdfExtractor,
     parse_pdf_date,
     pdf_page_count,
+    pdf_page_image_dpi,
     render_pdf_page,
 )
 from finddocs.types import SupportLevel, TextOrigin
@@ -112,6 +113,27 @@ def test_pdf_page_count(text_pdf: Path, multipage_pdf: Path) -> None:
     """Funkcja pomocnicza zwraca liczbe stron bez odczytu tekstu."""
     assert pdf_page_count(text_pdf) == 1
     assert pdf_page_count(multipage_pdf) >= 2
+
+
+def test_pdf_page_image_dpi_dla_czystego_skanu(scan_pdf: Path) -> None:
+    """Strona bedaca jednym obrazem zwraca wlasna gestosc pikseli obrazu."""
+    dpi = pdf_page_image_dpi(scan_pdf, 0)
+
+    # Obraz 420x594 px lezy na stronie A4 (595x842 pt), czyli okolo 51 dpi.
+    assert dpi is not None
+    assert dpi == pytest.approx(420 / (595.0 / 72.0), rel=0.05)
+
+
+def test_pdf_page_image_dpi_strony_tekstowej(text_pdf: Path) -> None:
+    """Strona z trescia inna niz obraz nie dostaje ograniczenia."""
+    assert pdf_page_image_dpi(text_pdf, 0) is None
+
+
+def test_pdf_page_image_dpi_poza_zakresem_i_uszkodzony(scan_pdf: Path, broken_pdf: Path) -> None:
+    """Zla strona albo nieczytelny plik oznacza brak oceny, nie wyjatek."""
+    assert pdf_page_image_dpi(scan_pdf, 5) is None
+    assert pdf_page_image_dpi(scan_pdf, -1) is None
+    assert pdf_page_image_dpi(broken_pdf, 0) is None
 
 
 def test_render_pdf_page_rozsadny_rozmiar(text_pdf: Path) -> None:

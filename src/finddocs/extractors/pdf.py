@@ -400,6 +400,47 @@ def render_pdf_page(
     return image
 
 
+def pdf_page_image_dpi(path: Path, page_index: int) -> float | None:
+    """Najwyzsza wlasna gestosc pikseli obrazow strony zlozonej z samych obrazow.
+
+    Zwraca None, gdy strona zawiera cokolwiek poza obrazami (tekst, grafike
+    wektorowa), nie ma zadnego obrazu albo oceny nie da sie przeprowadzic.
+    Wynik jest gorna granica sensownego DPI rasteryzacji strony do OCR:
+    skan renderowany powyzej wlasnej rozdzielczosci nie niesie nowej
+    informacji, a kazdy nadmiarowy piksel kosztuje czas kodowania,
+    przesylu i rozpoznawania.
+    """
+    best: float | None = None
+    try:
+        pdf = _open_document(path)
+    except Exception:
+        return None
+    try:
+        if page_index < 0 or page_index >= len(pdf):
+            return None
+        page = pdf[page_index]
+        try:
+            for obj in page.get_objects():
+                if obj.type != pdfium_c.FPDF_PAGEOBJ_IMAGE:
+                    return None
+                left, bottom, right, top = obj.get_bounds()
+                width_inch = (float(right) - float(left)) / POINTS_PER_INCH
+                height_inch = (float(top) - float(bottom)) / POINTS_PER_INCH
+                if width_inch <= 0 or height_inch <= 0:
+                    continue
+                px_width, px_height = obj.get_px_size()
+                candidate = max(px_width / width_inch, px_height / height_inch)
+                if candidate > 0:
+                    best = candidate if best is None else max(best, candidate)
+        finally:
+            page.close()
+    except Exception:
+        return None
+    finally:
+        pdf.close()
+    return best
+
+
 def pdf_page_count(path: Path) -> int:
     """Zwraca liczbe stron dokumentu PDF."""
     pdf = _open_document(path)
@@ -416,5 +457,6 @@ __all__ = [
     "PdfExtractor",
     "parse_pdf_date",
     "pdf_page_count",
+    "pdf_page_image_dpi",
     "render_pdf_page",
 ]
