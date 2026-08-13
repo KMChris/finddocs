@@ -129,7 +129,7 @@ w oknie błędu, w logu, w tabeli `error_log` i w raporcie pokrycia.
 | `FD-7000` | błąd wyszukiwania | szczegóły w logu |
 | `FD-7001` | błąd składni zapytania | sprawdź, czy cudzysłowy są domknięte |
 | `FD-7002` | wyszukiwanie anulowane | działanie użytkownika, nie błąd |
-| `FD-8000` | błąd zadania indeksowania | patrz zakładkę **Błędy** na ekranie **Indeksowanie** |
+| `FD-8000` | błąd zadania indeksowania | patrz zakładkę **Dziennik błędów** na ekranie **Indeksowanie** |
 | `FD-8001` | zadanie anulowane | działanie użytkownika, nie błąd |
 | `FD-9001` | magazyn poświadczeń niedostępny | logowanie do SharePoint trzeba powtarzać po restarcie |
 

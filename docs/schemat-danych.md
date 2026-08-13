@@ -184,9 +184,15 @@ przerwane zadanie bez powtarzania całej pracy.
 
 ### `error_log`
 
-Historia błędów: data, źródło, dokument, etap, kod błędu, klasa wyjątku,
-komunikat i informacja, czy błąd nadaje się do ponowienia. Zasila raport
-pokrycia i zakładkę **Błędy** na ekranie **Indeksowanie**. Tabela nie zawiera treści dokumentów.
+Wynik ostatniej próby przetworzenia: data, źródło, dokument, etap, kod błędu,
+klasa wyjątku, komunikat i informacja, czy błąd nadaje się do ponowienia.
+Zasila raport pokrycia i zakładkę **Dziennik błędów** na ekranie
+**Indeksowanie**. Tabela nie zawiera treści dokumentów.
+
+Wpisy dokumentu są kasowane, zanim zacznie się jego kolejna próba, więc jeden
+plik ma tu najwyżej jeden komplet wpisów, a plik poprawnie zaindeksowany nie ma
+żadnego. Pełne przeindeksowanie czyści wpisy skanowanych źródeł na starcie,
+a użytkownik może usunąć wybrane wpisy z poziomu interfejsu.
 
 ### `ocr_cache`
 

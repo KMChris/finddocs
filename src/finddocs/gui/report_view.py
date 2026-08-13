@@ -292,9 +292,9 @@ class ReportView(QWidget):
                 values = [
                     document.name,
                     document.logical_path,
-                    i18n.STATUS_LABELS.get(document.status, document.status.value),
+                    i18n.status_label(document.status),
                     document.error_code or "",
-                    document.error_message or "",
+                    document.error_message or i18n.status_hint(document.status),
                 ]
                 for column, value in enumerate(values):
                     self.table.setItem(position, column, text_item(value))

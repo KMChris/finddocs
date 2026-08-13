@@ -443,12 +443,51 @@ INDEXING_CANCEL_HINT = "Przerywa zadanie. Indeks pozostaje spójny, pracę możn
 INDEXING_FULL = "Pełne przeindeksowanie"
 INDEXING_FULL_HINT = "Przetwarza wszystkie dokumenty od nowa, także te, które się nie zmieniły."
 INDEXING_EXPORT = "Eksportuj raport"
-INDEXING_TAB_ERRORS = "Błędy"
-INDEXING_TAB_SKIPPED = "Pliki pominięte"
+
+#: Zakladki z listami. Pierwsza mowi o stanie zbioru (czego nie ma w wynikach),
+#: druga o zdarzeniach (co sie stalo przy ostatniej probie). Dawne nazwy
+#: ,,Bledy'' i ,,Pliki pominiete'' sugerowaly dwa rodzaje plikow, choc ten sam
+#: plik trafial na obie listy.
+INDEXING_TAB_PROBLEMS = "Pliki poza indeksem"
+INDEXING_TAB_ERRORS = "Dziennik błędów"
 #: Nazwa zakladki z liczba wierszy. Bez liczby trzeba kliknac, zeby sprawdzic,
 #: czy w ogole jest tam cos do ogladania.
 INDEXING_TAB_COUNT = "{name} ({count})"
 INDEXING_IDLE = "Gotowe do uruchomienia"
+
+INDEXING_PROBLEMS_HINT = (
+    "Te pliki zostały wykryte w źródle, ale nie ma ich w wynikach wyszukiwania. "
+    "Zaznacz wiersze i wybierz „Przetwórz ponownie”: wpisy znikną z listy, "
+    "a pliki wrócą do kolejki. Wrócą tu tylko wtedy, gdy znowu się nie uda."
+)
+INDEXING_PROBLEMS_EMPTY = "Wszystkie wykryte pliki są w indeksie i można je wyszukać."
+INDEXING_ERRORS_HINT = (
+    "Wynik ostatniej próby dla każdego pliku, po jednym wpisie. "
+    "Wpis znika sam, gdy plik uda się przetworzyć, i przy pełnym przeindeksowaniu."
+)
+INDEXING_ERRORS_EMPTY = "Dziennik jest pusty, ostatnie próby przebiegły bez błędów."
+
+INDEXING_RETRY = "Przetwórz ponownie"
+INDEXING_RETRY_HINT = (
+    "Usuwa zaznaczone wpisy z listy i oddaje pliki do przetworzenia przy najbliższym skanowaniu."
+)
+INDEXING_RETRY_DONE = "Skierowano do ponownego przetworzenia: {count}."
+INDEXING_RETRY_SCAN_PROMPT = (
+    "Zaznaczone pliki zostaną przetworzone przy najbliższym skanowaniu.\n"
+    "Uruchomić skanowanie teraz?"
+)
+INDEXING_ERRORS_DELETE = "Usuń zaznaczone"
+INDEXING_ERRORS_DELETE_HINT = (
+    "Usuwa zaznaczone wpisy z dziennika. Nie zmienia stanu plików w indeksie."
+)
+INDEXING_ERRORS_CLEAR = "Wyczyść dziennik"
+INDEXING_ERRORS_CLEAR_CONFIRM = (
+    "Usunąć wszystkie wpisy z dziennika błędów?\n"
+    "Stan plików w indeksie się nie zmieni, a błędy wrócą przy kolejnym skanowaniu, "
+    "jeżeli się powtórzą."
+)
+INDEXING_ERRORS_CLEARED = "Usunięto wpisy z dziennika: {count}."
+INDEXING_LIST_BUSY = "Trwa indeksowanie. Listy można porządkować po zakończeniu zadania."
 
 STAGE_LABEL = "Etap"
 STAT_DISCOVERED = "Wykryte pliki"
@@ -580,6 +619,33 @@ STATUS_LABELS: dict[DocumentStatus, str] = {
     DocumentStatus.DELETED: "usunięty ze źródła",
 }
 
+#: Wyjasnienie statusu zwykla polszczyzna. Sam status mowi, co sie stalo, ale
+#: nie mowi, dlaczego pliku nie ma w wynikach. W tabelach wchodzi tam, gdzie
+#: parser nie zostawil wlasnego komunikatu.
+STATUS_HINTS: dict[DocumentStatus, str] = {
+    DocumentStatus.PENDING: "Plik czeka w kolejce do przetworzenia.",
+    DocumentStatus.SKIPPED: "Plik pominięty przez ustawienia źródła: filtr albo limit rozmiaru.",
+    DocumentStatus.UNSUPPORTED: "Aplikacja nie ma parsera do tego formatu pliku.",
+    DocumentStatus.CORRUPTED: "Pliku nie da się otworzyć, jest uszkodzony albo niekompletny.",
+    DocumentStatus.PASSWORD_PROTECTED: "Plik jest zaszyfrowany i wymaga hasła.",
+    DocumentStatus.EMPTY: "Nie znaleziono tekstu do zaindeksowania. Skan wymaga włączonego OCR.",
+    DocumentStatus.DOWNLOAD_FAILED: "Nie udało się pobrać pliku ze źródła.",
+    DocumentStatus.ERROR: "Przetwarzanie zakończyło się błędem.",
+    DocumentStatus.DELETED: "Pliku nie ma już w źródle.",
+}
+
+
+def status_label(status: DocumentStatus) -> str:
+    """Nazwa statusu w postaci zdania: wielka litera na poczatku komorki tabeli."""
+    label = STATUS_LABELS.get(status, status.value)
+    return label[:1].upper() + label[1:]
+
+
+def status_hint(status: DocumentStatus) -> str:
+    """Wyjasnienie statusu dla uzytkownika. Pusty napis, gdy nie ma czego dodac."""
+    return STATUS_HINTS.get(status, "")
+
+
 # --- dostepnosc --------------------------------------------------------------
 
 #: Nazwy dla czytnikow ekranu tam, gdzie kontrolka nie ma wlasnego napisu.
@@ -685,10 +751,13 @@ __all__ = [
     "MATCH_LABELS",
     "MODE_HINTS",
     "MODE_LABELS",
+    "STATUS_HINTS",
     "STATUS_LABELS",
     "documents_count",
     "files_count",
     "format_bytes",
     "format_count",
     "format_duration",
+    "status_hint",
+    "status_label",
 ]

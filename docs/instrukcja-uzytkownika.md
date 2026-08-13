@@ -333,7 +333,7 @@ i statystyk pojawiają się wraz z uruchomieniem zadania i pokazują:
 * stan połączenia ze źródłem.
 
 Liczba błędów większa od zera jest wyróżniona kolorem błędu; kliknięcie jej
-otwiera zakładkę z listą błędów.
+otwiera listę plików poza indeksem.
 
 Przyciski:
 
@@ -345,11 +345,27 @@ Przyciski:
 | **Pełne przeindeksowanie** | przetwarza wszystko od nowa, także dokumenty bez zmian |
 | **Eksportuj raport** | zapisuje raport pokrycia do pliku |
 
-Pod statystykami są dwie zakładki: **Błędy** (dokumenty, których nie udało się
-odczytać) oraz **Pliki pominięte** (pliki świadomie pominięte). Liczba
-w nawiasie przy nazwie zakładki mówi, ile jest w niej pozycji. Pole
-**Filtruj wiersze** przy zakładkach zawęża obie tabele do wierszy zawierających
-wpisany tekst.
+Pod statystykami są dwie zakładki. Liczba w nawiasie przy nazwie mówi, ile jest
+w niej pozycji, a pole **Filtruj wiersze** zawęża obie tabele do wierszy
+zawierających wpisany tekst.
+
+**Pliki poza indeksem** to stan zbioru: pliki wykryte w źródle, których nie
+znajdziesz w wynikach. Każdy plik jest tu najwyżej raz, a kolumna **Powód**
+mówi, co się stało (format nieobsługiwany, plik uszkodzony, brak treści,
+zabezpieczony hasłem, pominięty przez ustawienia źródła). Zaznacz wiersze
+i kliknij **Przetwórz ponownie**: wpisy znikną z listy, a pliki wrócą do
+kolejki. Aplikacja od razu zapyta, czy uruchomić skanowanie. Plik wróci na
+listę tylko wtedy, gdy znowu się nie uda.
+
+**Dziennik błędów** to zdarzenia: wynik ostatniej próby dla każdego pliku, wraz
+z etapem i kodem błędu. Wpis znika sam, gdy plik uda się przetworzyć. Przyciski
+**Usuń zaznaczone** i **Wyczyść dziennik** porządkują listę; stan plików
+w indeksie się przy tym nie zmienia.
+
+Pełne przeindeksowanie zaczyna od wyczyszczenia obu list dla skanowanych źródeł,
+bo liczy każdy plik od nowa. Wpisy pojawiają się dopiero wtedy, gdy błąd się
+powtórzy. W trakcie zadania przyciski obu list są nieaktywne: listami zarządza
+wtedy samo indeksowanie.
 
 Okno działa normalnie w czasie indeksowania. Możesz przejść na ekran
 wyszukiwania i szukać w tym, co już jest w indeksie.

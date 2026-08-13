@@ -10,9 +10,9 @@ from PySide6.QtWidgets import QMessageBox
 
 from finddocs.gui import i18n
 from finddocs.gui.context import AppContext
-from finddocs.gui.indexing_view import IndexingView
+from finddocs.gui.indexing_view import ROW_ID_ROLE, IndexingView
 from finddocs.jobs.indexing_job import JobOptions
-from finddocs.types import JobKind, JobState, ProgressSnapshot
+from finddocs.types import DocumentStatus, JobKind, JobState, ProgressSnapshot
 
 #: Indeksowanie idzie do wlasnego watku, wiec czekamy na sygnal zamiast usypiac test.
 TIMEOUT_MS = 20_000
@@ -302,11 +302,11 @@ def test_nazwy_zakladek_niosa_liczbe_wierszy(
 
     view.refresh_tables()
 
-    skipped = i18n.INDEXING_TAB_COUNT.format(
-        name=i18n.INDEXING_TAB_SKIPPED, count=corpus_stats["niewyszukiwalne"]
+    problems = i18n.INDEXING_TAB_COUNT.format(
+        name=i18n.INDEXING_TAB_PROBLEMS, count=corpus_stats["niewyszukiwalne"]
     )
-    assert view._tabs.tabText(1) == skipped
-    assert view._tabs.tabText(0).startswith(i18n.INDEXING_TAB_ERRORS)
+    assert view._tabs.tabText(0) == problems
+    assert view._tabs.tabText(1).startswith(i18n.INDEXING_TAB_ERRORS)
 
 
 @pytest.mark.gui
@@ -372,7 +372,7 @@ def test_completion_reports_summary(indexing_view: IndexingView, fake_runner: Fa
 def test_tables_are_filled_from_repository(
     qtbot: object, indexed_gui_context: AppContext, corpus_stats: dict[str, int]
 ) -> None:
-    """Tabela bledow i tabela plikow pominietych czytaja dane z repozytorium."""
+    """Dziennik bledow i lista plikow poza indeksem czytaja dane z repozytorium."""
     repository = indexed_gui_context.require_index().repository
     repository.log_error(
         stage="ekstrakcja",
@@ -394,10 +394,118 @@ def test_tables_are_filled_from_repository(
     assert view.error_table.item(0, 3).text() == "Plik jest uszkodzony."
     assert _dt.datetime.fromisoformat(view.error_table.item(0, 4).text())
 
-    assert view.skipped_table.rowCount() == corpus_stats["niewyszukiwalne"]
-    names = [view.skipped_table.item(row, 0).text() for row in range(view.skipped_table.rowCount())]
+    assert view.problems_table.rowCount() == corpus_stats["niewyszukiwalne"]
+    names = [
+        view.problems_table.item(row, 0).text() for row in range(view.problems_table.rowCount())
+    ]
     assert "pusty.txt" in names
     statuses = {
-        view.skipped_table.item(row, 2).text() for row in range(view.skipped_table.rowCount())
+        view.problems_table.item(row, 2).text() for row in range(view.problems_table.rowCount())
     }
-    assert statuses == {"brak treści"}
+    assert statuses == {i18n.status_label(DocumentStatus.EMPTY)}
+
+
+@pytest.mark.gui
+def test_kazda_lista_mowi_co_na_niej_jest(qtbot: object, indexed_gui_context: AppContext) -> None:
+    """Zdanie nad tabela tlumaczy liste, a przy pustej liscie zmienia sie w dobra wiadomosc."""
+    repository = indexed_gui_context.require_index().repository
+    view = IndexingView(indexed_gui_context)
+    qtbot.addWidget(view)  # type: ignore[attr-defined]
+
+    view.refresh_tables()
+
+    # Korpus testowy ma jeden plik bez tresci, wiec obie listy maja wiersze.
+    assert view.problems_hint.text() == i18n.INDEXING_PROBLEMS_HINT
+    assert view.errors_hint.text() == i18n.INDEXING_ERRORS_HINT
+
+    repository.clear_errors()
+    view.refresh_tables()
+
+    assert view.errors_hint.text() == i18n.INDEXING_ERRORS_EMPTY
+
+
+@pytest.mark.gui
+def test_akcje_list_wymagaja_zaznaczenia(qtbot: object, indexed_gui_context: AppContext) -> None:
+    """Przycisk dzialajacy na zaznaczeniu jest nieaktywny, dopoki nic nie wybrano."""
+    view = IndexingView(indexed_gui_context)
+    qtbot.addWidget(view)  # type: ignore[attr-defined]
+    view.refresh_tables()
+
+    assert not view.retry_button.isEnabled()
+    assert not view.delete_errors_button.isEnabled()
+    # Czyszczenie dziennika nie potrzebuje zaznaczenia, tylko niepustej listy.
+    assert view.clear_errors_button.isEnabled()
+
+    view.problems_table.selectRow(0)
+    view.error_table.selectRow(0)
+
+    assert view.retry_button.isEnabled()
+    assert view.delete_errors_button.isEnabled()
+
+
+@pytest.mark.gui
+def test_ponowne_przetworzenie_usuwa_wpis_i_oddaje_plik_do_kolejki(
+    qtbot: object,
+    indexed_gui_context: AppContext,
+    drain_tasks: Callable[[], None],
+) -> None:
+    """Zaznaczony plik znika z listy i czeka na kolejne skanowanie."""
+    view = IndexingView(indexed_gui_context)
+    qtbot.addWidget(view)  # type: ignore[attr-defined]
+    view.refresh_tables()
+    assert view.problems_table.rowCount() == 1
+    doc_id = view.problems_table.item(0, 0).data(ROW_ID_ROLE)
+
+    view.problems_table.selectRow(0)
+    view.retry_button.click()
+    drain_tasks()
+
+    assert view.problems_table.rowCount() == 0
+    assert view.problems_hint.text() == i18n.INDEXING_PROBLEMS_EMPTY
+    record = indexed_gui_context.require_index().repository.get_document(int(doc_id))
+    assert record is not None
+    assert record.status is DocumentStatus.PENDING
+
+
+@pytest.mark.gui
+def test_wpisy_dziennika_mozna_usunac(
+    qtbot: object,
+    indexed_gui_context: AppContext,
+    drain_tasks: Callable[[], None],
+) -> None:
+    """Dziennik opisuje przeszlosc, wiec wpis mozna z niego usunac."""
+    repository = indexed_gui_context.require_index().repository
+    repository.log_error(stage="scan", code="FD-1006", file_name="wielki.pdf", message="Za duzy.")
+    view = IndexingView(indexed_gui_context)
+    qtbot.addWidget(view)  # type: ignore[attr-defined]
+    view.refresh_tables()
+    przed = view.error_table.rowCount()
+    assert przed >= 2
+
+    view.error_table.selectRow(0)
+    usuwany = view.error_table.item(0, 0).text()
+    view.delete_errors_button.click()
+    drain_tasks()
+
+    assert view.error_table.rowCount() == przed - 1
+    nazwy = [view.error_table.item(row, 0).text() for row in range(view.error_table.rowCount())]
+    assert usuwany not in nazwy
+    assert len(repository.recent_errors()) == przed - 1
+
+
+@pytest.mark.gui
+def test_listy_sa_zablokowane_w_trakcie_zadania(
+    qtbot: object, indexed_gui_context: AppContext, fake_runner: FakeRunner
+) -> None:
+    """W trakcie skanowania listy zmienia potok, wiec recznie sie ich nie rusza."""
+    view = IndexingView(indexed_gui_context)
+    qtbot.addWidget(view)  # type: ignore[attr-defined]
+    view.refresh_tables()
+    view.problems_table.selectRow(0)
+    assert view.retry_button.isEnabled()
+
+    fake_runner.is_running = True
+    view._refresh_buttons()
+
+    assert not view.retry_button.isEnabled()
+    assert not view.clear_errors_button.isEnabled()

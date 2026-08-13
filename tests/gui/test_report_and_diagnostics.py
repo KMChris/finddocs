@@ -11,6 +11,7 @@ from finddocs.gui import i18n
 from finddocs.gui.context import AppContext
 from finddocs.gui.diagnostics_view import DiagnosticsView
 from finddocs.gui.report_view import SUMMARY_ENTRIES, ReportView, summary_values
+from finddocs.types import DocumentStatus
 
 #: Raport i diagnostyka licza sie w tle, wiec czekamy na wynik.
 TIMEOUT_MS = 15_000
@@ -97,7 +98,10 @@ def test_report_reports_incomplete_set(
 
     assert report_view.table.rowCount() == corpus_stats["niewyszukiwalne"]
     assert report_view.table.item(0, 0).text() == "pusty.txt"
-    assert report_view.table.item(0, 2).text() == "brak treści"
+    # Komorka tabeli zaczyna sie wielka litera. Kolumna z komunikatem nigdy nie
+    # jest pusta: bez komunikatu parsera wchodzi tam wyjasnienie statusu.
+    assert report_view.table.item(0, 2).text() == i18n.status_label(DocumentStatus.EMPTY)
+    assert report_view.table.item(0, 4).text()
 
 
 @pytest.mark.gui
