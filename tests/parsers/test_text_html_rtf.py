@@ -109,6 +109,58 @@ def test_txt_limit_znakow_konczy_sie_ostrzezeniem(
     assert any("limit" in warning for warning in result.warnings)
 
 
+def test_txt_odczyt_nie_rezerwuje_calego_limitu(
+    make_text: Callable[..., Path], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Maly plik nie moze kosztowac tyle, co bufor o wielkosci limitu.
+
+    ``read`` rezerwuje bufor o zadanej wielkosci, wiec odczyt notatki z limitem
+    512 MB przydzielal i zwalnial pol gigabajta pamieci. Przy zbiorze notatek
+    bylo to ponad cztery piate czasu indeksowania.
+    """
+    path = make_text("notatka.txt", SAMPLE_TEXT)
+    rozmiar = path.stat().st_size
+    zadane: list[int] = []
+    otworz = Path.open
+
+    class Podglad:
+        """Uchwyt zapisujacy, ile bajtow parser probuje wczytac naraz."""
+
+        def __init__(self, handle: object) -> None:
+            self._handle = handle
+
+        def __enter__(self) -> Podglad:
+            return self
+
+        def __exit__(self, *_exc: object) -> bool:
+            self._handle.close()  # type: ignore[attr-defined]
+            return False
+
+        def read(self, size: int = -1) -> bytes:
+            zadane.append(size)
+            return self._handle.read(size)  # type: ignore[attr-defined,no-any-return]
+
+    def podgladane_open(self: Path, *args: object, **kwargs: object) -> object:
+        handle = otworz(self, *args, **kwargs)  # type: ignore[arg-type]
+        return Podglad(handle)
+
+    monkeypatch.setattr(Path, "open", podgladane_open)
+
+    PlainTextExtractor().extract(path, ExtractionContext(max_bytes=512 * 1024 * 1024))
+
+    assert zadane
+    assert max(zadane) <= rozmiar + 1
+
+
+def test_txt_plik_wiekszy_niz_limit_jest_obcinany(make_text: Callable[..., Path]) -> None:
+    """Limit bajtow nadal obowiazuje, a obciecie konczy sie ostrzezeniem."""
+    path = make_text("wielki.txt", "\n\n".join(f"Akapit {i}." for i in range(2000)))
+
+    result = PlainTextExtractor().extract(path, ExtractionContext(max_bytes=1024))
+
+    assert any("limit" in warning for warning in result.warnings)
+
+
 def test_txt_plik_bez_pustych_linii_dzieli_sie_na_bloki(
     make_text: Callable[..., Path], context: ExtractionContext
 ) -> None:
