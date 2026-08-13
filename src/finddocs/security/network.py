@@ -35,6 +35,9 @@ class EgressCategory(StrEnum):
     VECTOR_DB = "vector_db"
     """Zewnetrzna baza wektorowa organizacji (PostgreSQL z rozszerzeniem pgvector)."""
 
+    OCR_API = "ocr_api"
+    """Serwer OCR organizacji liczacy rozpoznawanie tekstu na GPU."""
+
 
 DEFAULT_ALLOWLIST: dict[EgressCategory, tuple[str, ...]] = {
     EgressCategory.MICROSOFT_GRAPH: (
@@ -53,6 +56,7 @@ DEFAULT_ALLOWLIST: dict[EgressCategory, tuple[str, ...]] = {
     ),
     EgressCategory.INTERNAL_API: (),
     EgressCategory.VECTOR_DB: (),
+    EgressCategory.OCR_API: (),
 }
 
 ALLOWED_SCHEMES = frozenset({"https"})
@@ -189,9 +193,9 @@ def policy_from_config(config: object) -> NetworkPolicy:
     """Buduje polityke sieciowa z konfiguracji aplikacji.
 
     Kategorie sa wlaczane wylacznie na podstawie jawnych ustawien. Dla zdalnego
-    API embeddingow do listy dozwolonych trafia dokladnie jeden host: ten z
-    adresu podanego w konfiguracji. Argument jest typowany jako ``object``,
-    zeby modul sieciowy nie zalezal od modulu konfiguracji.
+    API embeddingow i dla zdalnego OCR do listy dozwolonych trafia dokladnie
+    jeden host: ten z adresu podanego w konfiguracji. Argument jest typowany
+    jako ``object``, zeby modul sieciowy nie zalezal od modulu konfiguracji.
     """
     policy = NetworkPolicy.offline()
     policy.allow_plain_http_localhost = bool(getattr(config, "allow_plain_http_localhost", False))
@@ -213,6 +217,14 @@ def policy_from_config(config: object) -> NetworkPolicy:
         if host:
             policy.enable(EgressCategory.INTERNAL_API)
             policy.extra_hosts[EgressCategory.INTERNAL_API] = (host,)
+
+    ocr = getattr(config, "ocr", None)
+    if ocr is not None and getattr(ocr, "remote_api_enabled", False):
+        ocr_url = str(getattr(ocr, "remote_api_url", "") or "")
+        ocr_host = (urlparse(ocr_url).hostname or "").lower()
+        if ocr_host:
+            policy.enable(EgressCategory.OCR_API)
+            policy.extra_hosts[EgressCategory.OCR_API] = (ocr_host,)
 
     vector_store = getattr(config, "vector_store", None)
     if vector_store is not None and getattr(vector_store, "backend", "") == "pgvector":

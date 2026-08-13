@@ -104,6 +104,7 @@ w oknie błędu, w logu, w tabeli `error_log` i w raporcie pokrycia.
 | `FD-4000` | błąd rozpoznawania | patrz [OCR](ocr.md) |
 | `FD-4001` | brak silnika OCR | zainstaluj Tesseract z językiem polskim |
 | `FD-4002` | rozpoznawanie anulowane | działanie użytkownika, nie błąd |
+| `FD-4003` | zdalny serwer OCR nie odpowiedział poprawnie | patrz [OCR na GPU przez zdalne API](ocr-gpu-api.md) |
 
 ### FD-5xxx: indeks
 

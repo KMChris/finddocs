@@ -274,7 +274,7 @@ class OcrSettings:
 
     enabled: bool = True
     engine: str = "auto"
-    """auto, tesseract, rapidocr, easyocr albo none."""
+    """auto, tesseract, rapidocr, easyocr, remote_api albo none."""
 
     languages: list[str] = field(default_factory=lambda: ["pol"])
     tesseract_path: str = ""
@@ -290,6 +290,25 @@ class OcrSettings:
     page_timeout_seconds: float = 120.0
     auto_rotate: bool = True
     min_confidence_to_keep: float = 0.30
+
+    remote_api_enabled: bool = False
+    """Zgoda na wysyłanie obrazów stron do zdalnego serwera OCR.
+
+    Bez tej zgody silnik ``remote_api`` jest niedostępny, nawet gdy adres
+    serwera jest zapisany w konfiguracji.
+    """
+
+    remote_api_url: str = ""
+    """Adres serwera OCR, na przykład https://ocr.example.com."""
+
+    remote_api_model: str = "PP-OCRv6_medium"
+    """Nazwa modelu po stronie serwera. Wchodzi do klucza pamięci podręcznej OCR."""
+
+    remote_api_key_header: str = ""
+    """Nazwa nagłówka z kluczem API. Pusta wartość oznacza Authorization: Bearer."""
+
+    remote_api_timeout_seconds: float = 120.0
+    remote_api_max_retries: int = 3
 
 
 @dataclass(slots=True)

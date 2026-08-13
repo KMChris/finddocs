@@ -161,12 +161,23 @@ wymagania serwera i zasady bezpieczeństwa:
   "max_image_pixels": 40000000,
   "page_timeout_seconds": 120.0,
   "auto_rotate": true,
-  "min_confidence_to_keep": 0.3
+  "min_confidence_to_keep": 0.3,
+  "remote_api_enabled": false,
+  "remote_api_url": "",
+  "remote_api_model": "PP-OCRv6_medium",
+  "remote_api_key_header": "",
+  "remote_api_timeout_seconds": 120.0,
+  "remote_api_max_retries": 3
 }
 ```
 
 `engine: "auto"` wybiera pierwszy dostępny silnik w kolejności Tesseract,
 EasyOCR, RapidOCR. Szczegóły: [OCR](ocr.md).
+
+`engine: "remote_api"` razem z `remote_api_enabled: true` oddaje rozpoznawanie
+serwerowi z kartą graficzną. Obrazy stron opuszczają wtedy komputer, więc
+funkcja wymaga świadomego włączenia i zgody organizacji. Opis wdrożenia:
+[OCR na GPU przez zdalne API](ocr-gpu-api.md).
 
 ### Indeksowanie
 

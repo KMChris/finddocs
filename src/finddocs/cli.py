@@ -899,6 +899,118 @@ def cmd_model_api_key(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def cmd_ocr_api(args: argparse.Namespace) -> int:
+    """Konfiguruje zdalny serwer OCR i przelacza silnik rozpoznawania."""
+    from finddocs.ocr.service import AUTO_ENGINE_ORDER, REMOTE_ENGINE_NAME
+
+    config = _load(args)
+    ocr = config.ocr
+
+    if args.url is not None:
+        ocr.remote_api_url = args.url.strip().rstrip("/")
+    if args.model is not None:
+        ocr.remote_api_model = args.model.strip()
+    if args.key_header is not None:
+        ocr.remote_api_key_header = args.key_header.strip()
+    if args.timeout is not None:
+        ocr.remote_api_timeout_seconds = max(1.0, args.timeout)
+    if args.retries is not None:
+        ocr.remote_api_max_retries = max(1, args.retries)
+    if args.allow_http_localhost is not None:
+        config.allow_plain_http_localhost = bool(args.allow_http_localhost)
+
+    if args.enable and args.disable:
+        print("Opcje --enable i --disable wykluczają się.", file=sys.stderr)
+        return EXIT_USAGE
+    if args.enable:
+        if not ocr.remote_api_url:
+            print("Podaj adres serwera (--url), zanim włączysz zdalny OCR.", file=sys.stderr)
+            return EXIT_ERROR
+        ocr.remote_api_enabled = True
+        ocr.engine = REMOTE_ENGINE_NAME
+    if args.disable:
+        ocr.remote_api_enabled = False
+        if ocr.engine == REMOTE_ENGINE_NAME:
+            ocr.engine = "auto"
+
+    save_config(config, _paths(args).config_file)
+    data = {
+        "silnik": ocr.engine,
+        "wlaczony": ocr.remote_api_enabled,
+        "adres": ocr.remote_api_url or "(nie podano)",
+        "model": ocr.remote_api_model or "(nie podano)",
+        "naglowek_klucza": ocr.remote_api_key_header or "Authorization: Bearer",
+        "limit_czasu_s": ocr.remote_api_timeout_seconds,
+        "proby": ocr.remote_api_max_retries,
+        "http_do_localhost": config.allow_plain_http_localhost,
+    }
+    _print(data, as_json=args.json)
+    if ocr.remote_api_enabled:
+        print()
+        print("Uwaga: obrazy stron dokumentów będą wysyłane na wskazany adres.")
+        print("Połączenia są ograniczone do hosta z adresu serwera.")
+        if config.allow_plain_http_localhost:
+            print("Zwykłe http jest dozwolone tylko dla tego komputera (localhost).")
+        else:
+            print("Wymagane jest https; dla serwera na tym komputerze użyj")
+            print("  finddocs ocr api --allow-http-localhost")
+        print()
+        print("Gdy serwer nie odpowiada, rozpoznawanie wraca na silnik lokalny")
+        print(f"(kolejność prób: {', '.join(AUTO_ENGINE_ORDER)}).")
+        print("Sprawdzenie połączenia: finddocs ocr test")
+    return EXIT_OK
+
+
+def cmd_ocr_api_key(args: argparse.Namespace) -> int:
+    """Zapisuje albo usuwa klucz API zdalnego serwera OCR."""
+    from finddocs.security.credentials import OCR_API_KEY_NAME, create_credential_store
+
+    paths = _paths(args).ensure()
+    store = create_credential_store(paths.config_dir)
+    if args.clear:
+        store.delete_secret(OCR_API_KEY_NAME)
+        print("Klucz API serwera OCR został usunięty z magazynu poświadczeń.")
+        return EXIT_OK
+
+    import getpass
+
+    try:
+        key = getpass.getpass("Klucz API serwera OCR (wpis nie jest wyświetlany): ").strip()
+    except (EOFError, OSError):
+        key = ""
+    if not key:
+        print("Nie podano klucza. Nic nie zapisano.", file=sys.stderr)
+        return EXIT_ERROR
+    store.set_secret(OCR_API_KEY_NAME, key)
+    print(f"Klucz API serwera OCR został zapisany w magazynie poświadczeń ({store.name}).")
+    if not store.persistent:
+        print("Uwaga: magazyn nie jest trwały, klucz zniknie po zamknięciu procesu.")
+    return EXIT_OK
+
+
+def cmd_ocr_test(args: argparse.Namespace) -> int:
+    """Sprawdza polaczenie ze zdalnym serwerem OCR na sztucznym obrazie."""
+    from finddocs.ocr.service import build_remote_engine
+    from finddocs.security.network import policy_from_config, set_policy
+
+    config = _load(args)
+    if not config.ocr.remote_api_url:
+        print("Nie skonfigurowano adresu serwera OCR (finddocs ocr api --url).", file=sys.stderr)
+        return EXIT_ERROR
+    if not config.ocr.remote_api_enabled:
+        print("Zdalny OCR jest wyłączony (finddocs ocr api --enable).", file=sys.stderr)
+        return EXIT_ERROR
+
+    set_policy(policy_from_config(config))
+    engine = build_remote_engine(config.ocr, _paths(args).config_dir)
+    try:
+        result = engine.ping()
+    finally:
+        engine.close()
+    _print(result, as_json=args.json)
+    return EXIT_OK
+
+
 # --- parser argumentow ----------------------------------------------------
 
 
@@ -1165,6 +1277,66 @@ def build_parser() -> argparse.ArgumentParser:
     )
     model_api_key.add_argument("--clear", action="store_true", help="usuwa zapisany klucz")
     model_api_key.set_defaults(func=cmd_model_api_key)
+
+    ocr_cmd = sub.add_parser("ocr", help="zarzadzanie rozpoznawaniem tekstu")
+    ocr_sub = ocr_cmd.add_subparsers(dest="ocr_command", required=True)
+
+    ocr_api = ocr_sub.add_parser(
+        "api",
+        help="konfiguruje zdalny serwer OCR na GPU",
+        description=(
+            "Ustawia adres serwera OCR i przelacza silnik rozpoznawania. Wlaczenie "
+            "oznacza wysylanie obrazow stron na podany adres. Klucz API zapisuje "
+            "osobne polecenie: finddocs ocr api-key."
+        ),
+    )
+    ocr_api.add_argument("--enable", action="store_true", help="przelacz na zdalny serwer")
+    ocr_api.add_argument("--disable", action="store_true", help="wroc do silnikow lokalnych")
+    ocr_api.add_argument("--url", help="adres serwera, np. https://ocr.example.com")
+    ocr_api.add_argument("--model", help="nazwa modelu po stronie serwera, np. PP-OCRv6_medium")
+    ocr_api.add_argument(
+        "--key-header",
+        help="nazwa naglowka z kluczem; pusta wartosc oznacza Authorization: Bearer",
+    )
+    ocr_api.add_argument("--timeout", type=float, help="limit czasu żądania w sekundach")
+    ocr_api.add_argument("--retries", type=int, help="liczba prób przy błędach przejściowych")
+    ocr_api.add_argument(
+        "--allow-http-localhost",
+        dest="allow_http_localhost",
+        action="store_true",
+        default=None,
+        help="zezwól na http bez TLS, gdy serwer działa na tym komputerze",
+    )
+    ocr_api.add_argument(
+        "--no-allow-http-localhost",
+        dest="allow_http_localhost",
+        action="store_false",
+        default=None,
+        help="cofnij zgodę na http do tego komputera",
+    )
+    ocr_api.set_defaults(func=cmd_ocr_api)
+
+    ocr_api_key = ocr_sub.add_parser(
+        "api-key",
+        help="zapisuje klucz API serwera OCR w magazynie poświadczeń",
+        description=(
+            "Klucz jest pobierany z ukrytego wejscia i trafia wylacznie do magazynu "
+            "poswiadczen Windows (albo DPAPI). Nigdy nie jest zapisywany w pliku "
+            "konfiguracyjnym ani logach."
+        ),
+    )
+    ocr_api_key.add_argument("--clear", action="store_true", help="usuwa zapisany klucz")
+    ocr_api_key.set_defaults(func=cmd_ocr_api_key)
+
+    ocr_test = ocr_sub.add_parser(
+        "test",
+        help="sprawdza połączenie ze zdalnym serwerem OCR",
+        description=(
+            "Wysyla maly, sztuczny obraz przez ten sam kontrakt, ktorego uzywa "
+            "indeksowanie. Zaden dokument uzytkownika nie opuszcza komputera."
+        ),
+    )
+    ocr_test.set_defaults(func=cmd_ocr_test)
 
     sub.add_parser("gui", help="uruchamia interfejs graficzny").set_defaults(func=cmd_gui)
     return parser

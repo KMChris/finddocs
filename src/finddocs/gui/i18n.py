@@ -160,6 +160,7 @@ RESULTS_TOOK = "czas: {ms} ms"
 # wyszukiwania semantycznego oraz przechowywanie danych indeksu.
 SOURCES_TAB_SOURCES = "Źródła"
 SOURCES_TAB_SEMANTIC = "Wyszukiwanie semantyczne"
+SOURCES_TAB_OCR = "Rozpoznawanie tekstu"
 SOURCES_TAB_STORAGE = "Przechowywanie"
 
 SOURCES_TITLE = "Źródła dokumentów"
@@ -392,6 +393,52 @@ MODEL_VECTOR_HINT = (
     "serwera, a poza localhost wymagany jest TLS. Zmiana magazynu wymaga przebudowy "
     "części semantycznej indeksu."
 )
+# --- karta rozpoznawania tekstu ----------------------------------------------
+
+OCR_BOX = "Silnik rozpoznawania tekstu"
+OCR_ENGINE = "Silnik"
+OCR_ENGINE_AUTO = "Automatycznie (pierwszy dostępny lokalnie)"
+OCR_ENGINE_TESSERACT = "Tesseract (lokalnie, procesor)"
+OCR_ENGINE_EASYOCR = "EasyOCR (lokalnie, procesor)"
+OCR_ENGINE_RAPIDOCR = "RapidOCR (lokalnie, procesor)"
+OCR_ENGINE_REMOTE = "Zdalny serwer na GPU"
+OCR_ENGINE_HINT = (
+    "Silniki lokalne pracują na procesorze tego komputera i nic nie wysyłają. "
+    "Zdalny serwer liczy rozpoznawanie na karcie graficznej, więc jest znacznie "
+    "szybszy, ale wymaga wysłania obrazów stron na wskazany adres."
+)
+OCR_REMOTE_URL = "Adres serwera"
+OCR_REMOTE_URL_PLACEHOLDER = "np. https://ocr.firma.local"
+OCR_REMOTE_MODEL = "Model na serwerze"
+OCR_REMOTE_MODEL_HINT = (
+    "Nazwa modelu wchodzi do klucza pamięci podręcznej OCR. Po zmianie modelu na "
+    "serwerze wpisz tutaj nową nazwę, inaczej aplikacja odczyta stare wyniki."
+)
+OCR_REMOTE_KEY_HEADER = "Nagłówek klucza"
+OCR_REMOTE_KEY_HEADER_PLACEHOLDER = "puste pole oznacza Authorization: Bearer"
+OCR_REMOTE_TIMEOUT = "Limit czasu (s)"
+OCR_REMOTE_RETRIES = "Liczba prób"
+OCR_REMOTE_KEY = "Klucz API"
+OCR_REMOTE_KEY_PLACEHOLDER = "wklej klucz, aby go zapisać"
+OCR_REMOTE_KEY_SAVE = "Zapisz klucz"
+OCR_REMOTE_KEY_CLEAR = "Usuń klucz"
+OCR_REMOTE_KEY_SAVED = "Klucz serwera OCR został zapisany w magazynie poświadczeń."
+OCR_REMOTE_KEY_CLEARED = "Klucz serwera OCR został usunięty z magazynu poświadczeń."
+OCR_REMOTE_KEY_PRESENT = "Klucz: zapisany w magazynie poświadczeń"
+OCR_REMOTE_KEY_MISSING = "Klucz: brak"
+OCR_REMOTE_KEY_EMPTY = "Wklej klucz w pole powyżej, zanim go zapiszesz."
+OCR_REMOTE_URL_REQUIRED = "Podaj adres serwera, zanim włączysz zdalne rozpoznawanie."
+OCR_REMOTE_TEST = "Przetestuj połączenie"
+OCR_REMOTE_TEST_RUNNING = "Trwa próba połączenia z serwerem OCR..."
+OCR_REMOTE_TEST_OK = "Połączenie działa. Model {model}, odpowiedź w {seconds} s."
+OCR_REMOTE_HINT = (
+    "Obrazy stron dokumentów będą wysyłane na wskazany adres w celu rozpoznania "
+    "tekstu. Włączaj wyłącznie dla serwera zaakceptowanego przez organizację. "
+    "Połączenia są ograniczone do hosta z podanego adresu, a serwery zdalne "
+    "wymagają https. Gdy serwer nie odpowiada, rozpoznawanie wraca na silnik "
+    "lokalny, a informacja o tym trafia do raportu indeksowania."
+)
+
 MODEL_IMPORT_DISK = "Importuj z dysku..."
 MODEL_IMPORT_HF = "Pobierz z Hugging Face..."
 MODEL_IMPORT_TITLE = "Import modelu"

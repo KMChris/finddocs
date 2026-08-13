@@ -311,6 +311,21 @@ serwera modeli. Zmiana dostawcy wymaga przebudowy części semantycznej
 indeksu. Szczegóły w dokumencie
 [embeddingi na GPU i zdalne API](embeddingi-gpu-api.md).
 
+## Rozpoznawanie tekstu
+
+Zakładka **Rozpoznawanie tekstu** wybiera silnik OCR dla skanów. Silniki
+lokalne (Tesseract, EasyOCR, RapidOCR) pracują na procesorze tego komputera
+i niczego nie wysyłają. **Zdalny serwer na GPU** oddaje rozpoznawanie
+serwerowi organizacji z kartą graficzną: jest wyraźnie szybszy i lepiej radzi
+sobie z polskimi dokumentami, ale wysyła obrazy stron na wskazany adres.
+Karta ustawia adres serwera, nazwę modelu, limity czasu i klucz API,
+przechowywany w magazynie poświadczeń, nigdy w pliku konfiguracyjnym.
+Przycisk **Przetestuj połączenie** sprawdza serwer na sztucznym obrazie,
+bez wysyłania jakiegokolwiek dokumentu. Gdy serwer nie odpowiada,
+rozpoznawanie wraca na silnik lokalny, a informacja o tym trafia do raportu
+indeksowania. Szczegóły w dokumencie
+[OCR na GPU przez zdalne API](ocr-gpu-api.md).
+
 ## Przechowywanie
 
 Zakładka **Przechowywanie** pokazuje katalog danych aplikacji, wolne miejsce

@@ -226,9 +226,13 @@ EMBEDDING_API_KEY_NAME: Final = "embedding-api-key"
 #: Nazwa wpisu z haslem uzytkownika zewnetrznej bazy wektorowej (pgvector).
 PGVECTOR_PASSWORD_NAME: Final = "pgvector-password"
 
+#: Nazwa wpisu z kluczem API zdalnego serwera OCR.
+OCR_API_KEY_NAME: Final = "ocr-api-key"
+
 
 __all__ = [
     "EMBEDDING_API_KEY_NAME",
+    "OCR_API_KEY_NAME",
     "PGVECTOR_PASSWORD_NAME",
     "SERVICE_NAME",
     "CredentialStore",

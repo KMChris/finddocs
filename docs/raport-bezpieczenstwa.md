@@ -39,6 +39,8 @@ jest włączona (`NetworkPolicy.offline()`). Dozwolone są wyłącznie:
 | `microsoft_graph` | `graph.microsoft.com`, `login.microsoftonline.com`, `*.sharepoint.com` | po dodaniu źródła SharePoint |
 | `model_download` | `huggingface.co`, `cdn-lfs.huggingface.co`, `*.hf.co` | po jawnej zgodzie w konfiguracji |
 | `internal_api` | lista pusta | tylko po podaniu adresu w konfiguracji |
+| `vector_db` | lista pusta | tylko po wybraniu magazynu pgvector i podaniu serwera |
+| `ocr_api` | lista pusta | tylko po wybraniu silnika `remote_api` i podaniu adresu |
 
 Dla serwerów zdalnych wyłącznie HTTPS. Adres spoza listy kończy się błędem
 `FD-1005`, także gdy podał go serwer w odpowiedzi.

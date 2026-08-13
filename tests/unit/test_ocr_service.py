@@ -142,7 +142,9 @@ def service_with_fake(
 ) -> Iterator[tuple[OcrService, FakeEngine]]:
     """Usluga OCR z podstawionym silnikiem testowym."""
     engine = FakeEngine()
-    monkeypatch.setattr(ocr_service, "build_engines", lambda settings, model_dir=None: [engine])
+    monkeypatch.setattr(
+        ocr_service, "build_engines", lambda settings, model_dir=None, **kwargs: [engine]
+    )
     service = OcrService(ocr_settings)
     try:
         yield service, engine
@@ -160,7 +162,9 @@ def test_wybiera_pierwszy_dostepny_silnik(
     niedostepny = FakeEngine(available=False)
     dostepny = FakeEngine()
     monkeypatch.setattr(
-        ocr_service, "build_engines", lambda settings, model_dir=None: [niedostepny, dostepny]
+        ocr_service,
+        "build_engines",
+        lambda settings, model_dir=None, **kwargs: [niedostepny, dostepny],
     )
 
     service = OcrService(ocr_settings)
@@ -174,7 +178,9 @@ def test_brak_silnika_konczy_sie_wyjatkiem(
 ) -> None:
     """Bez zadnego silnika aplikacja mowi wprost, ze OCR jest niedostepny."""
     monkeypatch.setattr(
-        ocr_service, "build_engines", lambda settings, model_dir=None: [FakeEngine(available=False)]
+        ocr_service,
+        "build_engines",
+        lambda settings, model_dir=None, **kwargs: [FakeEngine(available=False)],
     )
     service = OcrService(ocr_settings)
 
@@ -189,7 +195,9 @@ def test_silnik_bez_polskiego_daje_ostrzezenie(
 ) -> None:
     """Brak modelu polskiego to ostrzezenie, a nie ciche pogorszenie jakosci."""
     monkeypatch.setattr(
-        ocr_service, "build_engines", lambda settings, model_dir=None: [FakeEngine(polish=False)]
+        ocr_service,
+        "build_engines",
+        lambda settings, model_dir=None, **kwargs: [FakeEngine(polish=False)],
     )
     service = OcrService(ocr_settings)
 
@@ -247,7 +255,9 @@ def test_limit_stron_przerywa_i_ostrzega(
 ) -> None:
     """Po osiagnieciu limitu wynik jest oznaczony jako przyciety."""
     engine = FakeEngine()
-    monkeypatch.setattr(ocr_service, "build_engines", lambda settings, model_dir=None: [engine])
+    monkeypatch.setattr(
+        ocr_service, "build_engines", lambda settings, model_dir=None, **kwargs: [engine]
+    )
     ocr_settings.max_pages_per_document = 2
     service = OcrService(ocr_settings)
 
@@ -263,7 +273,9 @@ def test_blad_jednej_strony_nie_przerywa_dokumentu(
 ) -> None:
     """Nieudana strona zostawia ostrzezenie, pozostale sa rozpoznawane."""
     engine = FakeEngine(fail_on={2})
-    monkeypatch.setattr(ocr_service, "build_engines", lambda settings, model_dir=None: [engine])
+    monkeypatch.setattr(
+        ocr_service, "build_engines", lambda settings, model_dir=None, **kwargs: [engine]
+    )
     service = OcrService(ocr_settings)
 
     result = service.run(multipage_image, TIFF_INFO)
@@ -292,7 +304,9 @@ def test_niska_pewnosc_daje_ostrzezenie(
 ) -> None:
     """Wynik ponizej progu jest odnotowany, zeby dalo sie ocenic jakosc skanu."""
     monkeypatch.setattr(
-        ocr_service, "build_engines", lambda settings, model_dir=None: [FakeEngine(confidence=0.1)]
+        ocr_service,
+        "build_engines",
+        lambda settings, model_dir=None, **kwargs: [FakeEngine(confidence=0.1)],
     )
     ocr_settings.min_confidence_to_keep = 0.5
     service = OcrService(ocr_settings)
@@ -315,7 +329,7 @@ def test_rozdzielczosc_jest_ograniczana(
 ) -> None:
     """Wartosc spoza zakresu jest przycinana, a nie przyjmowana na slepo."""
     monkeypatch.setattr(
-        ocr_service, "build_engines", lambda settings, model_dir=None: [FakeEngine()]
+        ocr_service, "build_engines", lambda settings, model_dir=None, **kwargs: [FakeEngine()]
     )
     ocr_settings.render_dpi = ustawione
     service = OcrService(ocr_settings)
@@ -349,7 +363,7 @@ def test_puste_strony_nie_daja_sekcji(
 ) -> None:
     """Strona bez tekstu nie trafia do indeksu jako pusty fragment."""
     monkeypatch.setattr(
-        ocr_service, "build_engines", lambda settings, model_dir=None: [FakeEngine()]
+        ocr_service, "build_engines", lambda settings, model_dir=None, **kwargs: [FakeEngine()]
     )
     service = OcrService(ocr_settings)
     from finddocs.ocr.base import OcrDocumentResult
@@ -377,7 +391,9 @@ def test_pamiec_podreczna_omija_ponowne_rozpoznanie(
 ) -> None:
     """Drugie uruchomienie na tym samym pliku nie wola silnika."""
     engine = FakeEngine()
-    monkeypatch.setattr(ocr_service, "build_engines", lambda settings, model_dir=None: [engine])
+    monkeypatch.setattr(
+        ocr_service, "build_engines", lambda settings, model_dir=None, **kwargs: [engine]
+    )
     service = OcrService(ocr_settings, repository=index_service.repository)
 
     pierwszy = service.run(image_file, PNG_INFO, content_sha256="a" * 64)
@@ -397,7 +413,9 @@ def test_zmiana_rozdzielczosci_uniewaznia_pamiec_podreczna(
 ) -> None:
     """Klucz pamieci podrecznej zawiera dpi, wiec inna wartosc wymusza ponowny OCR."""
     engine = FakeEngine()
-    monkeypatch.setattr(ocr_service, "build_engines", lambda settings, model_dir=None: [engine])
+    monkeypatch.setattr(
+        ocr_service, "build_engines", lambda settings, model_dir=None, **kwargs: [engine]
+    )
 
     service = OcrService(ocr_settings, repository=index_service.repository)
     service.run(image_file, PNG_INFO, content_sha256="b" * 64)
@@ -418,7 +436,9 @@ def test_bez_skrotu_tresci_pamiec_podreczna_nie_dziala(
 ) -> None:
     """Bez klucza nie ma czego zapisac, wiec OCR uruchamia sie za kazdym razem."""
     engine = FakeEngine()
-    monkeypatch.setattr(ocr_service, "build_engines", lambda settings, model_dir=None: [engine])
+    monkeypatch.setattr(
+        ocr_service, "build_engines", lambda settings, model_dir=None, **kwargs: [engine]
+    )
     service = OcrService(ocr_settings, repository=index_service.repository)
 
     service.run(image_file, PNG_INFO)
@@ -439,7 +459,9 @@ def test_wynik_obciety_limitem_nie_trafia_do_pamieci(
     czesciowy maskowalby nowe ustawienie. Wynik obciety nie jest zapamietywany.
     """
     engine = FakeEngine()
-    monkeypatch.setattr(ocr_service, "build_engines", lambda settings, model_dir=None: [engine])
+    monkeypatch.setattr(
+        ocr_service, "build_engines", lambda settings, model_dir=None, **kwargs: [engine]
+    )
     ocr_settings.max_pages_per_document = 2
     service = OcrService(ocr_settings, repository=index_service.repository)
 

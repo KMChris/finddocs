@@ -86,7 +86,10 @@ class IndexingJob:
             archives_enabled=config.indexing.index_archives,
         )
         self.ocr = ocr or OcrService(
-            config.ocr, repository=index.repository, model_dir=self.paths.models_dir
+            config.ocr,
+            repository=index.repository,
+            model_dir=self.paths.models_dir,
+            credentials_dir=self.paths.config_dir,
         )
         self.control = control or JobControl()
         self.progress_sink = progress

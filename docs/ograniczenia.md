@@ -87,6 +87,11 @@ częściowo, z ostrzeżeniem przy dokumencie.
 
 **Tabele w skanach tracą strukturę.** OCR zwraca tekst, nie układ kolumn.
 
+**Serwer OCR na GPU wymaga wdrożenia po stronie organizacji.** Silnik zdalny
+jest gotowy i przetestowany na kontenerze z repozytorium, ale sam kontener nie
+jest częścią instalatora aplikacji. Bez serwera pozostają silniki lokalne na
+CPU. Opis: [OCR na GPU przez zdalne API](ocr-gpu-api.md).
+
 ## Wydajność i skala
 
 **Aplikacja jest przewidziana na zbiory rzędu dziesiątek tysięcy dokumentów,

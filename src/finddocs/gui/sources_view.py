@@ -44,6 +44,7 @@ from finddocs.gui import i18n
 from finddocs.gui.config_cards import (
     ComputeCard,
     ModelCard,
+    OcrCard,
     ProfileCard,
     SemanticCard,
     VectorStoreCard,
@@ -213,6 +214,7 @@ class SourcesView(QWidget):
         self.tabs = TabPanel()
         self.tabs.addTab(self._build_sources_tab(), i18n.SOURCES_TAB_SOURCES)
         self.tabs.addTab(self._build_semantic_tab(), i18n.SOURCES_TAB_SEMANTIC)
+        self.tabs.addTab(self._build_ocr_tab(), i18n.SOURCES_TAB_OCR)
         self.tabs.addTab(self._build_storage_tab(), i18n.SOURCES_TAB_STORAGE)
         root.addWidget(self.tabs, stretch=1)
 
@@ -303,6 +305,12 @@ class SourcesView(QWidget):
         return self._scrolling_column(
             (self.semantic_card, self.profile_card, self.model_card, self.compute_card)
         )
+
+    def _build_ocr_tab(self) -> QWidget:
+        self.ocr_card = OcrCard(self.context)
+        self.ocr_card.status_message.connect(self.status_message)
+        self.ocr_card.applied.connect(self._after_config_applied)
+        return self._scrolling_column((self.ocr_card,))
 
     def _build_storage_tab(self) -> QWidget:
         self.vector_card = VectorStoreCard(self.context)

@@ -37,6 +37,11 @@ Aplikacja nie jest związana z jednym silnikiem. Interfejs jest w
 | Tesseract | `tesseract` | osobny instalator plus pakiet `pol` | tak, model `pol` | najlepsza jakość dla druku, licencja Apache-2.0 |
 | EasyOCR | `easyocr` | `pip install finddocs[ocr-easy]` | tak | wymaga pobrania modeli, wolniejszy |
 | RapidOCR | `rapidocr` | `pip install finddocs[ocr-rapid]` | model łaciński | działa na ONNX Runtime, bez instalatora systemowego |
+| Serwer zdalny | `remote_api` | kontener po stronie serwera | tak, PP-OCRv6 | liczy na GPU, wysyła obrazy stron poza komputer |
+
+Silnik zdalny opisuje osobny dokument:
+[OCR na GPU przez zdalne API](ocr-gpu-api.md). Wymaga świadomego włączenia
+i nigdy nie jest wybierany przez `auto`.
 
 Dodatek `ocr-rapid` instaluje pakiet `rapidocr`, następcę wycofanego
 `rapidocr-onnxruntime` (tamten kończy się na wersji 1.4.4 i wymaga Pythona
@@ -45,7 +50,9 @@ i nie pobierają niczego z sieci. Adapter aplikacji obsługuje oba warianty, wi�
 starsze środowisko z poprzednim pakietem nadal działa.
 
 `ocr.engine = "auto"` wybiera pierwszy dostępny w kolejności Tesseract,
-EasyOCR, RapidOCR. Sprawdzenie, co jest widoczne na danym komputerze:
+EasyOCR, RapidOCR. Serwera zdalnego na tej liście nie ma celowo: wysyłka obrazu
+poza komputer wymaga jawnego wyboru. Sprawdzenie, co jest widoczne na danym
+komputerze:
 
 ```bash
 finddocs doctor
@@ -155,6 +162,11 @@ modelem `pol`, `render_dpi = 220`:
 OCR jest najdroższym elementem indeksowania. Jeżeli zbiór zawiera dużo skanów,
 pierwsze indeksowanie warto uruchomić poza godzinami pracy. Zadanie da się
 wstrzymać i wznowić.
+
+Przy dużych zbiorach skanów rozpoznawanie można oddać serwerowi z kartą
+graficzną. Zmierzony czas strony A4 spada wtedy z 1,5 s do 0,2 s, a polskie
+znaki diakrytyczne wracają poprawnie także tam, gdzie silnik lokalny je gubi.
+Opis i pomiary: [OCR na GPU przez zdalne API](ocr-gpu-api.md).
 
 ## Rozwiązywanie problemów
 

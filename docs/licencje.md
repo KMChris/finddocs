@@ -102,6 +102,8 @@ ani zapytan poza komputer uzytkownika w konfiguracji domyslnej.
 | SQLite (biblioteka wbudowana w Pythona) | 3.42.0 | Public Domain | baza metadanych i indeks pelnotekstowy FTS5 | nie, czesc dystrybucji Pythona | https://www.sqlite.org/ |
 | PDFium | dostarczany przez pypdfium2 | BSD-3-Clause i Apache-2.0 | silnik odczytu PDF uzywany przez pypdfium2 | nie, dolaczony do pakietu pypdfium2 | https://pdfium.googlesource.com/pdfium/ |
 | Tesseract OCR | 5.x (opcjonalnie) | Apache-2.0 | opcjonalny silnik OCR o najlepszej jakosci dla jezyka polskiego | nie, instalowany osobno przez administratora | https://github.com/UB-Mannheim/tesseract/wiki |
+| PaddleOCR z modelami PP-OCRv6_medium | 3.7.0 (opcjonalnie) | Apache-2.0 | serwer OCR na GPU, uruchamiany przez organizacje poza aplikacja | nie, obraz budowany osobno z `deploy/ppocr` | https://github.com/PaddlePaddle/PaddleOCR |
+| PaddlePaddle | 3.3.0 (opcjonalnie) | Apache-2.0 | srodowisko uruchomieniowe serwera OCR na GPU | nie, tylko wewnatrz obrazu `deploy/ppocr` | https://github.com/PaddlePaddle/Paddle |
 | Inno Setup | 6.x | Inno Setup License (dopuszcza uzycie komercyjne) | budowanie instalatora Windows | nie, narzedzie deweloperskie | https://jrsoftware.org/isinfo.php |
 
 ## Narzedzia deweloperskie

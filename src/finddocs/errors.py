@@ -162,6 +162,11 @@ class OcrCancelledError(OcrError):
     default_message = "Rozpoznawanie tekstu zostało przerwane."
 
 
+class OcrRemoteError(OcrError):
+    code = "FD-4003"
+    default_message = "Zdalny serwer OCR nie odpowiedział poprawnie."
+
+
 # --- indeks --------------------------------------------------------------------
 
 
@@ -274,6 +279,7 @@ __all__ = [
     "OcrCancelledError",
     "OcrEngineUnavailableError",
     "OcrError",
+    "OcrRemoteError",
     "PasswordProtectedError",
     "ProviderError",
     "QuerySyntaxError",

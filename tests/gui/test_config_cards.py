@@ -18,6 +18,7 @@ from finddocs.gui import i18n
 from finddocs.gui.config_cards import (
     ComputeCard,
     ModelCard,
+    OcrCard,
     ProfileCard,
     SemanticCard,
     VectorStoreCard,
@@ -29,6 +30,7 @@ from finddocs.providers import model_store
 from finddocs.providers.model_export import write_manifest
 from finddocs.providers.model_manifest import LocalModelManifest
 from finddocs.providers.model_store import ImportedModel
+from finddocs.security.network import EgressCategory, policy_from_config
 
 FAKE_KEY = "model-testowy-karty"
 
@@ -653,6 +655,97 @@ def test_powrot_do_faiss_nie_wymaga_danych_pgvector(
     assert zapisana.vector_store.pgvector_host == "baza.firma.local"
 
 
+# --- karta rozpoznawania tekstu --------------------------------------------------
+
+
+@pytest.mark.gui
+def test_panel_zdalnego_ocr_jest_ukryty_dla_silnikow_lokalnych(
+    qtbot: object, card_context: AppContext
+) -> None:
+    card = OcrCard(card_context)
+    qtbot.addWidget(card)  # type: ignore[attr-defined]
+
+    assert card.selected_engine() == "auto"
+    assert card.ocr_remote_panel.isHidden()
+
+    position = card.ocr_engine_combo.findData("remote_api")
+    card.ocr_engine_combo.setCurrentIndex(position)
+
+    assert not card.ocr_remote_panel.isHidden()
+
+
+@pytest.mark.gui
+def test_zapis_ustawien_zdalnego_ocr(
+    qtbot: object, card_context: AppContext, message_boxes: list[QMessageBox]
+) -> None:
+    card = OcrCard(card_context)
+    qtbot.addWidget(card)  # type: ignore[attr-defined]
+    zgloszenia: list[bool] = []
+    card.applied.connect(zgloszenia.append)
+
+    position = card.ocr_engine_combo.findData("remote_api")
+    assert position >= 0
+    card.ocr_engine_combo.setCurrentIndex(position)
+    card.ocr_url_edit.setText("https://ocr.firma.local/")
+    card.ocr_model_edit.setText("PP-OCRv6_medium")
+    card.ocr_timeout_spin.setValue(90)
+    card.ocr_retries_spin.setValue(4)
+    card.apply_settings()
+
+    # Silnik OCR powstaje przy zadaniu indeksowania, wiec indeks zostaje otwarty.
+    assert zgloszenia == [False]
+    zapisana = load_config(card_context.paths.config_file)
+    assert zapisana.ocr.engine == "remote_api"
+    assert zapisana.ocr.remote_api_enabled is True
+    assert zapisana.ocr.remote_api_url == "https://ocr.firma.local"
+    assert zapisana.ocr.remote_api_model == "PP-OCRv6_medium"
+    assert zapisana.ocr.remote_api_timeout_seconds == 90.0
+    assert zapisana.ocr.remote_api_max_retries == 4
+
+
+@pytest.mark.gui
+def test_wlaczenie_zdalnego_ocr_bez_adresu_daje_ostrzezenie(
+    qtbot: object, card_context: AppContext, message_boxes: list[QMessageBox]
+) -> None:
+    card = OcrCard(card_context)
+    qtbot.addWidget(card)  # type: ignore[attr-defined]
+    zgloszenia: list[bool] = []
+    card.applied.connect(zgloszenia.append)
+
+    position = card.ocr_engine_combo.findData("remote_api")
+    card.ocr_engine_combo.setCurrentIndex(position)
+    card.apply_settings()
+
+    assert zgloszenia == []
+    assert [box.text() for box in message_boxes] == [i18n.OCR_REMOTE_URL_REQUIRED]
+    assert card_context.config.ocr.engine == "auto"
+
+
+@pytest.mark.gui
+def test_powrot_na_silnik_lokalny_zamyka_zgode_na_wysylke(
+    qtbot: object, card_context: AppContext
+) -> None:
+    """Adres zostaje zapisany, ale zgoda na ruch znika razem z wyborem silnika."""
+    ocr = card_context.config.ocr
+    ocr.engine = "remote_api"
+    ocr.remote_api_enabled = True
+    ocr.remote_api_url = "https://ocr.firma.local"
+
+    card = OcrCard(card_context)
+    qtbot.addWidget(card)  # type: ignore[attr-defined]
+    assert card.selected_engine() == "remote_api"
+
+    position = card.ocr_engine_combo.findData("tesseract")
+    card.ocr_engine_combo.setCurrentIndex(position)
+    card.apply_settings()
+
+    zapisana = load_config(card_context.paths.config_file)
+    assert zapisana.ocr.engine == "tesseract"
+    assert zapisana.ocr.remote_api_enabled is False
+    assert zapisana.ocr.remote_api_url == "https://ocr.firma.local"
+    assert not policy_from_config(zapisana).is_enabled(EgressCategory.OCR_API)
+
+
 # --- aktywacja i import ----------------------------------------------------------
 
 
@@ -732,7 +825,7 @@ def test_import_z_dysku_uruchamia_magazyn_i_zglasza_liste_modeli(
 
 
 @pytest.mark.gui
-def test_widok_zrodel_sklada_karty_w_trzy_zakladki(qtbot: object, card_context: AppContext) -> None:
+def test_widok_zrodel_sklada_karty_w_zakladki(qtbot: object, card_context: AppContext) -> None:
     """Konfiguracja jest podzielona tematycznie, a nie zebrana w jednym oknie."""
     view = SourcesView(card_context)
     qtbot.addWidget(view)  # type: ignore[attr-defined]
@@ -741,6 +834,7 @@ def test_widok_zrodel_sklada_karty_w_trzy_zakladki(qtbot: object, card_context: 
     assert labels == [
         i18n.SOURCES_TAB_SOURCES,
         i18n.SOURCES_TAB_SEMANTIC,
+        i18n.SOURCES_TAB_OCR,
         i18n.SOURCES_TAB_STORAGE,
     ]
     assert view.tabs.currentIndex() == 0
@@ -748,6 +842,7 @@ def test_widok_zrodel_sklada_karty_w_trzy_zakladki(qtbot: object, card_context: 
     assert isinstance(view.profile_card, ProfileCard)
     assert isinstance(view.model_card, ModelCard)
     assert isinstance(view.compute_card, ComputeCard)
+    assert isinstance(view.ocr_card, OcrCard)
     assert isinstance(view.vector_card, VectorStoreCard)
 
 

@@ -1,0 +1,28 @@
+# Serwer OCR PP-OCRv6_medium na GPU dla FindDocs.
+#
+# Uruchomienie:  docker compose -f deploy/ppocr/compose.yaml up -d --build
+# Zatrzymanie:   docker compose -f deploy/ppocr/compose.yaml down
+#
+# Port jest wystawiony wylacznie na petli zwrotnej. Serwer nie ma
+# uwierzytelnienia, wiec na maszynie wspoldzielonej postaw przed nim odwrotne
+# proxy z TLS i kluczem API (opis w docs/ocr-gpu-api.md).
+services:
+  ppocr:
+    build:
+      context: .
+    image: finddocs-ppocr:latest
+    container_name: finddocs-ppocr
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8868:8868"
+    # Kontener nie potrzebuje sieci po starcie: modele sa w obrazie.
+    environment:
+      HF_HUB_OFFLINE: "1"
+    shm_size: "2gb"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["0"]
+              capabilities: [gpu]

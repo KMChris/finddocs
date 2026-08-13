@@ -100,6 +100,12 @@ pgvector zamiast do pliku lokalnego (dodatek `finddocs[pgvector]`, włączany
 świadomie w ustawieniach). Opis i zasady bezpieczeństwa:
 [docs/baza-wektorowa.md](https://github.com/KMChris/finddocs/blob/main/docs/baza-wektorowa.md).
 
+Rozpoznawanie tekstu ze skanów działa domyślnie na procesorze. Przy dużych
+zbiorach skanów można je oddać serwerowi z kartą graficzną (model
+PP-OCRv6_medium, gotowy kontener w `deploy/ppocr`). Funkcja jest domyślnie
+wyłączona, bo wysyła obrazy stron poza komputer. Opis:
+[docs/ocr-gpu-api.md](https://github.com/KMChris/finddocs/blob/main/docs/ocr-gpu-api.md).
+
 ## Szybki start bez SharePointa
 
 Aplikacja ma wbudowany zbiór demonstracyjny z fikcyjnymi polskimi dokumentami.
@@ -208,6 +214,7 @@ Szczegóły i diagramy: [docs/architektura.md](https://github.com/KMChris/finddo
 | [Diagnostyka](https://github.com/KMChris/finddocs/blob/main/docs/diagnostyka.md) | logi, kody błędów, typowe problemy |
 | [Formaty](https://github.com/KMChris/finddocs/blob/main/docs/formaty.md) | obsługiwane formaty i poziomy wsparcia |
 | [OCR](https://github.com/KMChris/finddocs/blob/main/docs/ocr.md) | silniki, jakość, wydajność |
+| [OCR na GPU przez zdalne API](https://github.com/KMChris/finddocs/blob/main/docs/ocr-gpu-api.md) | serwer PP-OCRv6 w kontenerze, konfiguracja, bezpieczeństwo |
 | [Znane ograniczenia](https://github.com/KMChris/finddocs/blob/main/docs/ograniczenia.md) | czego aplikacja nie robi |
 | [Raport bezpieczeństwa](https://github.com/KMChris/finddocs/blob/main/docs/raport-bezpieczenstwa.md) | model zagrożeń i kontrole |
 | [Raport PoC](https://github.com/KMChris/finddocs/blob/main/docs/raport-poc.md) | porównanie modeli i pomiary |

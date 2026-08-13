@@ -309,7 +309,7 @@ def collect_component_info(config: AppConfig) -> dict[str, Any]:
             "jezyki": list(info.languages),
             "polski_obslugiwany": info.polish_supported,
         }
-        for info in describe_engines(config.ocr, paths.models_dir)
+        for info in describe_engines(config.ocr, paths.models_dir, credentials_dir=paths.config_dir)
     ]
 
     return {

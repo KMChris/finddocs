@@ -1,4 +1,4 @@
-"""Karty konfiguracji wyszukiwania semantycznego i magazynu wektorow.
+"""Karty konfiguracji semantyki, magazynu wektorow i rozpoznawania tekstu.
 
 Dawne okno ustawien modelu mieszalo w jednym przewijanym formularzu szesc
 grup: przedrostki, semantyke, obliczenia, zdalne API, magazyn wektorow
@@ -66,6 +66,7 @@ from finddocs.gui.model_dialog import ModelImportDialog
 from finddocs.gui.widgets.segmented import SegmentedControl
 from finddocs.gui.workers import CallableTask, thread_pool
 from finddocs.logging_setup import get_logger
+from finddocs.ocr.service import REMOTE_ENGINE_NAME
 from finddocs.providers.model_manifest import (
     KNOWN_MODELS,
     LocalModelManifest,
@@ -117,6 +118,16 @@ _SSLMODE_CHOICES: tuple[tuple[str, str], ...] = (
     ("verify-ca", i18n.MODEL_VECTOR_SSL_VERIFY_CA),
     ("verify-full", i18n.MODEL_VECTOR_SSL_VERIFY_FULL),
     ("disable", i18n.MODEL_VECTOR_SSL_DISABLE),
+)
+
+#: Silniki OCR w kolejnosci pokazywanej na karcie. Zdalny jest ostatni, bo jako
+#: jedyny wysyla obraz strony poza komputer.
+_OCR_ENGINE_CHOICES: tuple[tuple[str, str], ...] = (
+    ("auto", i18n.OCR_ENGINE_AUTO),
+    ("tesseract", i18n.OCR_ENGINE_TESSERACT),
+    ("easyocr", i18n.OCR_ENGINE_EASYOCR),
+    ("rapidocr", i18n.OCR_ENGINE_RAPIDOCR),
+    (REMOTE_ENGINE_NAME, i18n.OCR_ENGINE_REMOTE),
 )
 
 
@@ -1334,11 +1345,267 @@ class VectorStoreCard(ConfigCard):
         self.apply_button.setEnabled(not busy)
 
 
+class OcrCard(ConfigCard):
+    """Wybor silnika OCR i parametry zdalnego serwera liczacego na GPU."""
+
+    def __init__(self, context: AppContext, parent: QWidget | None = None) -> None:
+        super().__init__(i18n.OCR_BOX, context, parent)
+        self._busy = False
+        ocr = context.config.ocr
+        layout = QVBoxLayout(self)
+        layout.setSpacing(10)
+
+        form = QFormLayout()
+        form.setHorizontalSpacing(16)
+        form.setVerticalSpacing(10)
+        self.ocr_engine_combo = QComboBox()
+        for value, label in _OCR_ENGINE_CHOICES:
+            self.ocr_engine_combo.addItem(label, value)
+        position = self.ocr_engine_combo.findData(ocr.engine)
+        self.ocr_engine_combo.setCurrentIndex(max(0, position))
+        self.ocr_engine_combo.setFixedWidth(CONTROL_WIDTH)
+        self.ocr_engine_combo.currentIndexChanged.connect(self._on_engine_changed)
+        form.addRow(i18n.OCR_ENGINE, self.ocr_engine_combo)
+        layout.addLayout(form)
+        layout.addWidget(_hint_label(i18n.OCR_ENGINE_HINT))
+
+        self.ocr_remote_panel = self._build_remote_panel()
+        layout.addWidget(self.ocr_remote_panel)
+        layout.addLayout(self._apply_row(self.apply_settings))
+        self._show_remote_panel()
+
+    # --- budowa ---------------------------------------------------------------
+
+    def _build_remote_panel(self) -> QWidget:
+        panel = QWidget()
+        column = QVBoxLayout(panel)
+        column.setContentsMargins(0, 0, 0, 0)
+        column.setSpacing(10)
+
+        form = QFormLayout()
+        form.setContentsMargins(0, 0, 0, 0)
+        form.setHorizontalSpacing(16)
+        form.setVerticalSpacing(10)
+        ocr = self.context.config.ocr
+
+        self.ocr_url_edit = QLineEdit(ocr.remote_api_url)
+        self.ocr_url_edit.setPlaceholderText(i18n.OCR_REMOTE_URL_PLACEHOLDER)
+        form.addRow(i18n.OCR_REMOTE_URL, self.ocr_url_edit)
+
+        self.ocr_model_edit = QLineEdit(ocr.remote_api_model)
+        form.addRow(i18n.OCR_REMOTE_MODEL, self.ocr_model_edit)
+
+        self.ocr_key_header_edit = QLineEdit(ocr.remote_api_key_header)
+        self.ocr_key_header_edit.setPlaceholderText(i18n.OCR_REMOTE_KEY_HEADER_PLACEHOLDER)
+        form.addRow(i18n.OCR_REMOTE_KEY_HEADER, self.ocr_key_header_edit)
+
+        self.ocr_timeout_spin = QSpinBox()
+        self.ocr_timeout_spin.setRange(1, 3600)
+        self.ocr_timeout_spin.setValue(int(ocr.remote_api_timeout_seconds))
+        self.ocr_timeout_spin.setFixedWidth(CONTROL_WIDTH)
+        form.addRow(i18n.OCR_REMOTE_TIMEOUT, self.ocr_timeout_spin)
+
+        self.ocr_retries_spin = QSpinBox()
+        self.ocr_retries_spin.setRange(1, 10)
+        self.ocr_retries_spin.setValue(int(ocr.remote_api_max_retries))
+        self.ocr_retries_spin.setFixedWidth(CONTROL_WIDTH)
+        form.addRow(i18n.OCR_REMOTE_RETRIES, self.ocr_retries_spin)
+
+        self.ocr_key_edit = QLineEdit()
+        self.ocr_key_edit.setEchoMode(QLineEdit.EchoMode.Password)
+        self.ocr_key_edit.setPlaceholderText(i18n.OCR_REMOTE_KEY_PLACEHOLDER)
+        key_row = QHBoxLayout()
+        key_row.setSpacing(8)
+        key_row.addWidget(self.ocr_key_edit, stretch=1)
+        self.ocr_key_save_button = QPushButton(i18n.OCR_REMOTE_KEY_SAVE)
+        self.ocr_key_save_button.clicked.connect(self.save_api_key)
+        key_row.addWidget(self.ocr_key_save_button)
+        self.ocr_key_clear_button = QPushButton(i18n.OCR_REMOTE_KEY_CLEAR)
+        self.ocr_key_clear_button.clicked.connect(self.clear_api_key)
+        key_row.addWidget(self.ocr_key_clear_button)
+        form.addRow(i18n.OCR_REMOTE_KEY, key_row)
+
+        self.ocr_key_status = _muted_label()
+        form.addRow("", self.ocr_key_status)
+        self._update_key_status()
+
+        test_row = QHBoxLayout()
+        test_row.setSpacing(8)
+        self.ocr_test_button = QPushButton(i18n.OCR_REMOTE_TEST)
+        self.ocr_test_button.clicked.connect(self.test_connection)
+        test_row.addWidget(self.ocr_test_button)
+        test_row.addStretch(1)
+        form.addRow("", test_row)
+
+        self.ocr_test_label = _muted_label()
+        form.addRow("", self.ocr_test_label)
+
+        column.addLayout(form)
+        column.addWidget(_hint_label(i18n.OCR_REMOTE_MODEL_HINT))
+        column.addWidget(_hint_label(i18n.OCR_REMOTE_HINT))
+        return panel
+
+    # --- przelaczanie silnika -------------------------------------------------
+
+    def selected_engine(self) -> str:
+        return str(self.ocr_engine_combo.currentData())
+
+    def _on_engine_changed(self, _index: int) -> None:
+        self._show_remote_panel()
+
+    def _show_remote_panel(self) -> None:
+        self.ocr_remote_panel.setVisible(self.selected_engine() == REMOTE_ENGINE_NAME)
+
+    # --- zapis ----------------------------------------------------------------
+
+    def apply_settings(self) -> None:
+        """Zapisuje wybor silnika i parametry zdalnego serwera.
+
+        Wybor silnika lokalnego zamyka kategorie ruchu ``ocr_api``: adres zostaje
+        w konfiguracji, ale zgoda na wysylke znika razem z wyborem.
+        """
+        if self._busy:
+            return
+        ocr = self.context.config.ocr
+        engine = self.selected_engine()
+        url = self.ocr_url_edit.text().strip().rstrip("/")
+        if engine == REMOTE_ENGINE_NAME and not url:
+            show_warning(self, i18n.OCR_REMOTE_URL_REQUIRED)
+            return
+
+        ocr.engine = engine
+        ocr.remote_api_enabled = engine == REMOTE_ENGINE_NAME
+        ocr.remote_api_url = url
+        ocr.remote_api_model = self.ocr_model_edit.text().strip()
+        ocr.remote_api_key_header = self.ocr_key_header_edit.text().strip()
+        ocr.remote_api_timeout_seconds = float(self.ocr_timeout_spin.value())
+        ocr.remote_api_max_retries = int(self.ocr_retries_spin.value())
+        # Silnik OCR jest wybierany przy uruchomieniu zadania indeksowania,
+        # wiec otwarty indeks nie wymaga ponownego otwarcia.
+        self._finish_apply([], reload_needed=False)
+
+    # --- klucz API ------------------------------------------------------------
+
+    def _update_key_status(self) -> None:
+        from finddocs.security.credentials import OCR_API_KEY_NAME
+
+        try:
+            store = _credential_store(self.context)
+            present = store.get_secret(OCR_API_KEY_NAME) is not None
+        except Exception as exc:
+            log.warning("gui.ocr_key_status_failed", error_type=type(exc).__name__)
+            present = False
+        self.ocr_key_status.setText(
+            i18n.OCR_REMOTE_KEY_PRESENT if present else i18n.OCR_REMOTE_KEY_MISSING
+        )
+        self.ocr_key_clear_button.setEnabled(present)
+
+    def save_api_key(self) -> None:
+        """Zapisuje klucz w magazynie poswiadczen. Klucz nie trafia do pliku."""
+        key = self.ocr_key_edit.text().strip()
+        if not key:
+            show_warning(self, i18n.OCR_REMOTE_KEY_EMPTY)
+            return
+        from finddocs.security.credentials import OCR_API_KEY_NAME
+
+        try:
+            _credential_store(self.context).set_secret(OCR_API_KEY_NAME, key)
+        except FindDocsError as exc:
+            show_error(self, exc.user_message)
+            return
+        self.ocr_key_edit.clear()
+        self._update_key_status()
+        show_info(self, i18n.OCR_REMOTE_KEY_SAVED)
+
+    def clear_api_key(self) -> None:
+        from finddocs.security.credentials import OCR_API_KEY_NAME
+
+        try:
+            _credential_store(self.context).delete_secret(OCR_API_KEY_NAME)
+        except FindDocsError as exc:
+            show_error(self, exc.user_message)
+            return
+        self._update_key_status()
+        show_info(self, i18n.OCR_REMOTE_KEY_CLEARED)
+
+    # --- test polaczenia ------------------------------------------------------
+
+    def test_connection(self) -> None:
+        """Sprawdza serwer na sztucznym obrazie, na wartosciach z formularza.
+
+        Test dziala takze przed zapisaniem ustawien. Polityka sieciowa dopuszcza
+        na czas proby dokladnie ten jeden host.
+        """
+        url = self.ocr_url_edit.text().strip().rstrip("/")
+        if not url:
+            show_warning(self, i18n.OCR_REMOTE_URL_REQUIRED)
+            return
+        settings = replace(
+            self.context.config.ocr,
+            engine=REMOTE_ENGINE_NAME,
+            remote_api_enabled=True,
+            remote_api_url=url,
+            remote_api_model=self.ocr_model_edit.text().strip(),
+            remote_api_key_header=self.ocr_key_header_edit.text().strip(),
+            remote_api_timeout_seconds=float(self.ocr_timeout_spin.value()),
+            remote_api_max_retries=int(self.ocr_retries_spin.value()),
+        )
+        allow_http_localhost = self.context.config.allow_plain_http_localhost
+        config_dir = self.context.paths.config_dir
+        self._set_busy(True)
+        self.ocr_test_label.setText(i18n.OCR_REMOTE_TEST_RUNNING)
+
+        def work() -> dict[str, object]:
+            from urllib.parse import urlparse
+
+            from finddocs.ocr.service import build_remote_engine
+            from finddocs.security.network import EgressCategory, NetworkPolicy
+
+            host = (urlparse(url).hostname or "").lower()
+            policy = NetworkPolicy(
+                enabled_categories={EgressCategory.OCR_API},
+                extra_hosts={EgressCategory.OCR_API: (host,)},
+                allow_plain_http_localhost=allow_http_localhost,
+            )
+            engine = build_remote_engine(settings, config_dir, policy=policy)
+            try:
+                return engine.ping()
+            finally:
+                engine.close()
+
+        task = CallableTask(work, label="test serwera OCR")
+        task.signals.finished.connect(self._on_test_finished)
+        task.signals.failed.connect(self._on_test_failed)
+        thread_pool().start(task)
+
+    def _on_test_finished(self, result: object) -> None:
+        self._set_busy(False)
+        if not isinstance(result, dict):
+            self.ocr_test_label.setText("")
+            return
+        message = i18n.OCR_REMOTE_TEST_OK.format(
+            model=result.get("model", "?"), seconds=result.get("czas_odpowiedzi_s", "?")
+        )
+        self.ocr_test_label.setText(message)
+        show_info(self, message)
+
+    def _on_test_failed(self, code: str, message: str) -> None:
+        self._set_busy(False)
+        self.ocr_test_label.setText(message)
+        show_error(self, f"{message}\n\nKod błędu: {code}")
+
+    def _set_busy(self, busy: bool) -> None:
+        self._busy = busy
+        self.ocr_test_button.setEnabled(not busy)
+        self.apply_button.setEnabled(not busy)
+
+
 __all__ = [
     "CONTROL_WIDTH",
     "ComputeCard",
     "ConfigCard",
     "ModelCard",
+    "OcrCard",
     "ProfileCard",
     "SemanticCard",
     "VectorStoreCard",
