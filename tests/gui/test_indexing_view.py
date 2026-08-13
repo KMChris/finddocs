@@ -10,7 +10,7 @@ from PySide6.QtWidgets import QMessageBox
 
 from finddocs.gui import i18n
 from finddocs.gui.context import AppContext
-from finddocs.gui.indexing_view import ROW_ID_ROLE, IndexingView
+from finddocs.gui.indexing_view import LIST_REFRESH_TICKS, ROW_ID_ROLE, IndexingView
 from finddocs.jobs.indexing_job import JobOptions
 from finddocs.types import DocumentStatus, JobKind, JobState, ProgressSnapshot
 
@@ -58,6 +58,17 @@ class FakeRunner:
 
     def resumable_jobs(self) -> list[dict[str, object]]:
         return []
+
+
+def _publish(view: IndexingView, snapshot: ProgressSnapshot) -> ProgressSnapshot:
+    """Podaje migawke i wymusza takt zegara widoku.
+
+    Widok laczy migawki przychodzace gesciej niz co ``TICK_MS`` i rysuje je
+    zegarem. Test nie krec i petli zdarzen, wiec takt wywoluje sam.
+    """
+    view._on_progress(snapshot)
+    view._tick()
+    return snapshot
 
 
 def _snapshot(**changes: object) -> ProgressSnapshot:
@@ -270,7 +281,7 @@ def test_liczba_bledow_dostaje_kolor_bledu_i_otwiera_zakladke(
 
     assert indexing_view._tabs.currentIndex() == 0
 
-    indexing_view._on_progress(_snapshot(failed=0))
+    _publish(indexing_view, _snapshot(failed=0))
     assert failed.property("valueRole") == ""
 
 
@@ -332,25 +343,67 @@ def test_progress_snapshot_updates_labels(indexing_view: IndexingView) -> None:
 
 @pytest.mark.gui
 def test_known_progress_fills_bar(indexing_view: IndexingView) -> None:
-    """Znany postep ustawia wartosc paska i komunikat o przyblizeniu."""
-    indexing_view._on_progress(_snapshot())
+    """Po zakonczeniu wykrywania pasek pokazuje pewny procent i liczby."""
+    _publish(indexing_view, _snapshot())
 
     assert indexing_view.progress_bar.maximum() == 100
     assert indexing_view.progress_bar.value() == 50
-    assert indexing_view.progress_hint.text() == i18n.PROGRESS_APPROXIMATE.format(value="50.0%")
+    assert indexing_view.progress_hint.text() == i18n.PROGRESS_EXACT.format(
+        value="50.0%", done=10, total=20
+    )
 
 
 @pytest.mark.gui
 def test_unknown_progress_shows_indeterminate_bar(indexing_view: IndexingView) -> None:
-    """Przed zakonczeniem wykrywania pasek jest nieokreslony."""
+    """Bez oszacowania liczby plikow pasek jest nieokreslony."""
     snapshot = _snapshot(discovery_complete=False, stage_label="Wykrywanie plikow")
 
-    indexing_view._on_progress(snapshot)
+    _publish(indexing_view, snapshot)
 
     assert snapshot.progress_fraction is None
     assert indexing_view.progress_bar.minimum() == 0
     assert indexing_view.progress_bar.maximum() == 0
     assert indexing_view.progress_hint.text() == i18n.PROGRESS_UNKNOWN
+
+
+@pytest.mark.gui
+def test_oszacowanie_daje_procenty_przed_koncem_wykrywania(
+    indexing_view: IndexingView,
+) -> None:
+    """Znany mianownik zamienia pasek nieokreslony na procenty, z zastrzezeniem."""
+    snapshot = _snapshot(discovery_complete=False, estimated_total=40)
+
+    _publish(indexing_view, snapshot)
+
+    assert indexing_view.progress_bar.maximum() == 100
+    assert indexing_view.progress_bar.value() == 25
+    assert indexing_view.progress_hint.text() == i18n.PROGRESS_APPROXIMATE.format(
+        value="25.0%", done=10, total=40
+    )
+
+
+@pytest.mark.gui
+def test_czas_biegnie_miedzy_migawkami(indexing_view: IndexingView) -> None:
+    """Dlugi plik nie przysyla migawek, a licznik czasu ma isc dalej."""
+    _publish(indexing_view, _snapshot(elapsed_seconds=90.0))
+    assert indexing_view._stat_labels["elapsed"].text() == i18n.format_duration(90.0)
+
+    # Symulacja pliku przetwarzanego od pol minuty bez nowej migawki.
+    indexing_view._snapshot_at -= 30.0
+    indexing_view._tick()
+
+    assert indexing_view._stat_labels["elapsed"].text() == i18n.format_duration(120.0)
+
+
+@pytest.mark.gui
+def test_czas_stoi_po_wstrzymaniu(indexing_view: IndexingView) -> None:
+    """Zadanie wstrzymane nie nalicza czasu, wiec licznik tez stoi."""
+    _publish(indexing_view, _snapshot(state=JobState.PAUSED, elapsed_seconds=90.0))
+
+    indexing_view._snapshot_at -= 30.0
+    indexing_view._tick()
+
+    assert indexing_view._stat_labels["elapsed"].text() == i18n.format_duration(90.0)
 
 
 @pytest.mark.gui
@@ -491,6 +544,33 @@ def test_wpisy_dziennika_mozna_usunac(
     nazwy = [view.error_table.item(row, 0).text() for row in range(view.error_table.rowCount())]
     assert usuwany not in nazwy
     assert len(repository.recent_errors()) == przed - 1
+
+
+@pytest.mark.gui
+def test_listy_odswiezaja_sie_w_trakcie_zadania(
+    qtbot: object, indexed_gui_context: AppContext
+) -> None:
+    """Pelne przeindeksowanie kasuje wpisy na starcie, a tabela ma to pokazac.
+
+    Bez odswiezania w trakcie zadania wiersze zostawaly na ekranie do konca
+    przebiegu i wygladalo to tak, jakby czyszczenie nie dzialalo.
+    """
+    view = IndexingView(indexed_gui_context)
+    qtbot.addWidget(view)  # type: ignore[attr-defined]
+    view.refresh_tables()
+    assert view.problems_table.rowCount() == 1
+
+    repository = indexed_gui_context.require_index().repository
+    with indexed_gui_context.require_index().db.transaction():
+        repository.reset_source_problems("zrodlo-testowe")
+
+    # Zegar widoku siega po listy co kilka taktow, nie w kazdym.
+    view._on_progress(_snapshot())
+    for _ in range(LIST_REFRESH_TICKS):
+        view._tick()
+
+    assert view.problems_table.rowCount() == 0
+    assert view.error_table.rowCount() == 0
 
 
 @pytest.mark.gui

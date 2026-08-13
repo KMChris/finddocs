@@ -138,6 +138,25 @@ def test_filtr_globow_dopasowuje_sciezke_i_nazwe(tree: Path) -> None:
     ]
 
 
+def test_oszacowanie_liczby_plikow_zgadza_sie_z_enumeracja(tree: Path) -> None:
+    """Mianownik postepu musi liczyc dokladnie to, co potem trafi do potoku."""
+    connector = build_connector(tree, exclude_globs=["*.tmp", "archiwum/*"])
+
+    assert connector.estimate_total() == len(list(connector.iter_items()))
+
+
+def test_oszacowanie_nie_psuje_kursora_skanowania(tree: Path) -> None:
+    """Liczenie plikow idzie obok enumeracji, wiec nie rusza pozycji wznowienia."""
+    connector = build_connector(tree)
+    items = list(connector.iter_items())
+    po_skanie = connector.cursor()
+
+    connector.estimate_total()
+
+    assert connector.cursor().visited == po_skanie.visited == len(items)
+    assert connector.cursor().complete is True
+
+
 def test_plik_za_duzy_dostaje_znacznik_too_large(tmp_path: Path) -> None:
     root = tmp_path / "duze"
     root.mkdir()

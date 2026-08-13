@@ -557,8 +557,11 @@ STAT_ELAPSED = "Czas trwania"
 STAT_CONNECTION = "Połączenie"
 STAT_TEMP = "Przestrzeń tymczasowa"
 STAT_NONE = "brak"
-PROGRESS_UNKNOWN = "Postęp będzie znany po zakończeniu wykrywania plików"
-PROGRESS_APPROXIMATE = "Postęp przybliżony: {value}"
+PROGRESS_UNKNOWN = "Liczba plików nie jest jeszcze znana, postęp pojawi się po jej ustaleniu"
+#: Dopoki wykrywanie trwa, mianownik jest oszacowaniem: z poprzedniego przebiegu
+#: albo z policzenia plikow przed skanowaniem. Zdanie mowi to wprost.
+PROGRESS_APPROXIMATE = "Postęp przybliżony: {value} ({done} z około {total} plików)"
+PROGRESS_EXACT = "Postęp: {value} ({done} z {total} plików)"
 
 JOB_STATE_LABELS: dict[JobState, str] = {
     JobState.QUEUED: "w kolejce",

@@ -58,6 +58,29 @@ def test_runner_reads_config_at_job_start(gui_context: AppContext, tmp_path: Pat
 
 
 @pytest.mark.gui
+def test_wykonawca_nie_mnozy_odbiorcow_postepu(
+    qtbot: object, gui_context: AppContext, gui_corpus: Path
+) -> None:
+    """Widok zglasza sie przy kazdym zleceniu, a odbiorca ma zostac jeden.
+
+    Powtorzenia mnozyly te sama migawke: po kilku zadaniach w jednej sesji
+    interfejs przerysowywal postep tyle razy, ile zadan uruchomiono.
+    """
+    view = IndexingView(gui_context)
+    qtbot.addWidget(view)  # type: ignore[attr-defined]
+    gui_context.config = gui_context.config.with_source(_local_source(gui_corpus))
+    gui_context.save()
+    runner = gui_context.require_runner()
+
+    for _ in range(3):
+        with qtbot.waitSignal(view.index_changed, timeout=TIMEOUT_MS):  # type: ignore[attr-defined]
+            view.start_scan()
+
+    assert runner._progress_callbacks.count(view.bridge.publish) == 1
+    assert runner._completion_callbacks.count(view.bridge.publish_completion) == 1
+
+
+@pytest.mark.gui
 def test_indexing_sees_source_added_after_startup(
     qtbot: object, gui_context: AppContext, gui_corpus: Path
 ) -> None:

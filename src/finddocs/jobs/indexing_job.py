@@ -143,6 +143,7 @@ class IndexingJob:
             self._finish(JobState.FAILED, "Nie skonfigurowano żadnego aktywnego źródła.")
             return self.snapshot
 
+        self._prepare_totals(sources)
         self._workspace = self.paths.new_temp_workspace(prefix=f"{self.job_id}-")
         try:
             for source in sources:
@@ -198,6 +199,7 @@ class IndexingJob:
             checkpoint = repository.get_checkpoint(source.source_id, self.job_id)
             if checkpoint is None and self.is_full_reindex:
                 self._forget_previous_problems(source)
+            self._refine_total(source, connector)
             scan_id = (
                 int(checkpoint["scan_id"]) if checkpoint is not None else repository.next_scan_id()
             )
@@ -336,6 +338,28 @@ class IndexingJob:
         with self.index.db.transaction():
             requeued = self.index.repository.reset_source_problems(source.source_id)
         log.info("job.problems_reset", source_id=source.source_id, requeued=requeued)
+
+    def _prepare_totals(self, sources: list[SourceConfig]) -> None:
+        """Ustala wstepny mianownik postepu z poprzednich przebiegow.
+
+        Liczba dokumentow zapisanych dla zrodla jest darmowa i zwykle bliska
+        prawdy, wiec pasek pokazuje procenty od pierwszej chwili. Zrodlo
+        skanowane pierwszy raz nie ma jeszcze dokumentow i dostanie oszacowanie
+        od konektora tuz przed swoim przebiegiem.
+        """
+        self.snapshot.estimated_total = sum(
+            self.index.repository.count_documents(source.source_id) for source in sources
+        )
+
+    def _refine_total(self, source: SourceConfig, connector: SourceConnector) -> None:
+        """Uzupelnia mianownik postepu dla zrodla bez historii."""
+        if self.index.repository.count_documents(source.source_id):
+            return
+        self._emit("liczenie", f"Liczenie plików w źródle: {source.label}")
+        estimate = connector.estimate_total(cancel=self.control)
+        if estimate:
+            self.snapshot.estimated_total += estimate
+            log.info("job.total_estimated", source_id=source.source_id, estimate=estimate)
 
     def _selected_sources(self) -> list[SourceConfig]:
         wanted = set(self.options.source_ids)

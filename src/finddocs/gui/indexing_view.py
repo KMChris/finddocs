@@ -30,9 +30,10 @@ tam na zawsze. Kazda lista zaczyna sie od zdania, ktore mowi, co na niej jest.
 from __future__ import annotations
 
 import json
+import time
 from collections.abc import Callable
 
-from PySide6.QtCore import QEvent, QObject, Qt, Signal
+from PySide6.QtCore import QEvent, QObject, Qt, QTimer, Signal
 from PySide6.QtWidgets import (
     QFileDialog,
     QGroupBox,
@@ -73,6 +74,20 @@ ERROR_TABLE_LIMIT = 500
 #: Rola danych, w ktorej wiersz tabeli trzyma identyfikator swojego rekordu.
 #: Sortowanie i filtrowanie zmieniaja numery wierszy, identyfikator nie.
 ROW_ID_ROLE = Qt.ItemDataRole.UserRole
+
+#: Co ile milisekund widok przerysowuje postep trwajacego zadania. Wartosc jest
+#: kompromisem: zegar ma isc plynnie, a rysowanie nie moze zajmowac watku
+#: glownego, gdy zadanie zglasza kilkaset dokumentow na sekunde.
+TICK_MS = 250
+
+#: Co ile taktow zegara odswiezamy listy w trakcie zadania. Zbyt czeste
+#: przebudowywanie tabel migaloby, a same listy zmieniaja sie powoli.
+LIST_REFRESH_TICKS = 8
+
+#: Stany, w ktorych czas zadania biegnie dalej miedzy migawkami.
+RUNNING_STATES: frozenset[JobState] = frozenset(
+    {JobState.QUEUED, JobState.RUNNING, JobState.CANCELLING}
+)
 
 #: Pary (klucz, podpis) siatki statystyk. Kolejnosc decyduje o ukladzie.
 STAT_ENTRIES: tuple[tuple[str, str], ...] = (
@@ -116,6 +131,17 @@ class IndexingView(QWidget):
         self.bridge.progress.connect(self._on_progress)
         self.bridge.completed.connect(self._on_completed)
         self._last_state: JobState | None = None
+        # Migawka postepu jest odswiezana z watku zadania po kazdym dokumencie.
+        # Widok trzyma ostatnia i przerysowuje ja zegarem, zamiast reagowac na
+        # kazde zdarzenie: przy setkach malych plikow na sekunde samo rysowanie
+        # zajmowalo watek glowny i interfejs stawal sie ociezaly.
+        self._snapshot: ProgressSnapshot | None = None
+        self._snapshot_at = 0.0
+        self._painted_at = 0.0
+        self._ticks = 0
+        self._ticker = QTimer(self)
+        self._ticker.setInterval(TICK_MS)
+        self._ticker.timeout.connect(self._tick)
 
         root = page_layout(self)
 
@@ -390,6 +416,8 @@ class IndexingView(QWidget):
         if runner.is_running:
             show_info(self, "Indeksowanie już trwa. Poczekaj albo je anuluj.")
             return
+        # Wykonawca odsiewa powtorzenia, wiec zgloszenie przy kazdym zleceniu
+        # nie mnozy odbiorcow migawek.
         runner.on_progress(self.bridge.publish)
         runner.on_completed(self.bridge.publish_completion)
         runner.submit(options)
@@ -535,8 +563,49 @@ class IndexingView(QWidget):
     # --- reakcje na postep ------------------------------------------------
 
     def _on_progress(self, snapshot: object) -> None:
+        """Przyjmuje migawke z watku zadania i pilnuje, zeby zegar chodzil.
+
+        Rysowanie idzie przez ``_paint``, ale nie po kazdej migawce: przy
+        szybkim zbiorze zadanie zglasza kilkaset dokumentow na sekunde, a kazde
+        odswiezenie to komplet etykiet i pasek. Zegar widoku przerysowuje stan
+        cztery razy na sekunde, dzieki czemu interfejs pozostaje zywy takze
+        wtedy, gdy jeden duzy plik przetwarza sie kilka minut bez zadnej migawki.
+        """
         if not isinstance(snapshot, ProgressSnapshot):
             return
+        self._snapshot = snapshot
+        self._snapshot_at = time.monotonic()
+        if not self._ticker.isActive():
+            self._ticks = 0
+            self._ticker.start()
+        if self._snapshot_at - self._painted_at >= TICK_MS / 1000:
+            self._paint(snapshot)
+
+    def _tick(self) -> None:
+        """Takt zegara: przerysowuje ostatnia migawke i co jakis czas listy."""
+        snapshot = self._snapshot
+        if snapshot is None:
+            self._ticker.stop()
+            return
+        self._paint(snapshot)
+        self._ticks += 1
+        if self._ticks % LIST_REFRESH_TICKS == 0:
+            self._refresh_lists_if_changed()
+
+    def _elapsed_seconds(self, snapshot: ProgressSnapshot) -> float:
+        """Czas trwania zadania doliczony do chwili obecnej.
+
+        Migawka niesie czas z chwili jej powstania. Przy dlugim pliku kolejna
+        przychodzi po kilku minutach, a zamrozony licznik wyglada jak zawieszona
+        aplikacja. Zadanie wstrzymane nie nalicza czasu, wiec stoi tez tutaj,
+        tak samo jak zadanie juz zakonczone.
+        """
+        if snapshot.state not in RUNNING_STATES:
+            return snapshot.elapsed_seconds
+        return snapshot.elapsed_seconds + max(0.0, time.monotonic() - self._snapshot_at)
+
+    def _paint(self, snapshot: ProgressSnapshot) -> None:
+        self._painted_at = time.monotonic()
         # Pierwsza migawka zadania odsuwa podsumowanie ostatniego przebiegu
         # i pokazuje karty biezacego postepu.
         if self.progress_box.isHidden():
@@ -547,17 +616,7 @@ class IndexingView(QWidget):
         self.stage_label.setText(f"{snapshot.stage_label} ({state_label})")
         self.header.set_meta(state_label)
 
-        fraction = snapshot.progress_fraction
-        self.progress_hint.setVisible(True)
-        if fraction is None:
-            self.progress_bar.setRange(0, 0)
-            self.progress_hint.setText(i18n.PROGRESS_UNKNOWN)
-        else:
-            self.progress_bar.setRange(0, 100)
-            self.progress_bar.setValue(int(fraction * 100))
-            self.progress_hint.setText(
-                i18n.PROGRESS_APPROXIMATE.format(value=f"{fraction * 100:.1f}%")
-            )
+        self._paint_progress(snapshot)
 
         self.current_file_label.setVisible(bool(snapshot.current_file))
         self.current_file_label.setText(
@@ -573,7 +632,7 @@ class IndexingView(QWidget):
                 "deleted": snapshot.deleted,
                 "ocr_documents": snapshot.ocr_documents,
                 "ocr_pages": snapshot.ocr_pages,
-                "elapsed": i18n.format_duration(snapshot.elapsed_seconds),
+                "elapsed": i18n.format_duration(self._elapsed_seconds(snapshot)),
                 "connection": snapshot.connection_status or i18n.STAT_NONE,
                 "temp": i18n.format_bytes(snapshot.temp_bytes_used),
             }
@@ -583,10 +642,59 @@ class IndexingView(QWidget):
         self._last_state = snapshot.state
         self._refresh_buttons()
 
+    def _paint_progress(self, snapshot: ProgressSnapshot) -> None:
+        """Pasek i zdanie pod nim.
+
+        Dopoki nie wiadomo, ile jest plikow, pasek chodzi bez wartosci. Gdy
+        znany jest mianownik (oszacowanie konektora albo poprzedni przebieg),
+        pasek pokazuje procenty i liczby, a po zakonczeniu wykrywania przestaje
+        byc przyblizeniem.
+        """
+        fraction = snapshot.progress_fraction
+        self.progress_hint.setVisible(True)
+        if fraction is None:
+            self.progress_bar.setRange(0, 0)
+            self.progress_hint.setText(i18n.PROGRESS_UNKNOWN)
+            return
+        self.progress_bar.setRange(0, 100)
+        self.progress_bar.setValue(int(fraction * 100))
+        template = i18n.PROGRESS_EXACT if snapshot.discovery_complete else i18n.PROGRESS_APPROXIMATE
+        self.progress_hint.setText(
+            template.format(
+                value=f"{fraction * 100:.1f}%",
+                done=snapshot.handled,
+                total=snapshot.total_hint,
+            )
+        )
+
+    def _refresh_lists_if_changed(self) -> None:
+        """Odswieza listy w trakcie zadania, gdy liczby wierszy sie zmienily.
+
+        Bez tego pelne przeindeksowanie wygladalo tak, jakby nic nie kasowalo:
+        wpisy znikaja z bazy na starcie zadania, a tabela pokazywala je do
+        samego konca. Przebudowa tabeli bez zmiany liczb bylaby tylko miganiem,
+        wiec najpierw sprawdzamy liczniki.
+        """
+        index = self.context.index
+        if index is None:
+            return
+        try:
+            errors = index.repository.count_errors()
+            problems = index.repository.count_non_searchable(include_pending=False)
+        except Exception as exc:
+            log.warning("gui.list_counts_failed", error_type=type(exc).__name__)
+            return
+        if errors == self.error_table.rowCount() and problems == self.problems_table.rowCount():
+            return
+        self.refresh_tables()
+
     def _on_completed(self, snapshot: object) -> None:
         if not isinstance(snapshot, ProgressSnapshot):
             return
-        self._on_progress(snapshot)
+        self._ticker.stop()
+        self._snapshot = snapshot
+        self._snapshot_at = time.monotonic()
+        self._paint(snapshot)
         self.progress_bar.setRange(0, 100)
         if snapshot.state is JobState.COMPLETED:
             self.progress_bar.setValue(100)

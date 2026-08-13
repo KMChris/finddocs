@@ -17,6 +17,7 @@ import mimetypes
 import os
 import shutil
 import stat
+import time
 from collections.abc import Iterable, Iterator
 from pathlib import Path
 from typing import Any
@@ -46,6 +47,9 @@ CANCEL_CHECK_INTERVAL = 200
 
 MAX_TOP_LEVEL_PROBE = 5000
 """Górny limit zliczania pozycji przy tescie połączenia."""
+
+ESTIMATE_BUDGET_SECONDS = 15.0
+"""Ile czasu wolno poświęcić na policzenie plików przed skanowaniem."""
 
 HIDDEN_ATTRIBUTES = stat.FILE_ATTRIBUTE_HIDDEN | stat.FILE_ATTRIBUTE_SYSTEM
 """Atrybuty Windows uznawane za oznaczenie pozycji ukrytej."""
@@ -322,11 +326,34 @@ class LocalDirectoryConnector(SourceConnector):
         start: int,
         cancel: CancellationToken | None,
     ) -> Iterator[SourceItem]:
+        position = 0
+        for item in self._traverse(root, cancel=cancel):
+            position += 1
+            self._visited = position
+            if position <= start:
+                continue
+            yield item
+
+        self._visited = position
+        self._complete = True
+        log.info("local_dir.scan_finished", source_id=self.source_id, items=position)
+
+    def _traverse(
+        self,
+        root: Path,
+        *,
+        cancel: CancellationToken | None,
+    ) -> Iterator[SourceItem]:
+        """Przechodzi drzewo katalogow i zwraca pozycje przechodzace filtry.
+
+        Kolejnosc jest deterministyczna. Metoda nie zna pojecia pozycji ani
+        wznowienia: tym zajmuje sie ``_walk``. Dzieki temu liczenie plikow
+        na potrzeby postepu uzywa dokladnie tych samych filtrow co skanowanie.
+        """
         library = root.name or str(root)
         stack: list[Path] = [root]
         visited_dirs: set[str] = set()
         examined = 0
-        position = 0
 
         while stack:
             current = stack.pop()
@@ -338,18 +365,31 @@ class LocalDirectoryConnector(SourceConnector):
                 if cancel is not None and examined % CANCEL_CHECK_INTERVAL == 0:
                     cancel.raise_if_cancelled()
                 item = self._inspect(entry, root, library, subdirectories)
-                if item is None:
-                    continue
-                position += 1
-                self._visited = position
-                if position <= start:
-                    continue
-                yield item
+                if item is not None:
+                    yield item
             stack.extend(reversed(subdirectories))
 
-        self._visited = position
-        self._complete = True
-        log.info("local_dir.scan_finished", source_id=self.source_id, items=position)
+    def estimate_total(self, *, cancel: CancellationToken | None = None) -> int | None:
+        """Liczy pliki pasujace do filtrow, zeby postep mial mianownik.
+
+        Przejscie po katalogach bez czytania plikow jest o rzedy wielkosci
+        tansze niz ich przetworzenie, wiec oplaca sie zrobic je raz na poczatku.
+        Na bardzo duzym zasobie samo liczenie tez trwa, dlatego ma budzet czasu:
+        po jego przekroczeniu konektor zwraca None i pasek zostaje nieokreslony.
+        """
+        try:
+            root = self._existing_root()
+        except SourceUnavailableError:
+            return None
+        deadline = time.monotonic() + ESTIMATE_BUDGET_SECONDS
+        total = 0
+        for _item in self._traverse(root, cancel=cancel):
+            total += 1
+            if total % CANCEL_CHECK_INTERVAL == 0 and time.monotonic() > deadline:
+                log.info("local_dir.estimate_abandoned", source_id=self.source_id, counted=total)
+                return None
+        log.info("local_dir.estimate_ready", source_id=self.source_id, total=total)
+        return total
 
     def _first_visit(self, directory: Path, visited: set[str]) -> bool:
         """Zabezpiecza przed petla przy wlaczonym podazaniu za dowiazaniami."""

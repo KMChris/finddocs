@@ -227,6 +227,45 @@ def test_uszkodzony_plik_nie_zatrzymuje_procesu_i_trafia_do_raportu(
     assert index_service.repository.recent_errors()
 
 
+# --- postep ----------------------------------------------------------------------
+
+
+def test_postep_zna_liczbe_plikow_przed_koncem_wykrywania(
+    prepared: tuple[AppConfig, Path],
+    index_service: IndexService,
+    run_job: Callable[..., ProgressSnapshot],
+) -> None:
+    """Bez mianownika pasek postepu chodzi bez wartosci przez cale zadanie."""
+    config, _root = prepared
+    ulamki: list[float | None] = []
+
+    def zapamietaj(snapshot: ProgressSnapshot) -> None:
+        if not snapshot.discovery_complete:
+            ulamki.append(snapshot.progress_fraction)
+
+    snapshot = run_job(config, index_service, on_progress=zapamietaj)
+
+    assert snapshot.estimated_total == len(CORPUS)
+    # Pierwsze zgloszenia sa sprzed policzenia plikow, ale w trakcie
+    # przetwarzania postep jest juz wyrazony ulamkiem.
+    assert any(wartosc is not None for wartosc in ulamki)
+    assert all(0.0 <= wartosc <= 0.99 for wartosc in ulamki if wartosc is not None)
+
+
+def test_kolejny_przebieg_bierze_mianownik_z_poprzedniego(
+    prepared: tuple[AppConfig, Path],
+    index_service: IndexService,
+    run_job: Callable[..., ProgressSnapshot],
+) -> None:
+    """Zrodlo z historia nie musi byc liczone jeszcze raz przed skanowaniem."""
+    config, _root = prepared
+    run_job(config, index_service)
+
+    snapshot = run_job(config, index_service, kind=JobKind.RESCAN)
+
+    assert snapshot.estimated_total == len(CORPUS)
+
+
 # --- slady po nieudanych probach -------------------------------------------------
 
 

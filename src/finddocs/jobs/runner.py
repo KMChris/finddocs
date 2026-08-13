@@ -79,10 +79,19 @@ class JobRunner:
     # --- subskrypcje ------------------------------------------------------
 
     def on_progress(self, callback: ProgressCallback) -> None:
-        self._progress_callbacks.append(callback)
+        """Dopisuje odbiorce postepu. Powtorne zgloszenie tego samego nic nie zmienia.
+
+        Widok zglasza sie przy kazdym zleceniu zadania. Bez odsiewania powtorzen
+        lista rosla z kazdym uruchomieniem, a interfejs dostawal te sama migawke
+        tyle razy, ile zadan zlecono w tej sesji.
+        """
+        if callback not in self._progress_callbacks:
+            self._progress_callbacks.append(callback)
 
     def on_completed(self, callback: CompletionCallback) -> None:
-        self._completion_callbacks.append(callback)
+        """Dopisuje odbiorce zakonczenia. Powtorne zgloszenie tego samego nic nie zmienia."""
+        if callback not in self._completion_callbacks:
+            self._completion_callbacks.append(callback)
 
     # --- cykl zycia -------------------------------------------------------
 

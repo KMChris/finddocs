@@ -350,6 +350,16 @@ i statystyk pojawiają się wraz z uruchomieniem zadania i pokazują:
 Liczba błędów większa od zera jest wyróżniona kolorem błędu; kliknięcie jej
 otwiera listę plików poza indeksem.
 
+Pasek postępu pokazuje procenty, gdy znana jest liczba plików do przejrzenia.
+Przy pierwszym skanowaniu źródła aplikacja liczy pliki przed startem (etap
+**Liczenie plików**), a kolejne przebiegi biorą liczbę z poprzedniego. Dopóki
+wykrywanie trwa, zdanie pod paskiem mówi „postęp przybliżony” i podaje
+oszacowanie; po zakończeniu wykrywania liczby są dokładne. Jeżeli policzenie
+plików trwałoby zbyt długo (bardzo duży zasób sieciowy), pasek pozostaje
+nieokreślony. Czas trwania idzie dalej także wtedy, gdy jeden duży plik
+przetwarza się kilka minut, a listy pod statystykami odświeżają się w trakcie
+pracy.
+
 Przyciski:
 
 | Przycisk | Działanie |

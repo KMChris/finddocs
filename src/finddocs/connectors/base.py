@@ -100,6 +100,17 @@ class SourceConnector(ABC):
     ) -> FetchedFile:
         """Pobiera pojedynczy plik do wskazanego katalogu."""
 
+    def estimate_total(self, *, cancel: CancellationToken | None = None) -> int | None:
+        """Szacowana liczba plikow w zrodle albo None, gdy policzenie jest za drogie.
+
+        Enumeracja jest leniwa, wiec pelna liczba plikow jest znana dopiero na
+        koncu skanowania. Bez zadnego mianownika pasek postepu przez caly czas
+        pokazuje ruch bez wartosci. Konektor, ktory potrafi policzyc pozycje
+        taniej niz je przetworzyc, podaje tu oszacowanie; pozostale zwracaja
+        None i pasek zostaje nieokreslony.
+        """
+        return None
+
     def cursor(self) -> ScanCursor:
         """Biezaca pozycja enumeracji."""
         return ScanCursor()

@@ -586,15 +586,45 @@ class ProgressSnapshot:
     discovery_complete: bool = False
     """Gdy False, liczba wykrytych plików jest jeszcze niepełna."""
 
+    estimated_total: int = 0
+    """Szacowana liczba plików w źródłach zadania; 0 oznacza brak oszacowania."""
+
     message: str | None = None
 
     @property
+    def handled(self) -> int:
+        """Liczba plikow, ktore maja juz swoj wynik."""
+        return self.processed + self.skipped + self.failed + self.unchanged
+
+    @property
+    def total_hint(self) -> int:
+        """Mianownik postepu: pewny po zakonczeniu wykrywania, wczesniej szacowany.
+
+        Bez oszacowania mianownika nie ma. Liczba plikow wykrytych do tej pory
+        sie do tego nie nadaje: rosnie razem z licznikiem, wiec pasek staby
+        w miejscu i klamal, ze koniec jest blisko.
+        """
+        if self.discovery_complete:
+            return self.discovered
+        if self.estimated_total <= 0:
+            return 0
+        return max(self.estimated_total, self.discovered)
+
+    @property
     def progress_fraction(self) -> float | None:
-        """Ulamek postepu albo None, gdy nie da sie go wiarygodnie oszacowac."""
-        if not self.discovery_complete or self.discovered <= 0:
+        """Ulamek postepu albo None, gdy nie da sie go wiarygodnie oszacowac.
+
+        Po zakonczeniu wykrywania mianownik jest pewny i ulamek moze dojsc do
+        jedynki. Wczesniej liczy sie wzgledem oszacowania, wiec konczy sie na
+        99 procentach: pasek pelny przy trwajacej pracy bylby nieprawda.
+        """
+        total = self.total_hint
+        if total <= 0:
             return None
-        done = self.processed + self.skipped + self.failed + self.unchanged
-        return min(1.0, done / self.discovered)
+        fraction = self.handled / total
+        if self.discovery_complete:
+            return min(1.0, fraction)
+        return min(0.99, fraction)
 
 
 @dataclass(slots=True)

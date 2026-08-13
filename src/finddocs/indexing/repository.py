@@ -697,6 +697,10 @@ class Repository:
             (limit,),
         )
 
+    def count_errors(self) -> int:
+        """Liczba wpisow dziennika. Tania kontrola, czy lista sie zmienila."""
+        return int(self.db.query_scalar("SELECT COUNT(*) FROM error_log", (), 0))
+
     def error_counts(self) -> dict[str, int]:
         rows = self.db.query_all("SELECT code, COUNT(*) AS n FROM error_log GROUP BY code")
         return {str(r["code"]): int(r["n"]) for r in rows}
@@ -865,6 +869,19 @@ class Repository:
         )
         return {str(r["status"]): int(r["n"]) for r in rows}
 
+    def count_documents(self, source_id: str | None = None) -> int:
+        """Liczba dokumentow zrodla wykrytych w poprzednich skanowaniach.
+
+        Zalaczniki i wpisy archiwow sa pomijane: konektor ich nie wylicza, wiec
+        nie naleza do mianownika postepu.
+        """
+        sql = "SELECT COUNT(*) FROM documents WHERE attachment_of IS NULL"
+        params: list[Any] = []
+        if source_id is not None:
+            sql += " AND source_id = ?"
+            params.append(source_id)
+        return int(self.db.query_scalar(sql, params, 0))
+
     def extension_counts(self) -> dict[str, int]:
         rows = self.db.query_all(
             "SELECT extension, COUNT(*) AS n FROM documents GROUP BY extension ORDER BY n DESC",
@@ -923,6 +940,15 @@ class Repository:
             )
             for r in rows
         ]
+
+    def count_non_searchable(self, *, include_pending: bool = True) -> int:
+        """Liczba dokumentow poza indeksem, bez budowania calej listy."""
+        sql = "SELECT COUNT(*) FROM documents WHERE status NOT IN ('indexed', 'partial')"
+        params: list[Any] = []
+        if not include_pending:
+            sql += " AND status <> ?"
+            params.append(DocumentStatus.PENDING.value)
+        return int(self.db.query_scalar(sql, params, 0))
 
     def distinct_values(self, column: str, limit: int = 500) -> list[str]:
         """Unikalne wartosci kolumny dokumentu, uzywane do wypelnienia filtrow."""
