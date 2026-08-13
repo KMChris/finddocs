@@ -166,6 +166,10 @@ class IndexingJob:
             self._salvage_embedding_buffer()
             self._finish(JobState.FAILED, f"Nieoczekiwany błąd zadania: {type(exc).__name__}.")
         finally:
+            if self._batcher is not None:
+                # Kazda sciezka wyjscia ma juz za soba flush albo discard,
+                # wiec zostaje samo zakonczenie watku liczacego.
+                self._batcher.close()
             if self._workspace is not None:
                 shutil.rmtree(self._workspace, ignore_errors=True)
             self.index.writer.flush(force=True)
