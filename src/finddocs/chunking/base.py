@@ -11,6 +11,7 @@ from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 
 from finddocs.normalization.pipeline import normalize
+from finddocs.normalization.text import clean_text
 from finddocs.types import Chunk, ExtractedSection, TextOrigin
 
 
@@ -70,10 +71,17 @@ def build_chunk(
     char_start: int = 0,
     char_end: int = 0,
 ) -> Chunk:
-    """Tworzy fragment wraz z wszystkimi reprezentacjami wyszukiwawczymi."""
+    """Tworzy fragment wraz z wszystkimi reprezentacjami wyszukiwawczymi.
+
+    Pola wyszukiwawcze obejmuja naglowek sekcji, a tekst pokazywany
+    uzytkownikowi nie. Bez naglowka obie postacie pochodza z tego samego
+    przebiegu potoku; z naglowkiem wystarczy samo czyszczenie tekstu, bo
+    ``display`` z potoku to dokladnie ``clean_text``. Wczesniej byl tu drugi
+    pelny przebieg normalizacji, ktorego wynik poza jednym polem szedl do kosza.
+    """
     header_prefix = f"{heading}\n" if heading else ""
     normalized = normalize(header_prefix + text)
-    display = normalize(text).display
+    display = clean_text(text) if header_prefix else normalized.display
     return Chunk(
         ordinal=ordinal,
         text=display,

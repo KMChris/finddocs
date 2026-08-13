@@ -67,6 +67,34 @@ _PUNCTUATION_MAP: dict[str, str | int | None] = {
     " ": "\n",
 }
 
+#: Tablice dla ``str.translate`` skladane raz przy imporcie. Wczesniej kazde
+#: wywolanie budowalo tablice od nowa, choc mapy sa stale.
+_SPECIAL_FOLD_TABLE = str.maketrans(SPECIAL_FOLD)
+_PUNCTUATION_TABLE = str.maketrans(_PUNCTUATION_MAP)
+
+
+class _CombiningTable(dict[int, int | None]):
+    """Tablica dla ``str.translate``: usuwa znaki laczace, reszte zostawia.
+
+    Skladanie znakow po rozkladzie NFKD to filtrowanie znak po znaku. Wykonane
+    w Pythonie kosztowalo jedno wywolanie ``unicodedata.combining`` na znak
+    tekstu. Tutaj decyzja zapada raz na punkt kodowy i zostaje zapamietana,
+    a samo przejscie po tekscie robi ``str.translate`` w C.
+
+    Slownik rosnie tylko o punkty kodowe faktycznie spotkane w dokumentach,
+    wiec zajmuje setki wpisow, nie caly repertuar Unicode. Wartosc jest
+    wyliczana z samego punktu kodowego, wiec rownolegle wejscie dwoch watkow
+    daje ten sam wynik.
+    """
+
+    def __missing__(self, code: int) -> int | None:
+        value = None if unicodedata.combining(chr(code)) else code
+        self[code] = value
+        return value
+
+
+_COMBINING_TABLE = _CombiningTable()
+
 _CONTROL_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 _MULTI_SPACE_RE = re.compile(r"[ \t\f\r]+")
 _MULTI_NEWLINE_RE = re.compile(r"\n{3,}")
@@ -100,8 +128,11 @@ def normalize_unicode(text: str) -> str:
     if not text:
         return ""
     out = unicodedata.normalize("NFC", text)
+    # Sprawdzenie idzie po mapie, nie po tekscie: kilkanascie szukan podnapisu
+    # w C jest tansze niz przepisanie calego tekstu znak po znaku przez
+    # ``translate`` (zmierzone: 0,009 ms wobec 0,072 ms na 3 kB).
     if any(ch in out for ch in _PUNCTUATION_MAP):
-        out = out.translate(str.maketrans(_PUNCTUATION_MAP))
+        out = out.translate(_PUNCTUATION_TABLE)
     return _CONTROL_RE.sub(" ", out)
 
 
@@ -134,13 +165,19 @@ def fold_diacritics(text: str) -> str:
 
     Obsluguje polskie ``ł``, ktorego rozklad NFKD nie usuwa, bo nie jest to
     znak laczony tylko osobna litera alfabetu.
+
+    Tekst czysto ASCII wraca bez zmian od razu: nie ma w nim ani znakow z mapy
+    (wszystkie sa spoza ASCII), ani znakow laczacych, a NFKD go nie rusza.
+    Wiekszosc fragmentow tabel i zestawien to wlasnie taki tekst.
     """
-    if not text:
-        return ""
-    if any(ch in SPECIAL_FOLD for ch in text):
-        text = text.translate(str.maketrans(SPECIAL_FOLD))
+    if not text or text.isascii():
+        return text
+    # Petla idzie po mapie, nie po tekscie: kilkanascie szukan podnapisu w C
+    # zamiast wywolania na kazdy znak fragmentu.
+    if any(ch in text for ch in SPECIAL_FOLD):
+        text = text.translate(_SPECIAL_FOLD_TABLE)
     decomposed = unicodedata.normalize("NFKD", text)
-    return "".join(ch for ch in decomposed if not unicodedata.combining(ch))
+    return decomposed.translate(_COMBINING_TABLE)
 
 
 def fold_for_search(text: str) -> str:

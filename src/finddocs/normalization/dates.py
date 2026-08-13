@@ -143,11 +143,16 @@ def _expand_two_digit_year(value: int) -> int:
     return 2000 + value if value < TWO_DIGIT_PIVOT else 1900 + value
 
 
-def find_dates(text: str) -> list[DateMatch]:
-    """Znajduje wszystkie daty w tekscie. Zwraca liste posortowana po pozycji."""
+def find_dates(text: str, *, folded: str | None = None) -> list[DateMatch]:
+    """Znajduje wszystkie daty w tekscie. Zwraca liste posortowana po pozycji.
+
+    ``folded`` przyjmuje gotowa postac zlozona TEGO SAMEGO tekstu. Potok
+    normalizacji sklada fragment raz i podaje wynik wszystkim detektorom;
+    bez tego ten sam fragment byl skladany cztery razy przy kazdym zapisie.
+    """
     if not text:
         return []
-    folded = fold_diacritics(text).lower()
+    folded = (fold_diacritics(text) if folded is None else folded).lower()
     found: list[DateMatch] = []
     occupied: list[tuple[int, int]] = []
 
@@ -187,10 +192,10 @@ def find_dates(text: str) -> list[DateMatch]:
     return found
 
 
-def date_tokens(text: str) -> list[str]:
+def date_tokens(text: str, *, folded: str | None = None) -> list[str]:
     """Tokeny dat do zapisania w polu wyszukiwawczym."""
     tokens: list[str] = []
-    for match in find_dates(text):
+    for match in find_dates(text, folded=folded):
         tokens.append(match.token)
         if match.precision == "day":
             tokens.append(f"{MONTH_TOKEN_PREFIX}{match.value.year:04d}{match.value.month:02d}")

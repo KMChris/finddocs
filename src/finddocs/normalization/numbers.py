@@ -144,10 +144,14 @@ def normalize_amount(integer_part: str, fraction_part: str | None) -> str | None
     return str(int(value))
 
 
-def find_amounts(text: str) -> list[NumberMatch]:
-    """Znajduje kwoty z jawna waluta."""
+def find_amounts(text: str, *, folded: str | None = None) -> list[NumberMatch]:
+    """Znajduje kwoty z jawna waluta.
+
+    ``folded`` przyjmuje gotowa postac zlozona TEGO SAMEGO tekstu, zeby potok
+    normalizacji nie skladal jednego fragmentu kilka razy.
+    """
     results: list[NumberMatch] = []
-    folded = fold_diacritics(text)
+    folded = fold_diacritics(text) if folded is None else folded
     for match in _AMOUNT_RE.finditer(folded):
         grosze = normalize_amount(match.group(1), match.group(2))
         if grosze is None:
@@ -245,10 +249,13 @@ def find_official_numbers(text: str) -> list[NumberMatch]:
     return results
 
 
-def find_identifiers(text: str) -> list[NumberMatch]:
-    """Znajduje identyfikatory alfanumeryczne, np. FV/2015/07/123 albo ABC-12345."""
+def find_identifiers(text: str, *, folded: str | None = None) -> list[NumberMatch]:
+    """Znajduje identyfikatory alfanumeryczne, np. FV/2015/07/123 albo ABC-12345.
+
+    ``folded`` przyjmuje gotowa postac zlozona TEGO SAMEGO tekstu.
+    """
     results: list[NumberMatch] = []
-    folded = fold_diacritics(text)
+    folded = fold_diacritics(text) if folded is None else folded
     for match in _IDENTIFIER_RE.finditer(folded):
         raw = match.group(1)
         compact = re.sub(r"[^0-9A-Za-z]", "", raw).lower()
@@ -266,16 +273,20 @@ def find_identifiers(text: str) -> list[NumberMatch]:
     return results
 
 
-def find_all(text: str) -> list[NumberMatch]:
-    """Uruchamia wszystkie detektory i zwraca posortowana liste bez duplikatow tokenow."""
+def find_all(text: str, *, folded: str | None = None) -> list[NumberMatch]:
+    """Uruchamia wszystkie detektory i zwraca posortowana liste bez duplikatow tokenow.
+
+    ``folded`` przyjmuje gotowa postac zlozona TEGO SAMEGO tekstu i jest
+    przekazywana detektorom, ktore jej potrzebuja.
+    """
     if not text:
         return []
     matches: list[NumberMatch] = []
     matches.extend(find_official_numbers(text))
     matches.extend(find_ibans(text))
-    matches.extend(find_amounts(text))
+    matches.extend(find_amounts(text, folded=folded))
     matches.extend(find_digit_sequences(text))
-    matches.extend(find_identifiers(text))
+    matches.extend(find_identifiers(text, folded=folded))
     seen: set[str] = set()
     unique: list[NumberMatch] = []
     for match in sorted(matches, key=lambda m: (m.span[0], -len(m.token))):
@@ -286,9 +297,9 @@ def find_all(text: str) -> list[NumberMatch]:
     return unique
 
 
-def number_tokens(text: str) -> list[str]:
+def number_tokens(text: str, *, folded: str | None = None) -> list[str]:
     """Same tokeny, w kolejnosci wystapienia."""
-    return [m.token for m in find_all(text)]
+    return [m.token for m in find_all(text, folded=folded)]
 
 
 def account_token(value: str) -> str | None:

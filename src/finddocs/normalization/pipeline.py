@@ -18,7 +18,7 @@ from finddocs.normalization.dates import date_tokens
 from finddocs.normalization.numbers import number_tokens
 from finddocs.normalization.text import (
     clean_text,
-    fold_for_search,
+    fold_diacritics,
     search_form,
 )
 from finddocs.version import NORMALIZATION_VERSION
@@ -42,18 +42,27 @@ class NormalizedText:
 
 
 def normalize(text: str, *, extract_tokens: bool = True) -> NormalizedText:
-    """Przetwarza tekst przez pelny potok normalizacji."""
+    """Przetwarza tekst przez pelny potok normalizacji.
+
+    Skladanie znakow diakrytycznych dzieje sie raz, a wynik dostaja wszyscy,
+    ktorzy go potrzebuja: pole ``folded`` i detektory tokenow. Wczesniej kazdy
+    z nich skladal ten sam fragment od nowa.
+    """
     display = clean_text(text)
     if not display:
         return NormalizedText(display="", search="", folded="", tokens=[])
 
     search = search_form(display)
-    folded = fold_for_search(display)
+    base = fold_diacritics(display)
+    folded = base.casefold()
 
     tokens: list[str] = []
     if extract_tokens:
         seen: set[str] = set()
-        for token in (*date_tokens(display), *number_tokens(display)):
+        for token in (
+            *date_tokens(display, folded=base),
+            *number_tokens(display, folded=base),
+        ):
             if token in seen:
                 continue
             seen.add(token)
