@@ -587,7 +587,13 @@ class ProgressSnapshot:
     """Gdy False, liczba wykrytych plików jest jeszcze niepełna."""
 
     estimated_total: int = 0
-    """Szacowana liczba plików w źródłach zadania; 0 oznacza brak oszacowania."""
+    """Policzona albo szacowana liczba plików w źródłach; 0 oznacza brak liczby."""
+
+    source_index: int = 0
+    """Numer przetwarzanego źródła, licząc od jednego."""
+
+    source_count: int = 0
+    """Liczba źródeł objętych zadaniem."""
 
     message: str | None = None
 

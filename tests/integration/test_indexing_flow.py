@@ -9,11 +9,12 @@ from __future__ import annotations
 
 import os
 from collections.abc import Callable
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
 
-from finddocs.config import AppConfig
+from finddocs.config import AppConfig, LocalDirSourceSettings
 from finddocs.indexing.repository import Repository
 from finddocs.indexing.service import IndexService
 from finddocs.jobs.control import JobControl
@@ -252,18 +253,55 @@ def test_postep_zna_liczbe_plikow_przed_koncem_wykrywania(
     assert all(0.0 <= wartosc <= 0.99 for wartosc in ulamki if wartosc is not None)
 
 
-def test_kolejny_przebieg_bierze_mianownik_z_poprzedniego(
+def test_kazdy_przebieg_liczy_pliki_od_nowa(
     prepared: tuple[AppConfig, Path],
     index_service: IndexService,
     run_job: Callable[..., ProgressSnapshot],
 ) -> None:
-    """Zrodlo z historia nie musi byc liczone jeszcze raz przed skanowaniem."""
-    config, _root = prepared
+    """Mianownik pochodzi z policzenia zrodla, nie z liczby dokumentow w bazie.
+
+    Liczba z poprzedniego przebiegu bywa mocno za mala. Gdy licznik
+    przetworzonych ja przekroczy, pasek staje na koncu skali i zostaje tam do
+    konca zadania, czyli mowi ,,prawie gotowe'' przez wieksza czesc pracy.
+    """
+    config, root = prepared
     run_job(config, index_service)
+    for numer in range(5):
+        (root / f"dopisany-{numer}.txt").write_text(
+            f"Notatka dopisana po pierwszym indeksowaniu, numer {numer}.\n", encoding="utf-8"
+        )
 
     snapshot = run_job(config, index_service, kind=JobKind.RESCAN)
 
-    assert snapshot.estimated_total == len(CORPUS)
+    assert snapshot.estimated_total == len(CORPUS) + 5
+    assert snapshot.discovered == len(CORPUS) + 5
+
+
+def test_postep_mowi_ktore_zrodlo_z_ilu(
+    indexing_config: Callable[..., AppConfig],
+    index_service: IndexService,
+    run_job: Callable[..., ProgressSnapshot],
+    tmp_path: Path,
+) -> None:
+    """Przy kilku zrodlach same liczniki plikow nie mowia, ile pracy zostalo."""
+    pierwszy = write_corpus(tmp_path / "pierwsze", CORPUS)
+    drugi = write_corpus(tmp_path / "drugie", {"delta.txt": "Notatka czwarta.\n"})
+    config = indexing_config(pierwszy)
+    config.sources.append(replace(config.sources[0], source_id="drugie", label="Drugie źródło"))
+    config.sources[1].local = LocalDirSourceSettings(root_path=str(drugi))
+    pozycje: list[tuple[int, int]] = []
+
+    snapshot = run_job(
+        config,
+        index_service,
+        on_progress=lambda s: pozycje.append((s.source_index, s.source_count)),
+    )
+
+    assert snapshot.source_count == 2
+    assert snapshot.source_index == 2
+    assert (1, 2) in pozycje
+    assert (2, 2) in pozycje
+    assert snapshot.estimated_total == len(CORPUS) + 1
 
 
 # --- slady po nieudanych probach -------------------------------------------------

@@ -553,6 +553,10 @@ STAT_DELETED = "Usunięte ze źródła"
 STAT_OCR = "Pliki z OCR"
 STAT_OCR_PAGES = "Strony OCR"
 STAT_CURRENT = "Przetwarzany plik"
+STAT_SOURCES = "Źródła"
+#: Ktore zrodlo z ilu jest przetwarzane. Zadanie idzie po zrodlach po kolei,
+#: a same liczniki plikow nie mowia, ile pracy jeszcze przed nami.
+STAT_SOURCE_POSITION = "{index} z {count}"
 STAT_ELAPSED = "Czas trwania"
 STAT_CONNECTION = "Połączenie"
 STAT_TEMP = "Przestrzeń tymczasowa"

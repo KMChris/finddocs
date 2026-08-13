@@ -99,6 +99,7 @@ STAT_ENTRIES: tuple[tuple[str, str], ...] = (
     ("deleted", i18n.STAT_DELETED),
     ("ocr_documents", i18n.STAT_OCR),
     ("ocr_pages", i18n.STAT_OCR_PAGES),
+    ("sources", i18n.STAT_SOURCES),
     ("elapsed", i18n.STAT_ELAPSED),
     ("connection", i18n.STAT_CONNECTION),
     ("temp", i18n.STAT_TEMP),
@@ -115,7 +116,17 @@ def idle_stats() -> dict[str, str]:
     values["elapsed"] = i18n.format_duration(0)
     values["connection"] = i18n.STAT_NONE
     values["temp"] = i18n.format_bytes(0)
+    values["sources"] = i18n.STAT_NONE
     return values
+
+
+def source_position(snapshot: ProgressSnapshot) -> str:
+    """Ktore zrodlo z ilu jest przetwarzane, np. ,,1 z 2''."""
+    if snapshot.source_count <= 0:
+        return i18n.STAT_NONE
+    return i18n.STAT_SOURCE_POSITION.format(
+        index=max(1, snapshot.source_index), count=snapshot.source_count
+    )
 
 
 class IndexingView(QWidget):
@@ -632,6 +643,7 @@ class IndexingView(QWidget):
                 "deleted": snapshot.deleted,
                 "ocr_documents": snapshot.ocr_documents,
                 "ocr_pages": snapshot.ocr_pages,
+                "sources": source_position(snapshot),
                 "elapsed": i18n.format_duration(self._elapsed_seconds(snapshot)),
                 "connection": snapshot.connection_status or i18n.STAT_NONE,
                 "temp": i18n.format_bytes(snapshot.temp_bytes_used),
@@ -833,4 +845,11 @@ class IndexingView(QWidget):
         self.clear_errors_button.setEnabled(not running and self.error_table.rowCount() > 0)
 
 
-__all__ = ["ERROR_TABLE_LIMIT", "ROW_ID_ROLE", "STAT_ENTRIES", "IndexingView", "idle_stats"]
+__all__ = [
+    "ERROR_TABLE_LIMIT",
+    "ROW_ID_ROLE",
+    "STAT_ENTRIES",
+    "IndexingView",
+    "idle_stats",
+    "source_position",
+]

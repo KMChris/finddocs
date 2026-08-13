@@ -146,8 +146,9 @@ class IndexingJob:
         self._prepare_totals(sources)
         self._workspace = self.paths.new_temp_workspace(prefix=f"{self.job_id}-")
         try:
-            for source in sources:
+            for position, source in enumerate(sources, start=1):
                 self.control.checkpoint()
+                self.snapshot.source_index = position
                 self._run_source(source)
             self._finish(JobState.COMPLETED)
         except JobCancelledError:
@@ -342,24 +343,34 @@ class IndexingJob:
     def _prepare_totals(self, sources: list[SourceConfig]) -> None:
         """Ustala wstepny mianownik postepu z poprzednich przebiegow.
 
-        Liczba dokumentow zapisanych dla zrodla jest darmowa i zwykle bliska
-        prawdy, wiec pasek pokazuje procenty od pierwszej chwili. Zrodlo
-        skanowane pierwszy raz nie ma jeszcze dokumentow i dostanie oszacowanie
-        od konektora tuz przed swoim przebiegiem.
+        Liczba dokumentow zapisanych dla zrodla jest darmowa, wiec zaraz po
+        starcie pasek ma z czym porownywac takze te zrodla, ktorych jeszcze nie
+        przeliczono. Kazde zrodlo podmienia swoja czesc na policzona, gdy
+        przychodzi jego kolej.
         """
+        self.snapshot.source_count = len(sources)
         self.snapshot.estimated_total = sum(
             self.index.repository.count_documents(source.source_id) for source in sources
         )
 
     def _refine_total(self, source: SourceConfig, connector: SourceConnector) -> None:
-        """Uzupelnia mianownik postepu dla zrodla bez historii."""
-        if self.index.repository.count_documents(source.source_id):
-            return
+        """Liczy pliki w zrodle przed jego przetwarzaniem.
+
+        Mianownik z poprzedniego przebiegu bywa mocno nieaktualny, a gdy jest
+        za maly, licznik przetworzonych dogania go po kilku plikach i pasek
+        stoi na koncu skali przez cale zadanie. Dlatego zrodlo jest najpierw
+        przeliczane, a dopiero potem przetwarzane. Konektor, ktory nie potrafi
+        policzyc pozycji taniej niz je pobrac (SharePoint), zwraca None i
+        zostaje przy liczbie z poprzedniego przebiegu.
+        """
+        previous = self.index.repository.count_documents(source.source_id)
         self._emit("liczenie", f"Liczenie plików w źródle: {source.label}")
-        estimate = connector.estimate_total(cancel=self.control)
-        if estimate:
-            self.snapshot.estimated_total += estimate
-            log.info("job.total_estimated", source_id=source.source_id, estimate=estimate)
+        counted = connector.estimate_total(cancel=self.control)
+        if counted is None:
+            log.info("job.total_not_counted", source_id=source.source_id, previous=previous)
+            return
+        self.snapshot.estimated_total += counted - previous
+        log.info("job.total_counted", source_id=source.source_id, counted=counted)
 
     def _selected_sources(self) -> list[SourceConfig]:
         wanted = set(self.options.source_ids)

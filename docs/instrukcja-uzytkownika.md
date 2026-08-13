@@ -350,15 +350,20 @@ i statystyk pojawiają się wraz z uruchomieniem zadania i pokazują:
 Liczba błędów większa od zera jest wyróżniona kolorem błędu; kliknięcie jej
 otwiera listę plików poza indeksem.
 
-Pasek postępu pokazuje procenty, gdy znana jest liczba plików do przejrzenia.
-Przy pierwszym skanowaniu źródła aplikacja liczy pliki przed startem (etap
-**Liczenie plików**), a kolejne przebiegi biorą liczbę z poprzedniego. Dopóki
-wykrywanie trwa, zdanie pod paskiem mówi „postęp przybliżony” i podaje
-oszacowanie; po zakończeniu wykrywania liczby są dokładne. Jeżeli policzenie
-plików trwałoby zbyt długo (bardzo duży zasób sieciowy), pasek pozostaje
-nieokreślony. Czas trwania idzie dalej także wtedy, gdy jeden duży plik
-przetwarza się kilka minut, a listy pod statystykami odświeżają się w trakcie
-pracy.
+Każde źródło jest najpierw przeliczane, a dopiero potem przetwarzane: na etapie
+**Liczenie plików** aplikacja przechodzi po katalogu i ustala, ile plików obejmie
+praca. Dzięki temu pasek postępu pokazuje procenty i liczby („55,1% (221 z około
+401 plików)”), a nie samą animację. Dopóki wykrywanie trwa, postęp jest opisany
+jako przybliżony i zatrzymuje się na 99%; po jego zakończeniu liczby są dokładne.
+Statystyka **Źródła** mówi, które źródło z ilu jest właśnie przetwarzane.
+
+Źródła SharePoint nie dają się policzyć taniej niż przejrzeć, więc dla nich
+mianownikiem jest liczba dokumentów z poprzedniego przebiegu, a przy pierwszym
+skanowaniu pasek pozostaje nieokreślony. Tak samo dzieje się, gdy liczenie
+bardzo dużego zasobu przekroczy budżet czasu.
+
+Czas trwania idzie dalej także wtedy, gdy jeden duży plik przetwarza się kilka
+minut, a listy pod statystykami odświeżają się w trakcie pracy.
 
 Przyciski:
 

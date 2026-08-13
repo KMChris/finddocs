@@ -10,7 +10,12 @@ from PySide6.QtWidgets import QMessageBox
 
 from finddocs.gui import i18n
 from finddocs.gui.context import AppContext
-from finddocs.gui.indexing_view import LIST_REFRESH_TICKS, ROW_ID_ROLE, IndexingView
+from finddocs.gui.indexing_view import (
+    LIST_REFRESH_TICKS,
+    ROW_ID_ROLE,
+    IndexingView,
+    idle_stats,
+)
 from finddocs.jobs.indexing_job import JobOptions
 from finddocs.types import DocumentStatus, JobKind, JobState, ProgressSnapshot
 
@@ -380,6 +385,21 @@ def test_oszacowanie_daje_procenty_przed_koncem_wykrywania(
     assert indexing_view.progress_hint.text() == i18n.PROGRESS_APPROXIMATE.format(
         value="25.0%", done=10, total=40
     )
+
+
+@pytest.mark.gui
+def test_statystyki_mowia_ktore_zrodlo_z_ilu(indexing_view: IndexingView) -> None:
+    """Przy kilku zrodlach same liczby plikow nie mowia, ile pracy zostalo."""
+    _publish(indexing_view, _snapshot(source_index=1, source_count=2))
+
+    assert indexing_view._stat_labels["sources"].text() == "1 z 2"
+
+
+@pytest.mark.gui
+def test_bez_zadania_liczba_zrodel_nie_jest_zerem(indexing_view: IndexingView) -> None:
+    """,,Zrodla: 0'' nic nie znaczy, tak samo jak polaczenie rowne zeru."""
+    assert idle_stats()["sources"] == i18n.STAT_NONE
+    assert indexing_view._stat_labels["sources"].text() == i18n.STAT_NONE
 
 
 @pytest.mark.gui
