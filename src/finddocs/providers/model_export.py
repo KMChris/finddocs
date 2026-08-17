@@ -2,8 +2,8 @@
 
 Modul ma dwa zastosowania:
 
-1. ``finddocs model import`` konwertuje checkpoint na stacji administratora,
-   jesli srodowisko ma zainstalowany dodatek ``finddocs[export]``.
+1. ``run.py model import`` konwertuje checkpoint na stacji administratora,
+   jesli srodowisko ma pakiety z pliku ``requirements-export.txt``.
 2. Skrypt ``tools/export_model_onnx.py`` laduje ten plik bezposrednio po sciezce
    (bez importu pakietu ``finddocs.providers``), zeby dzialac takze w srodowisku
    deweloperskim, ktore ma torch, ale nie ma zaleznosci uruchomieniowych aplikacji.
@@ -30,7 +30,7 @@ from finddocs.errors import ModelNotAvailableError
 
 DEFAULT_OPSET = 14
 
-#: Pakiety wymagane do konwersji checkpointu. Instaluje je dodatek finddocs[export].
+#: Pakiety wymagane do konwersji checkpointu. Instaluje je requirements-export.txt.
 EXPORT_PACKAGES: tuple[str, ...] = ("torch", "transformers", "onnx")
 
 #: Pliki tokenizera i konfiguracji kopiowane obok modelu ONNX.
@@ -219,7 +219,7 @@ def convert_checkpoint(
 ) -> ConversionResult:
     """Konwertuje checkpoint HuggingFace do ONNX w katalogu docelowym.
 
-    Wymaga pakietow z dodatku ``finddocs[export]`` (torch, transformers, onnx).
+    Wymaga pakietow z ``requirements-export.txt`` (torch, transformers, onnx).
     Przy ``quantize`` zapisuje wariant INT8, a plik FP32 zostawia tylko przy
     ``keep_fp32``. Manifest zapisuje osobno funkcja :func:`write_manifest`.
     """
@@ -228,7 +228,7 @@ def convert_checkpoint(
     if missing:
         raise ModelNotAvailableError(
             "Konwersja modelu do ONNX wymaga pakietów: " + ", ".join(missing) + ". "
-            'Zainstaluj je poleceniem: pip install "finddocs[export]".',
+            "Zainstaluj je poleceniem: pip install -r requirements-export.txt.",
             details={"brakujace": missing},
         )
 

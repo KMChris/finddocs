@@ -3,15 +3,16 @@ venv/
 models/
 __pycache__/
 *.py[cod]
+# Pozostalosci po poprzednim sposobie dystrybucji: katalogi wynikowe
+# setuptools i PyInstallera. Nic w repozytorium ich juz nie tworzy.
 *.egg-info/
 build/
 dist/
+packaging/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
 .coverage
 htmlcov/
-packaging/output/
-packaging/build/
 tests/data/generated/
 .artifacts/

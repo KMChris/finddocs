@@ -26,7 +26,7 @@ używa niezgodnej części indeksu i nie udaje, że wyniki są kompletne.
 ## Kopia zapasowa
 
 ```bash
-finddocs maintenance backup
+python run.py maintenance backup
 ```
 
 Kopia trafia do `%LOCALAPPDATA%\FindDocs\backup\index-RRRRMMDD-GGMMSS`.
@@ -37,7 +37,7 @@ pracę kodem `FD-1002` zamiast tworzyć niepełną kopię.
 Lista kopii:
 
 ```bash
-finddocs maintenance list-backups
+python run.py maintenance list-backups
 ```
 
 Kopie nie są usuwane automatycznie. Stare katalogi kasuje się ręcznie.
@@ -48,7 +48,7 @@ zawiera treść dokumentów, więc przechowuj ją tam, gdzie same dokumenty.
 ## Przywracanie kopii
 
 ```bash
-finddocs maintenance restore --name index-20260731-183000
+python run.py maintenance restore --name index-20260731-183000
 ```
 
 Bieżący indeks nie jest kasowany: trafia do
@@ -60,7 +60,7 @@ Aplikacja musi być zamknięta w trakcie przywracania.
 ## Kompaktacja
 
 ```bash
-finddocs maintenance compact
+python run.py maintenance compact
 ```
 
 Co robi:
@@ -74,7 +74,7 @@ Skasowany dokument zostawia po sobie nagrobek: wektor fizycznie zostaje
 w pliku, ale jest pomijany przy wyszukiwaniu. Po wielu cyklach indeksowania
 nagrobki zajmują miejsce i spowalniają wyszukiwanie.
 
-Kiedy uruchamiać: raz w miesiącu albo gdy `finddocs maintenance check` pokaże
+Kiedy uruchamiać: raz w miesiącu albo gdy `python run.py maintenance check` pokaże
 dużą liczbę nagrobków w stosunku do liczby wektorów.
 
 Operacja wymaga miejsca na tymczasową kopię indeksu wektorowego.
@@ -85,16 +85,16 @@ Przebudowa nie kasuje indeksu. Oznacza dokumenty do ponownego przetworzenia,
 a właściwą pracę wykonuje zwykłe indeksowanie:
 
 ```bash
-finddocs maintenance backup
-finddocs maintenance rebuild
-finddocs index
+python run.py maintenance backup
+python run.py maintenance rebuild
+python run.py index
 ```
 
 Tylko część semantyczna:
 
 ```bash
-finddocs maintenance rebuild --vectors-only
-finddocs index
+python run.py maintenance rebuild --vectors-only
+python run.py index
 ```
 
 `--vectors-only` zostawia indeks pełnotekstowy nietknięty i policzy od nowa
@@ -127,7 +127,7 @@ Jeżeli zależy Ci na jej zachowaniu, przywróć kopię zamiast budować od zera
 ## Sprawdzanie spójności
 
 ```bash
-finddocs maintenance check
+python run.py maintenance check
 ```
 
 Kontroluje:

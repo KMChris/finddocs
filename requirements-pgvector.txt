@@ -1,0 +1,8 @@
+# Sterownik PostgreSQL dla magazynu wektorow w rozszerzeniu pgvector.
+# Opcjonalny: bez niego wektory leza w lokalnym pliku FAISS, tak jak domyslnie.
+#
+#     .venv\Scripts\python.exe -m pip install -r requirements-pgvector.txt
+#
+# Sterownik jest importowany dopiero po swiadomym wlaczeniu magazynu
+# (vector_store.backend = pgvector), wiec sama instalacja nic nie zmienia.
+psycopg[binary]==3.3.4

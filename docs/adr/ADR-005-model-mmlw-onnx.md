@@ -7,10 +7,10 @@
 
 Potrzebujemy modelu embeddingów do wyszukiwania semantycznego po polsku.
 Ograniczenia: działa lokalnie, tylko na CPU, licencja dopuszczająca użycie
-komercyjne, rozmiar mieszczący się w instalatorze desktopowym.
+komercyjne, rozmiar możliwy do trzymania na zwykłym stanowisku.
 
 Runtime aplikacji nie może zależeć od PyTorch: sam PyTorch to kilkaset
-megabajtów, a przy pakowaniu jeszcze więcej.
+megabajtów w środowisku, którego użytkownik nigdy nie potrzebuje do wyszukiwania.
 
 ## Decyzja
 
@@ -58,7 +58,7 @@ przeznaczone do wyszukiwania.
 
 Dobre:
 
-* runtime bez PyTorch, instalator o rząd wielkości mniejszy;
+* runtime bez PyTorch, środowisko o rząd wielkości mniejsze;
 * INT8 daje dwukrotnie wyższą przepustowość i trzykrotnie mniejsze zużycie
   pamięci niż FP32, kosztem marginalnego spadku jakości rankingu;
 * model jest wymienny: wystarczy inny katalog i podniesienie skrótu zgodności.

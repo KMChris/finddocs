@@ -28,75 +28,64 @@ HTML, RTF, EML, MSG wraz z załącznikami, PNG, JPEG, TIFF, BMP, GIF, WEBP.
 
 Szczegóły, poziom wsparcia i ograniczenia każdego formatu: [docs/formaty.md](https://github.com/KMChris/finddocs/blob/main/docs/formaty.md).
 
-## Instalacja dla użytkownika
+## Uruchomienie
 
-Uruchom instalator `FindDocs-0.3.0-instalator.exe`. Instalacja nie wymaga
-uprawnień administratora. Po zakończeniu aplikacja jest dostępna w menu Start.
-Nie trzeba uruchamiać żadnego serwera ani wpisywać adresu w przeglądarce.
-
-Pełna instrukcja: [docs/instrukcja-uzytkownika.md](https://github.com/KMChris/finddocs/blob/main/docs/instrukcja-uzytkownika.md).
-
-## Instalacja przez pip
-
-Wymagany Python od 3.11 do 3.14 na Windows 11.
+FindDocs nie ma instalatora ani pliku wykonywalnego. Aplikacja uruchamia się
+wprost z kodu źródłowego. Wymagany Python od 3.11 do 3.14 na Windows 11.
 
 ```bash
-pip install finddocs
+py -3.11 -m venv .venv
 ```
-
-Silnik OCR jest opcjonalny i instaluje się jako dodatek:
 
 ```bash
-pip install "finddocs[ocr-rapid]"
+.venv\Scripts\python -m pip install -r requirements.txt
 ```
-
-Dodatek `all` instaluje komplet dla samodzielnego stanowiska: silnik OCR
-oraz narzędzia importu i konwersji modeli embeddingów:
 
 ```bash
-pip install "finddocs[all]"
+.venv\Scripts\python run.py
 ```
 
-Typowe stanowiska instaluje się jedną nazwą presetu:
+Skrypt `run.py` bez argumentów uruchamia interfejs graficzny, a z dowolnym
+poleceniem daje dostęp do poleceń administracyjnych (`run.py --help`).
+Skrót w menu Start wskazuje na `pythonw.exe` z argumentem `run.py`, więc
+użytkownik nie widzi konsoli.
 
-| Preset | Przeznaczenie |
+Zależności opcjonalne mają osobne pliki, instalowane w razie potrzeby:
+
+| Plik | Zawartość |
 | --- | --- |
-| `preset-standard` | stanowisko biurowe: obliczenia na CPU, OCR skanów |
-| `preset-gpu` | dowolna karta graficzna na Windows (DirectML), OCR |
-| `preset-nvidia` | karta NVIDIA: embeddingi przez CUDA, OCR |
-| `preset-server` | indeksowanie do wspólnej bazy PostgreSQL (pgvector), OCR |
+| `requirements-ocr.txt` | silnik OCR RapidOCR, bez instalatora systemowego |
+| `requirements-export.txt` | konwersja modeli Hugging Face do ONNX |
+| `requirements-gpu-dml.txt` | embeddingi na dowolnej karcie graficznej (DirectML) |
+| `requirements-gpu-cuda.txt` | embeddingi na karcie NVIDIA (CUDA) |
+| `requirements-pgvector.txt` | magazyn wektorów w PostgreSQL z pgvector |
+| `requirements-dev.txt` | testy, kontrola typów i linting |
 
-Przykład dla stanowiska z kartą NVIDIA; presety z GPU wymagają drugiego
-polecenia, które przywraca wariant GPU pakietu onnxruntime:
+Pliki z wariantem GPU wymagają drugiego polecenia, które przywraca wariant GPU
+pakietu onnxruntime (warianty CPU i GPU współdzielą pliki, a pip nie gwarantuje
+kolejności instalacji):
 
 ```bash
-pip install "finddocs[preset-nvidia]"
+.venv\Scripts\python -m pip install --force-reinstall --no-deps onnxruntime-gpu
 ```
 
-```bash
-pip install --force-reinstall --no-deps onnxruntime-gpu
-```
-
-Opis presetów, wymagań i wydajności GPU:
-[docs/instalacja-pip.md](https://github.com/KMChris/finddocs/blob/main/docs/instalacja-pip.md)
+Pełny opis przygotowania środowiska, wydajności GPU i konfiguracji:
+[docs/uruchomienie-ze-zrodel.md](https://github.com/KMChris/finddocs/blob/main/docs/uruchomienie-ze-zrodel.md)
 oraz [docs/embeddingi-gpu-api.md](https://github.com/KMChris/finddocs/blob/main/docs/embeddingi-gpu-api.md).
 
-Po instalacji polecenie `finddocs-gui` uruchamia interfejs graficzny,
-a `finddocs` daje dostęp do poleceń administracyjnych. Wyszukiwanie dokładne
-działa od razu. Wyszukiwanie semantyczne i hybrydowe wymaga lokalnego modelu
-embeddingów, który instaluje jedno polecenie (za jawną zgodą pobiera model
-z Hugging Face i konwertuje do ONNX):
+Wyszukiwanie dokładne działa od razu. Wyszukiwanie semantyczne i hybrydowe
+wymaga lokalnego modelu embeddingów, który instaluje jedno polecenie (za jawną
+zgodą pobiera model z Hugging Face i konwertuje do ONNX):
 
 ```bash
-finddocs model import --use
+.venv\Scripts\python run.py model import --use
 ```
 
-Polecenie `finddocs model import` przyjmuje też katalog z własnym modelem albo
-dowolne repozytorium Hugging Face. Pełny opis instalacji, konfiguracji i modeli:
-[docs/instalacja-pip.md](https://github.com/KMChris/finddocs/blob/main/docs/instalacja-pip.md).
+Polecenie `run.py model import` przyjmuje też katalog z własnym modelem albo
+dowolne repozytorium Hugging Face.
 
 Wektory fragmentów mogą opcjonalnie trafiać do bazy PostgreSQL z rozszerzeniem
-pgvector zamiast do pliku lokalnego (dodatek `finddocs[pgvector]`, włączany
+pgvector zamiast do pliku lokalnego (`requirements-pgvector.txt`, włączane
 świadomie w ustawieniach). Opis i zasady bezpieczeństwa:
 [docs/baza-wektorowa.md](https://github.com/KMChris/finddocs/blob/main/docs/baza-wektorowa.md).
 
@@ -116,65 +105,58 @@ można wyszukiwać.
 To samo z wiersza poleceń:
 
 ```bash
-finddocs demo --register
-finddocs index
-finddocs search "procedura przelewów 24.07.2015"
+.venv\Scripts\python run.py demo --register
 ```
 
-## Uruchomienie developerskie
+```bash
+.venv\Scripts\python run.py index
+```
 
-Wymagany Python od 3.11 do 3.14 na Windows 11.
+```bash
+.venv\Scripts\python run.py search "procedura przelewów 24.07.2015"
+```
+
+## Środowisko developerskie
 
 ```bash
 py -3.11 -m venv .venv
-.venv\Scripts\python.exe -m pip install -e ".[dev,ocr-rapid]"
+```
+
+```bash
+.venv\Scripts\python.exe -m pip install -r requirements-dev.txt -r requirements-ocr.txt
 ```
 
 Model embeddingów pobiera się raz z Hugging Face i eksportuje do ONNX:
 
 ```bash
 git clone https://huggingface.co/sdadas/mmlw-retrieval-roberta-base models/mmlw-retrieval-roberta-base
-.venv\Scripts\python.exe -m pip install torch transformers onnx onnxscript
+```
+
+```bash
+.venv\Scripts\python.exe -m pip install -r requirements-export.txt
+```
+
+```bash
 .venv\Scripts\python.exe tools/export_model_onnx.py models/mmlw-retrieval-roberta-base --quantize
-```
-
-Uruchomienie interfejsu:
-
-```bash
-.venv\Scripts\python.exe -m finddocs.gui
-```
-
-Uruchomienie poleceń administracyjnych:
-
-```bash
-.venv\Scripts\python.exe -m finddocs --help
 ```
 
 ## Kontrola jakości
 
 ```bash
-.venv\Scripts\python.exe -m ruff check src tests packaging tools
-.venv\Scripts\python.exe -m ruff format --check src tests packaging tools
-.venv\Scripts\python.exe -m mypy src
-.venv\Scripts\python.exe -m pytest -q
+.venv\Scripts\python.exe -m ruff check src tests tools run.py
 ```
-
-## Budowanie pakietu i instalatora
 
 ```bash
-.venv\Scripts\python.exe packaging/build_app.py --with-model
-.venv\Scripts\python.exe packaging/build_installer.py
+.venv\Scripts\python.exe -m ruff format --check src tests tools run.py
 ```
 
-Pierwsze polecenie tworzy katalog `packaging/output/FindDocs` z plikiem
-wykonywalnym i wykonuje test dymny. Drugie buduje instalator przy pomocy
-Inno Setup 6. Gdy Inno Setup nie jest zainstalowany, skrypt wypisuje instrukcję
-instalacji zamiast kończyć pracę bez komunikatu.
+```bash
+.venv\Scripts\python.exe -m mypy src
+```
 
-Rozmiary wyniku: 409 MB bez modelu, 534 MB z modelem w wersji INT8,
-191 MB dla samego instalatora. Przełącznik `--full-precision-model` dokłada
-wagi FP32, co powiększa pakiet o około 470 MB i nie jest potrzebne do
-domyślnej konfiguracji.
+```bash
+.venv\Scripts\python.exe -m pytest -q
+```
 
 ## Architektura w skrócie
 
@@ -202,7 +184,7 @@ Szczegóły i diagramy: [docs/architektura.md](https://github.com/KMChris/finddo
 | Dokument | Zawartość |
 | --- | --- |
 | [Instrukcja użytkownika](https://github.com/KMChris/finddocs/blob/main/docs/instrukcja-uzytkownika.md) | obsługa aplikacji |
-| [Instalacja z PyPI](https://github.com/KMChris/finddocs/blob/main/docs/instalacja-pip.md) | pip, presety instalacyjne, konfiguracja, lokalny model embeddingów |
+| [Uruchomienie z kodu źródłowego](https://github.com/KMChris/finddocs/blob/main/docs/uruchomienie-ze-zrodel.md) | środowisko, zależności, konfiguracja, lokalny model embeddingów |
 | [Embeddingi na GPU i zdalne API](https://github.com/KMChris/finddocs/blob/main/docs/embeddingi-gpu-api.md) | DirectML i CUDA, batch, zdalny dostawca z kluczem API |
 | [Instrukcja administratora](https://github.com/KMChris/finddocs/blob/main/docs/instrukcja-administratora.md) | wdrożenie, konfiguracja, CLI |
 | [Integracja z SharePoint](https://github.com/KMChris/finddocs/blob/main/docs/integracja-sharepoint.md) | Microsoft Graph, Entra ID, uprawnienia |

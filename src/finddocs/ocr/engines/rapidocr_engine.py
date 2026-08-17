@@ -87,7 +87,6 @@ def _latin_model_paths() -> tuple[Path, Path] | None:
     roots = [
         AppPaths.default().models_dir / LATIN_MODEL_DIR,
         Path(__file__).resolve().parents[4] / "models" / LATIN_MODEL_DIR,
-        Path(__file__).resolve().parents[2] / "resources" / "models" / LATIN_MODEL_DIR,
     ]
     for root in roots:
         model = root / LATIN_REC_MODEL

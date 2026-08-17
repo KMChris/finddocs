@@ -110,10 +110,10 @@ niewłaściwym rzutowaniem.
 Sterownik PostgreSQL jest zależnością opcjonalną:
 
 ```bash
-pip install "finddocs[pgvector]"
+pip install -r requirements-pgvector.txt
 ```
 
-Dodatek instaluje pakiet `psycopg` z wbudowaną biblioteką libpq. Bez niego
+Plik instaluje pakiet `psycopg` z wbudowaną biblioteką libpq. Bez niego
 włączenie magazynu pgvector kończy się czytelnym komunikatem, a aplikacja
 dalej działa w trybie dokładnym.
 
@@ -152,8 +152,8 @@ innej tabeli oznacza inny, zwykle pusty zbiór wektorów, więc aplikacja
 zgłosi potrzebę przebudowy części semantycznej:
 
 ```bash
-finddocs maintenance rebuild --vectors-only
-finddocs index
+python run.py maintenance rebuild --vectors-only
+python run.py index
 ```
 
 Do czasu przebudowy wyszukiwanie dokładne działa bez zmian. Zmiana
@@ -177,12 +177,12 @@ przy pierwszej kolejnej operacji.
 ## Konserwacja i diagnostyka
 
 * Usunięcia wektorów wykonują się od razu (`DELETE`), więc kompaktacja
-  znana z FAISS nie jest potrzebna; polecenie `finddocs maintenance compact`
+  znana z FAISS nie jest potrzebna; polecenie `python run.py maintenance compact`
   działa jako pełna resynchronizacja tabeli z lokalnym SQLite.
-* `finddocs maintenance check` porównuje liczbę wektorów w bazie z liczbą
+* `python run.py maintenance check` porównuje liczbę wektorów w bazie z liczbą
   fragmentów oznaczonych jako zwektoryzowane i zgłasza rozjazd jako
   ostrzeżenie.
-* Kopia indeksu (`finddocs maintenance backup`) obejmuje wyłącznie pliki
+* Kopia indeksu (`python run.py maintenance backup`) obejmuje wyłącznie pliki
   lokalne. Za kopię zapasową tabel w PostgreSQL odpowiada administrator bazy.
 * Ekran Diagnostyka pokazuje kategorię `vector_db` w polityce połączeń
   wraz z dozwolonym hostem.

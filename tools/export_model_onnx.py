@@ -2,7 +2,7 @@
 
 Skrypt uruchamiamy raz, w srodowisku deweloperskim, ktore ma zainstalowany torch
 i transformers. Runtime aplikacji korzysta juz tylko z onnxruntime i tokenizers,
-dzieki czemu instalator jest o rzad wielkosci mniejszy.
+dzieki czemu srodowisko na stanowisku jest o rzad wielkosci mniejsze.
 
 Uzycie:
 

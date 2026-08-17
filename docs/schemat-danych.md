@@ -221,7 +221,7 @@ jednostkowych odpowiada podobieństwu kosinusowemu. Identyfikatorem wektora jest
 `chunk_id`, więc nie ma osobnej tablicy tłumaczącej.
 
 HNSW nie obsługuje `remove_ids`. Usunięcia zapisujemy jako nagrobki w metadanych
-i odfiltrowujemy przy wyszukiwaniu. `finddocs maintenance compact` przebudowuje
+i odfiltrowujemy przy wyszukiwaniu. `python run.py maintenance compact` przebudowuje
 indeks bez nagrobków.
 
 Zapis jest atomowy: plik tymczasowy, `fsync`, zamiana nazwy. Przerwanie zapisu
@@ -255,7 +255,7 @@ To najgroźniejszy sposób zepsucia tej aplikacji.
 ## Sprawdzanie spójności
 
 ```bash
-finddocs maintenance check
+python run.py maintenance check
 ```
 
 Kontroluje: `PRAGMA integrity_check`, zgodność liczby fragmentów z licznikiem

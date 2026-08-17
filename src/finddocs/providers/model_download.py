@@ -213,7 +213,7 @@ def select_download_files(
             raise ModelNotAvailableError(
                 f"Repozytorium {info.repo_id} zawiera tylko checkpoint wymagający "
                 "konwersji do ONNX, a w środowisku brakuje pakietu torch. "
-                'Zainstaluj dodatek: pip install "finddocs[export]".'
+                "Zainstaluj je poleceniem: pip install -r requirements-export.txt."
             )
         strategy = "weights"
         weight = "model.safetensors" if "model.safetensors" in info.files else "pytorch_model.bin"

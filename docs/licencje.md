@@ -3,9 +3,9 @@
 Dokument wygenerowany automatycznie przez `tools/gen_sbom.py` dla wersji 0.3.0.
 Odpowiadajacy mu plik SBOM w formacie CycloneDX to `sbom.cdx.json`.
 
-Wykaz obejmuje zaleznosci zadeklarowane w `pyproject.toml` wraz z zaleznosciami
-przechodnimi. Pakiet doinstalowany doraznie do srodowiska deweloperskiego nie jest
-komponentem produktu i nie wchodzi na te liste.
+Wykaz obejmuje zaleznosci zadeklarowane w plikach `requirements*.txt` wraz
+z zaleznosciami przechodnimi. Pakiet doinstalowany doraznie do srodowiska
+deweloperskiego nie jest komponentem produktu i nie wchodzi na te liste.
 
 Wszystkie komponenty dzialaja lokalnie. Zaden z nich nie wysyla tresci dokumentow
 ani zapytan poza komputer uzytkownika w konfiguracji domyslnej.
@@ -79,7 +79,6 @@ ani zapytan poza komputer uzytkownika w konfiguracji domyslnej.
 | rapidocr | 3.9.2 | Apache-2.0 | silnik OCR (opcjonalny) | https://rapidai.github.io/RapidOCRDocs |
 | rarfile | 4.5 | ISC License (ISCL) | odczyt archiwow RAR | https://github.com/markokr/rarfile |
 | requests | 2.34.2 | Apache Software License | zaleznosc posrednia | https://requests.readthedocs.io |
-| setuptools | 83.0.0 | MIT | zaleznosc posrednia | https://github.com/pypa/setuptools |
 | shapely | 2.1.2 | BSD License | zaleznosc posrednia | https://shapely.readthedocs.io/ |
 | shiboken6 | 6.11.1 | LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only | warstwa wiazan Qt dla Pythona | https://pyside.org |
 | six | 1.17.0 | MIT License | zaleznosc posrednia | https://github.com/benjaminp/six |
@@ -98,30 +97,23 @@ ani zapytan poza komputer uzytkownika w konfiguracji domyslnej.
 
 | Komponent | Wersja | Licencja | Zastosowanie | Pobierany | Zrodlo |
 | --- | --- | --- | --- | --- | --- |
-| mmlw-retrieval-roberta-base | 2023-12-26 | Apache-2.0 | model embeddingow do wyszukiwania semantycznego po polsku | tak, jednorazowo przez uzytkownika albo dolaczony do instalatora | https://huggingface.co/sdadas/mmlw-retrieval-roberta-base |
+| mmlw-retrieval-roberta-base | 2023-12-26 | Apache-2.0 | model embeddingow do wyszukiwania semantycznego po polsku | tak, jednorazowo przez uzytkownika | https://huggingface.co/sdadas/mmlw-retrieval-roberta-base |
 | SQLite (biblioteka wbudowana w Pythona) | 3.42.0 | Public Domain | baza metadanych i indeks pelnotekstowy FTS5 | nie, czesc dystrybucji Pythona | https://www.sqlite.org/ |
 | PDFium | dostarczany przez pypdfium2 | BSD-3-Clause i Apache-2.0 | silnik odczytu PDF uzywany przez pypdfium2 | nie, dolaczony do pakietu pypdfium2 | https://pdfium.googlesource.com/pdfium/ |
 | Tesseract OCR | 5.x (opcjonalnie) | Apache-2.0 | opcjonalny silnik OCR o najlepszej jakosci dla jezyka polskiego | nie, instalowany osobno przez administratora | https://github.com/UB-Mannheim/tesseract/wiki |
-| PaddleOCR z modelami PP-OCRv6_medium | 3.7.0 (opcjonalnie) | Apache-2.0 | serwer OCR na GPU, uruchamiany przez organizacje poza aplikacja | nie, obraz budowany osobno z `deploy/ppocr` | https://github.com/PaddlePaddle/PaddleOCR |
-| PaddlePaddle | 3.3.0 (opcjonalnie) | Apache-2.0 | srodowisko uruchomieniowe serwera OCR na GPU | nie, tylko wewnatrz obrazu `deploy/ppocr` | https://github.com/PaddlePaddle/Paddle |
-| Inno Setup | 6.x | Inno Setup License (dopuszcza uzycie komercyjne) | budowanie instalatora Windows | nie, narzedzie deweloperskie | https://jrsoftware.org/isinfo.php |
 
 ## Narzedzia deweloperskie
 
-Nie trafiaja do pakietu instalacyjnego.
+Potrzebne tylko do testow i kontroli jakosci, aplikacja ich nie uzywa.
 
 | Komponent | Wersja | Licencja |
 | --- | --- | --- |
-| altgraph | 0.17.5 | MIT License |
 | coverage | 7.15.2 | Apache-2.0 |
 | iniconfig | 2.3.0 | MIT |
 | mypy | 2.3.0 | MIT |
 | mypy_extensions | 1.1.0 | MIT |
-| pefile | 2023.2.7 | MIT |
 | pluggy | 1.6.0 | MIT License |
 | Pygments | 2.20.0 | BSD-2-Clause |
-| pyinstaller | 6.21.0 | GNU General Public License v2 (GPLv2) |
-| pyinstaller-hooks-contrib | 2026.6 | Apache Software License |
 | pytest | 9.1.1 | MIT |
 | pytest-cov | 7.1.0 | MIT License |
 | pytest-qt | 4.5.0 | MIT License |

@@ -53,8 +53,8 @@ Kosztowne:
 * **HNSW nie obsługuje `remove_ids`.** Usunięcie dokumentu nie usuwa jego
   wektorów. Realizujemy to nagrobkami w metadanych i odfiltrowaniem przy
   wyszukiwaniu. Po wielu cyklach indeksowania trzeba uruchomić kompaktację
-  (`finddocs maintenance compact`), która buduje indeks od nowa;
+  (`python run.py maintenance compact`), która buduje indeks od nowa;
 * wynik HNSW jest przybliżeniem. Dlatego tryb semantyczny **nigdy** nie
   deklaruje kompletności, a interfejs mówi o tym wprost;
-* FAISS to zależność binarna, więc PyInstaller wymaga jawnego zebrania
-  bibliotek dynamicznych.
+* FAISS to zależność binarna, więc na stanowisku musi być koło `faiss-cpu`
+  zgodne z wersją Pythona.

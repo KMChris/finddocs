@@ -44,7 +44,8 @@ Dobre:
 * dobre wsparcie DPI i motywów systemowych;
 * `pytest-qt` pozwala testować przepływy interfejsu bez widocznego okna;
 * LGPL pozwala na wdrożenie bez zakupu licencji, o ile biblioteka pozostaje
-  wymienialna (a przy pakowaniu PyInstaller w trybie onedir tak jest).
+  wymienialna. Przy instalacji pipem w środowisku wirtualnym jest to spełnione
+  wprost: Qt leży w `site-packages` jako osobne pliki.
 
 Kosztowne:
 

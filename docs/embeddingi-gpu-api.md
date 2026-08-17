@@ -34,33 +34,33 @@ karty graficznej nie wystarczy: kod providera GPU jest skompilowany w wariancie
 pakietu onnxruntime, a nie w sterowniku, więc bez odpowiedniego wariantu
 `onnxruntime.get_available_providers()` nie zwróci urządzenia GPU.
 
-Instalacja przez dodatek pakietu, dwoma poleceniami:
+Instalacja z osobnego pliku zależności, dwoma poleceniami:
 
 ```bash
-pip install "finddocs[gpu-dml]"
+pip install -r requirements-gpu-dml.txt
 pip install --force-reinstall --no-deps onnxruntime-directml
 ```
 
-Dla CUDA odpowiednio `finddocs[gpu-cuda]` i `onnxruntime-gpu`. Drugi krok jest
-konieczny: wszystkie warianty pakietu onnxruntime mają ten sam pakiet importowy,
-a pip nie gwarantuje kolejności instalacji kół współdzielących pliki. W próbie
-kontrolnej po jednym poleceniu aktywny pozostał wariant CPU z zależności
+Dla CUDA odpowiednio `requirements-gpu-cuda.txt` i `onnxruntime-gpu`. Drugi krok
+jest konieczny: wszystkie warianty pakietu onnxruntime mają ten sam pakiet
+importowy, a pip nie gwarantuje kolejności instalacji kół współdzielących pliki.
+W próbie kontrolnej po jednym poleceniu aktywny pozostał wariant CPU z zależności
 bazowej; drugie polecenie przywraca wariant GPU niezależnie od kolejności.
 To samo polecenie naprawia środowisko, gdy późniejsza aktualizacja przywróci
-wariant CPU. Gotowe zestawy z OCR instalują presety `preset-nvidia`
-i `preset-gpu`, opisane w [instalacji z PyPI](instalacja-pip.md).
+wariant CPU. Przygotowanie całego środowiska opisuje
+[uruchomienie z kodu źródłowego](uruchomienie-ze-zrodel.md).
 
 Wybór wariantu:
 
-* CUDA (`gpu-cuda`) działa tylko na kartach NVIDIA i jest najszybszym
-  zmierzonym wariantem (pomiar niżej). Dodatek instaluje biblioteki CUDA
-  i cuDNN jako zwykłe pakiety pip (`nvidia-*`, około 2 GB na dysku), więc
+* CUDA (`requirements-gpu-cuda.txt`) działa tylko na kartach NVIDIA i jest
+  najszybszym zmierzonym wariantem (pomiar niżej). Plik instaluje biblioteki
+  CUDA i cuDNN jako zwykłe pakiety pip (`nvidia-*`, około 2 GB na dysku), więc
   poza aktualnym sterownikiem NVIDIA nic nie trzeba instalować ręcznie.
   ONNX Runtime nie znajduje tych bibliotek sam: aplikacja ładuje je tuż
   przed utworzeniem sesji (`preload_cuda_libraries`). Z tego samego powodu
   ręczna próba w interpreterze wymaga wywołania `onnxruntime.preload_dlls()`
   przed utworzeniem sesji.
-* DirectML (`gpu-dml`) działa na kartach AMD, Intel i NVIDIA i potrzebuje
+* DirectML (`requirements-gpu-dml.txt`) działa na kartach AMD, Intel i NVIDIA i potrzebuje
   wyłącznie zwykłego sterownika graficznego (DirectX 12). To właściwy wariant
   dla kart innych niż NVIDIA; na karcie NVIDIA jest wyraźnie wolniejszy
   od CUDA.
@@ -71,7 +71,7 @@ zgodny w obu wersjach. Gdy biblioteki providera GPU nie dają się załadować,
 sesja powstaje na CPU: aplikacja wykrywa to po utworzeniu sesji, zapisuje
 ostrzeżenie w logu i pokazuje faktyczne urządzenie w diagnostyce.
 
-Stan środowiska pokazuje `finddocs model device` (pozycja
+Stan środowiska pokazuje `python run.py model device` (pozycja
 `dostepne_w_srodowisku`) oraz ekran Diagnostyka.
 
 ### Kwantyzacja, urządzenie i rozmiar paczki
@@ -119,10 +119,10 @@ urządzenia wykryte w bieżącym środowisku.
 Z wiersza poleceń:
 
 ```bash
-finddocs model device            # podgląd i dostępność
-finddocs model device dml --batch 64
-finddocs model device auto
-finddocs model device cpu
+python run.py model device            # podgląd i dostępność
+python run.py model device dml --batch 64
+python run.py model device auto
+python run.py model device cpu
 ```
 
 Wartość `auto` wybiera CUDA, potem DirectML, na końcu CPU. Przy przejściu na
@@ -225,12 +225,12 @@ Obliczenia embeddingów**, dostawca **Zdalne API organizacji**. Z wiersza
 poleceń:
 
 ```bash
-finddocs model api --url https://embeddingi.example.com/v1 --protocol openai --model mmlw-duzy --dimension 1024
-finddocs model api-key
-finddocs model api --enable
+python run.py model api --url https://embeddingi.example.com/v1 --protocol openai --model mmlw-duzy --dimension 1024
+python run.py model api-key
+python run.py model api --enable
 ```
 
-`finddocs model api-key` pobiera klucz z ukrytego wejścia i zapisuje go
+`python run.py model api-key` pobiera klucz z ukrytego wejścia i zapisuje go
 w magazynie poświadczeń (`--clear` usuwa). Nagłówek uwierzytelnienia to
 domyślnie `Authorization: Bearer`; inne API wskazuje się opcją
 `--key-header`, np. `--key-header api-key`.
@@ -268,7 +268,7 @@ zezwolić na zwykłe HTTP:
 
 * w GUI: karta **Obliczenia embeddingów**, dostawca **Zdalne API organizacji**,
   pole wyboru **Zezwól na http do tego komputera**;
-* z wiersza poleceń: `finddocs model api --allow-http-localhost`
+* z wiersza poleceń: `python run.py model api --allow-http-localhost`
   (cofnięcie: `--no-allow-http-localhost`).
 
 Zgoda obejmuje wyłącznie `localhost`, `127.0.0.1` i `::1`. Adres dowolnego
@@ -279,7 +279,7 @@ Przykład dla Ollamy z modelem `qwen3-embedding:8b` (kontrakt `openai`, wymiar
 4096, brak klucza API):
 
 ```bash
-finddocs model api --url http://127.0.0.1:11434/v1 --protocol openai --model qwen3-embedding:8b --dimension 4096 --batch 32 --allow-http-localhost --enable
+python run.py model api --url http://127.0.0.1:11434/v1 --protocol openai --model qwen3-embedding:8b --dimension 4096 --batch 32 --allow-http-localhost --enable
 ```
 
 Model instaluje się po stronie Ollamy poleceniem `ollama pull qwen3-embedding:8b`.
@@ -332,7 +332,7 @@ albo wyłączenie wymaga przebudowy części semantycznej indeksu.
 Przykład pełnej konfiguracji Qwen3 skróconego do 2048 z bazą pgvector:
 
 ```bash
-finddocs model api --url http://127.0.0.1:11434/v1 --protocol openai --model qwen3-embedding:8b --dimension 2048 --batch 32 --send-dimensions --allow-http-localhost --enable
+python run.py model api --url http://127.0.0.1:11434/v1 --protocol openai --model qwen3-embedding:8b --dimension 2048 --batch 32 --send-dimensions --allow-http-localhost --enable
 ```
 
 ### Zgodność indeksu
@@ -341,8 +341,8 @@ Przełączenie dostawcy oraz zmiana kontraktu, nazwy modelu albo wymiaru
 zmieniają przestrzeń wektorów i unieważniają część semantyczną indeksu:
 
 ```bash
-finddocs maintenance rebuild --vectors-only
-finddocs index
+python run.py maintenance rebuild --vectors-only
+python run.py index
 ```
 
 Zmiana adresu, liczby tekstów w żądaniu, limitów czasu i liczby ponowień nie
@@ -385,10 +385,10 @@ semantyczne (lista profili, Aktywuj, Zapisz bieżące jako profil, Usuń).
 Z wiersza poleceń:
 
 ```bash
-finddocs model profile
-finddocs model profile save Klaster
-finddocs model profile use Klaster
-finddocs model profile remove Klaster
+python run.py model profile
+python run.py model profile save Klaster
+python run.py model profile use Klaster
+python run.py model profile remove Klaster
 ```
 
 Konfiguracje zapisane przed wprowadzeniem profili dostają pierwszy profil

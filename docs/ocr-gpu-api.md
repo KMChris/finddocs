@@ -116,24 +116,24 @@ zapisany, ale zgoda na wysyłkę znika razem z wyborem silnika.
 ## Konfiguracja z wiersza poleceń
 
 ```bash
-finddocs ocr api --enable --url https://ocr.firma.local --model PP-OCRv6_medium
-finddocs ocr api-key
-finddocs ocr test
+python run.py ocr api --enable --url https://ocr.firma.local --model PP-OCRv6_medium
+python run.py ocr api-key
+python run.py ocr test
 ```
 
 Serwer na tym samym komputerze, bez TLS:
 
 ```bash
-finddocs ocr api --enable --url http://127.0.0.1:8868 --allow-http-localhost
+python run.py ocr api --enable --url http://127.0.0.1:8868 --allow-http-localhost
 ```
 
 Powrót na silniki lokalne:
 
 ```bash
-finddocs ocr api --disable
+python run.py ocr api --disable
 ```
 
-Stan silników pokazuje `finddocs doctor` w sekcji **Komponenty**.
+Stan silników pokazuje `python run.py doctor` w sekcji **Komponenty**.
 
 ## Ustawienia
 
@@ -170,7 +170,7 @@ OCR (przycisk na ekranie Diagnostyka) i pełnego indeksowania.
 schemat (`http://` albo `https://`).
 
 **Kod FD-4003 z informacją o kluczu API.** Serwer odrzucił uwierzytelnienie.
-Zapisz klucz ponownie (`finddocs ocr api-key`).
+Zapisz klucz ponownie (`python run.py ocr api-key`).
 
 **Rozpoznawanie działa, ale na silniku lokalnym.** Ostrzeżenie w raporcie
 indeksowania mówi, dlaczego serwer odpadł. Najczęstsze powody: kategoria

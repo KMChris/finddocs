@@ -621,7 +621,7 @@ class ModelCard(ConfigCard):
         self._load_prefixes(embedding.model_key)
 
     def activate_model(self, key: str) -> None:
-        """Ustawia zaimportowany model jako aktywny, tak jak finddocs model use."""
+        """Ustawia zaimportowany model jako aktywny, tak jak run.py model use."""
         embedding = self.context.config.embedding
         extra = Path(embedding.model_path) if embedding.model_path else None
         try:

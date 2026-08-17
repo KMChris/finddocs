@@ -1,0 +1,15 @@
+# Obliczenia embeddingow na karcie NVIDIA (CUDA). Opcjonalne: bez tego pliku
+# wszystko liczy sie na procesorze.
+#
+# Biblioteki CUDA i cuDNN przychodza jako pakiety pip nvidia-* (ok. 2 GB), wiec
+# poza sterownikiem NVIDIA nic nie trzeba instalowac recznie. ORT nie znajduje
+# ich sam: dostawca laduje je przez preload_dlls (preload_cuda_libraries
+# w providers/onnx_local.py).
+#
+# Instalacja jest zawsze dwuetapowa, z tego samego powodu co przy DirectML:
+#
+#     .venv\Scripts\python.exe -m pip install -r requirements-gpu-cuda.txt
+#     .venv\Scripts\python.exe -m pip install --force-reinstall --no-deps onnxruntime-gpu
+#
+# Kontrola stanu: run.py model device.
+onnxruntime-gpu[cuda,cudnn]==1.28.0

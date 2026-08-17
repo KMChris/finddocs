@@ -30,8 +30,8 @@ Pomiary powtarzalne skryptem
 | `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` | Apache-2.0 | 384 | ok. 470 MB | wielojęzyczny, mały | odrzucony: wyraźnie słabszy na parafrazach po polsku |
 | `Voicelab/sbert-base-cased-pl` | CC BY 4.0 | 768 | ok. 500 MB | polski, ale zadanie podobieństwa zdań | odrzucony: nieprzeznaczony do wyszukiwania |
 
-Kryteria: licencja dopuszczająca użycie komercyjne, rozmiar mieszczący się
-w instalatorze desktopowym, jakość na języku polskim, czas na CPU, zużycie
+Kryteria: licencja dopuszczająca użycie komercyjne, rozmiar możliwy do
+trzymania na stanowisku, jakość na języku polskim, czas na CPU, zużycie
 pamięci i wymiar wektora (wpływa na rozmiar indeksu).
 
 `mmlw-retrieval-roberta-base` wygrywa, bo jest jedynym kandydatem, który
@@ -70,7 +70,7 @@ znaleźć).
 Wybrany wariant to **INT8**. Uzasadnienie:
 
 * czterokrotnie mniejszy plik i trzykrotnie mniejsze zużycie pamięci,
-  co decyduje o tym, czy aplikacja mieści się w instalatorze desktopowym;
+  co decyduje o tym, czy model da się trzymać na zwykłym stanowisku;
 * dwukrotnie wyższa przepustowość indeksowania i dwukrotnie krótszy czas zapytania;
 * koszt jakości jest mały i dotyczy jednego zapytania na osiem: dokument
   „protokół z inwentaryzacji” spada z pozycji pierwszej na drugą. recall@5
@@ -197,7 +197,7 @@ To wyklucza pdfminer i pypdf, a licencja wyklucza PyMuPDF.
 | PaddleOCR | odrzucony: bardzo duże zależności, słabe wsparcie polskiego |
 | Windows OCR (WinRT) | odrzucony: wymaga pakietu językowego systemu, brak kontroli nad jakością |
 
-Tesseract nie jest dołączony do instalatora, bo ma własny instalator systemowy
+Tesseract nie jest zależnością aplikacji, bo ma własny instalator systemowy
 i własne modele językowe. Aplikacja wykrywa go i mówi wprost, gdy go nie ma.
 
 ## Wiadomości Outlook
@@ -224,36 +224,24 @@ przechowywania binariów w repozytorium.
 | wxPython | odrzucone: mniejsza społeczność, gorsze wsparcie Windows 11 |
 | interfejs w przeglądarce (Flask, FastAPI) | odrzucone wprost przez wymagania: użytkownik nie ma wpisywać adresu ani startować serwera |
 
-## Pakowanie
+## Dystrybucja
 
-| Rozwiązanie | Ocena |
-| --- | --- |
-| **PyInstaller w trybie onedir** | **wybrany**: przewidywalny, dobrze udokumentowany, obsługuje zależności binarne |
-| PyInstaller onefile | odrzucone: rozpakowywanie przy każdym starcie, wolniejszy start, problemy z modelami |
-| Nuitka | odrzucone: długi czas kompilacji, trudniejsze diagnozowanie |
-| cx_Freeze | odrzucone: słabsze wsparcie dla numpy i ONNX Runtime |
+Ocena z czasu PoC dotyczyła narzędzi pakujących: wybrano wtedy PyInstaller
+w trybie onedir z instalatorem Inno Setup, odrzucając PyInstaller onefile
+(rozpakowywanie przy każdym starcie), Nuitkę (długa kompilacja) i cx_Freeze
+(słabsze wsparcie dla numpy i ONNX Runtime).
 
-Instalator: **Inno Setup 6**, bo instaluje w profilu użytkownika bez uprawnień
-administratora, ma polską lokalizację i nie wymaga podpisu, którego nie mamy.
+Ta ścieżka została później porzucona w całości. Aplikacja uruchamia się wprost
+z kodu źródłowego, bez procesu budowania i bez instalatora. Powody i koszty
+tej zmiany opisuje [ADR-012](adr/ADR-012-uruchomienie-ze-zrodel.md).
 
-Odrzucone: MSIX (wymaga podpisu i sklepu albo zaufanego certyfikatu),
-WiX (złożoność nieproporcjonalna do potrzeb, instalacja dla całej maszyny).
+### Problem, który przetrwał zmianę
 
-### Problemy napotkane przy pakowaniu
-
-**numpy 2.x i PyInstaller.** Domyślna analiza nie zbiera podmodułu
-`numpy._core`. Objaw: aplikacja startuje i przewraca się na
-`No module named 'numpy._core._exceptions'`, a komunikat błędu myli, bo wygląda
-na brak PySide6. Rozwiązanie: `collect_submodules`, `collect_data_files`
-i `collect_dynamic_libs` dla numpy w pliku specyfikacji.
-
-**Okno modalne w konstruktorze okna głównego.** Test dymny przekraczał limit
-czasu, bo aplikacja czekała na kliknięcie w oknie, którego nikt nie widział.
-Rozwiązanie: komunikaty startowe pokazywane po `show()`, plus zmienna
-`FINDDOCS_NO_DIALOG=1` wyłączająca okna modalne w trybie nieinteraktywnym.
-
-Oba problemy mają teraz test w postaci kroku dymnego w
-[`packaging/build_app.py`](../packaging/build_app.py).
+**Okno modalne w konstruktorze okna głównego.** Uruchomienie nieinteraktywne
+przekraczało limit czasu, bo aplikacja czekała na kliknięcie w oknie, którego
+nikt nie widział. Rozwiązanie: komunikaty startowe pokazywane po `show()`,
+plus zmienna `FINDDOCS_NO_DIALOG=1` wyłączająca okna modalne. Sprawdza to
+uruchomienie `run.py gui --self-test`.
 
 ## Rozpoznawanie kodowania
 

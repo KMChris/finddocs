@@ -35,15 +35,15 @@ Aplikacja nie jest związana z jednym silnikiem. Interfejs jest w
 | Silnik | Wartość `engine` | Instalacja | Polski | Uwagi |
 | --- | --- | --- | --- | --- |
 | Tesseract | `tesseract` | osobny instalator plus pakiet `pol` | tak, model `pol` | najlepsza jakość dla druku, licencja Apache-2.0 |
-| EasyOCR | `easyocr` | `pip install finddocs[ocr-easy]` | tak | wymaga pobrania modeli, wolniejszy |
-| RapidOCR | `rapidocr` | `pip install finddocs[ocr-rapid]` | model łaciński | działa na ONNX Runtime, bez instalatora systemowego |
+| EasyOCR | `easyocr` | `pip install "easyocr>=1.7.2"` | tak | wymaga pobrania modeli, wolniejszy |
+| RapidOCR | `rapidocr` | `pip install -r requirements-ocr.txt` | model łaciński | działa na ONNX Runtime, bez instalatora systemowego |
 | Serwer zdalny | `remote_api` | kontener po stronie serwera | tak, PP-OCRv6 | liczy na GPU, wysyła obrazy stron poza komputer |
 
 Silnik zdalny opisuje osobny dokument:
 [OCR na GPU przez zdalne API](ocr-gpu-api.md). Wymaga świadomego włączenia
 i nigdy nie jest wybierany przez `auto`.
 
-Dodatek `ocr-rapid` instaluje pakiet `rapidocr`, następcę wycofanego
+Plik `requirements-ocr.txt` instaluje pakiet `rapidocr`, następcę wycofanego
 `rapidocr-onnxruntime` (tamten kończy się na wersji 1.4.4 i wymaga Pythona
 poniżej 3.13). Oba pochodzą z projektu RapidAI, mają modele wbudowane w pakiet
 i nie pobierają niczego z sieci. Adapter aplikacji obsługuje oba warianty, więc
@@ -55,12 +55,12 @@ poza komputer wymaga jawnego wyboru. Sprawdzenie, co jest widoczne na danym
 komputerze:
 
 ```bash
-finddocs doctor
+python run.py doctor
 ```
 
 ### Instalacja Tesseract
 
-Tesseract nie jest dołączony do instalatora, bo ma własny instalator systemowy
+Tesseract nie jest zależnością aplikacji, bo ma własny instalator systemowy
 i własny zestaw modeli językowych.
 
 1. Pobierz instalator dla Windows (wydania UB Mannheim).
@@ -129,7 +129,7 @@ przeindeksowanie z gotową pamięcią podręczną 1,7 s.
 Klucz zawiera wersję silnika, więc aktualizacja Tesseract unieważnia stare
 wpisy i pozwala odzyskać poprawiony wynik.
 
-Pamięć podręczną czyści `finddocs maintenance compact`.
+Pamięć podręczną czyści `python run.py maintenance compact`.
 
 ## Anulowanie
 
@@ -170,7 +170,7 @@ Opis i pomiary: [OCR na GPU przez zdalne API](ocr-gpu-api.md).
 
 ## Rozwiązywanie problemów
 
-**Skany nie są w ogóle rozpoznawane.** `finddocs doctor` pokaże, czy jakikolwiek
+**Skany nie są w ogóle rozpoznawane.** `python run.py doctor` pokaże, czy jakikolwiek
 silnik jest dostępny. Kod `FD-4001` oznacza brak silnika.
 
 **Rozpoznany tekst jest bez polskich znaków.** Brakuje modelu językowego `pol`.

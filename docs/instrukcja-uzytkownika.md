@@ -284,8 +284,8 @@ Można tu:
   Przedrostki są wykrywane automatycznie przy imporcie, ale można je poprawić;
 * **zaimportować własny model z dysku** (przycisk **Importuj z dysku...**):
   wskaż katalog z gotowym eksportem ONNX albo z checkpointem Hugging Face
-  (konwersja wymaga dodatku `finddocs[export]`, opisanego w
-  [instalacji z PyPI](instalacja-pip.md));
+  (konwersja wymaga pakietów z pliku `requirements-export.txt`, opisanych w
+  [uruchomieniu z kodu źródłowego](uruchomienie-ze-zrodel.md));
 * **pobrać model z Hugging Face** (przycisk **Pobierz z Hugging Face...**):
   podaj identyfikator repozytorium, na przykład
   `sdadas/mmlw-retrieval-roberta-base`. Aplikacja poprosi o zgodę na

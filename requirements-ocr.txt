@@ -1,0 +1,12 @@
+# Silnik OCR. Opcjonalny: bez niego dziala wszystko poza odczytem skanow.
+#
+#     .venv\Scripts\python.exe -m pip install -r requirements-ocr.txt
+#
+# Nastepca pakietu rapidocr-onnxruntime (tamten konczy sie na 1.4.4 i wymaga
+# Pythona < 3.13). Adapter w ocr/engines obsluguje takze stary pakiet, jesli
+# ktos ma go zainstalowanego z wczesniejszych wydan.
+rapidocr==3.9.2
+
+# EasyOCR jest alternatywa, celowo poza tym plikiem: tryb auto wybiera go
+# przed RapidOCR, wiec instaluje sie go swiadomie i osobno.
+#     .venv\Scripts\python.exe -m pip install "easyocr>=1.7.2"

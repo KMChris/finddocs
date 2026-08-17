@@ -1,0 +1,16 @@
+# Obliczenia embeddingow na dowolnej karcie graficznej w Windows (DirectML).
+# Opcjonalne: bez tego pliku wszystko liczy sie na procesorze.
+#
+# Instalacja jest zawsze dwuetapowa. Warianty pakietu onnxruntime (CPU,
+# DirectML, CUDA) instaluja ten sam pakiet importowy "onnxruntime", a pip NIE
+# gwarantuje kolejnosci zapisu wspoldzielonych plikow: po jednym poleceniu
+# potrafi zostac aktywne kolo CPU z requirements.txt. Drugi krok przywraca
+# wariant GPU:
+#
+#     .venv\Scripts\python.exe -m pip install -r requirements-gpu-dml.txt
+#     .venv\Scripts\python.exe -m pip install --force-reinstall --no-deps onnxruntime-directml
+#
+# Kontrola stanu: run.py model device. Uwaga na wersje: linia
+# onnxruntime-directml konczy sie na 1.24.4 i nie idzie rowno z linia CPU
+# (1.28.0); interfejs ORT uzywany przez aplikacje jest zgodny w obu.
+onnxruntime-directml==1.24.4

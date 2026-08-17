@@ -253,7 +253,7 @@ def test_import_checkpointu_bez_torch_daje_wskazowke(
     (checkpoint / "model.safetensors").write_bytes(b"wagi")
     (checkpoint / "tokenizer.json").write_text("{}", encoding="utf-8")
     monkeypatch.setattr(model_store, "missing_export_packages", lambda: ["torch"])
-    with pytest.raises(ModelNotAvailableError, match="finddocs\\[export\\]"):
+    with pytest.raises(ModelNotAvailableError, match=r"requirements-export\.txt"):
         import_local_model(checkpoint, ImportOptions(name="ck"), paths=tmp_home)
 
 

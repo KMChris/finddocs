@@ -15,6 +15,7 @@ from pathlib import Path
 from finddocs.app_paths import AppPaths
 from finddocs.errors import FindDocsError
 from finddocs.logging_setup import configure_logging, get_logger
+from finddocs.startup import prepare_environment
 from finddocs.version import APP_NAME, APP_VERSION
 from finddocs.win_console import suppress_console_windows
 
@@ -56,7 +57,7 @@ def _show_startup_error(message: str, log_path: Path) -> None:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="finddocs-gui", description=f"{APP_NAME} {APP_VERSION}")
+    parser = argparse.ArgumentParser(prog="run.py gui", description=f"{APP_NAME} {APP_VERSION}")
     parser.add_argument("--data-dir", help="katalog danych aplikacji")
     parser.add_argument("--query", help="wpisz zapytanie zaraz po starcie")
     parser.add_argument(
@@ -68,6 +69,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    prepare_environment()
     # Przed importem bibliotek pytajacych o wersje systemu: inaczej aplikacja
     # bez konsoli zapala na chwile okna wiersza polecen (patrz win_console).
     suppress_console_windows()

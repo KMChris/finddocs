@@ -308,7 +308,7 @@ def test_brak_sterownika_daje_czytelny_blad(monkeypatch):
     store = PgVectorStore(make_settings(), policy=allowing_policy())
     with pytest.raises(DependencyUnavailableError) as blad:
         store.open(dimension=DIM, model_key="m", model_version="1", vector_compat_hash=COMPAT)
-    assert "finddocs[pgvector]" in blad.value.user_message
+    assert "requirements-pgvector.txt" in blad.value.user_message
 
 
 # --- polityka sieciowa ------------------------------------------------------------

@@ -120,7 +120,7 @@ sekcja „Rozszerzanie” w [architekturze](architektura.md).
 ## Sprawdzenie, co jest dostępne na tym komputerze
 
 ```bash
-finddocs doctor
+python run.py doctor
 ```
 
 Wypisuje listę parserów z informacją, czy są dostępne, a jeśli nie, to dlaczego

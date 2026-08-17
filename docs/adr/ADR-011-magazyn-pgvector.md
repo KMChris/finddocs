@@ -35,7 +35,7 @@ Zasady dla wariantu pgvector:
 * tożsamość magazynu (backend, host, port, baza, schemat, tabela) wchodzi
   do skrótu zgodności wektorów, ale tylko przy backendzie innym niż faiss,
   żeby istniejące konfiguracje nie wymagały przebudowy po aktualizacji;
-* sterownik `psycopg` jest dodatkiem instalacyjnym `finddocs[pgvector]`
+* sterownik `psycopg` jest zależnością opcjonalną (`requirements-pgvector.txt`)
   importowanym dopiero po włączeniu magazynu;
 * SQLite pozostaje źródłem prawdy; niedostępna baza degraduje aplikację
   do trybu dokładnego (dokumenty `partial`, jawna notatka w wynikach),

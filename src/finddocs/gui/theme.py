@@ -23,9 +23,6 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
-# Ikony motywu sa w SVG. Sam import wystarcza, zeby PyInstaller dolaczyl
-# biblioteke Qt6Svg i wtyczki SVG do pakietu; w kodzie modul nie jest uzywany.
-import PySide6.QtSvg  # noqa: F401
 from PySide6.QtCore import QEvent, QObject, QSize, Qt
 from PySide6.QtGui import QColor, QFont, QFontDatabase, QIcon, QPalette
 from PySide6.QtWidgets import QApplication, QProxyStyle, QStyle, QStyleOption, QWidget

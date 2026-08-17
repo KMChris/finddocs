@@ -1,10 +1,10 @@
 """Generator SBOM w formacie CycloneDX oraz zestawienia licencji.
 
-Wykaz komponentow powstaje z zaleznosci zadeklarowanych w ``pyproject.toml``
-(sekcje ``dependencies`` i ``optional-dependencies``) rozwinietych o zaleznosci
-przechodnie z metadanych ``Requires-Dist``. Wersje i licencje czytamy z pakietow
-zainstalowanych w biezacym srodowisku, ale sama obecnosc pakietu w ``.venv`` nie
-wystarczy: narzedzie doinstalowane doraznie nie jest komponentem produktu.
+Wykaz komponentow powstaje z zaleznosci zadeklarowanych w plikach
+``requirements*.txt`` rozwinietych o zaleznosci przechodnie z metadanych
+``Requires-Dist``. Wersje i licencje czytamy z pakietow zainstalowanych
+w biezacym srodowisku, ale sama obecnosc pakietu w ``.venv`` nie wystarczy:
+narzedzie doinstalowane doraznie nie jest komponentem produktu.
 Do tego dochodza modele i komponenty zewnetrzne z listy ``EXTERNAL``.
 
 Skrypt zapisuje:
@@ -23,7 +23,6 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-import tomllib
 from dataclasses import dataclass, field
 from importlib.metadata import Distribution, distributions
 from pathlib import Path
@@ -35,9 +34,21 @@ from packaging.requirements import InvalidRequirement, Requirement
 from packaging.utils import canonicalize_name
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-PYPROJECT = PROJECT_ROOT / "pyproject.toml"
-APP_NAME = "FindDocs"
-APP_VERSION = "0.3.0"
+sys.path.insert(0, str(PROJECT_ROOT / "src"))
+
+from finddocs.version import APP_NAME, APP_VERSION  # noqa: E402
+
+#: Pliki z zaleznosciami, od ktorych zaczyna sie przejscie po grafie.
+#: Wpisy ``-r`` wewnatrz plikow sa rozwijane, wiec wystarcza korzenie.
+REQUIREMENT_FILES: tuple[str, ...] = (
+    "requirements.txt",
+    "requirements-dev.txt",
+    "requirements-ocr.txt",
+    "requirements-export.txt",
+    "requirements-pgvector.txt",
+    "requirements-gpu-dml.txt",
+    "requirements-gpu-cuda.txt",
+)
 
 #: Zastosowanie pakietu w aplikacji. Klucz to znormalizowana nazwa pakietu.
 USAGE: dict[str, str] = {
@@ -69,16 +80,13 @@ USAGE: dict[str, str] = {
     "easyocr": "silnik OCR (opcjonalny)",
     "psycopg": "klient PostgreSQL dla magazynu wektorow pgvector (opcjonalny)",
     "psycopg-binary": "biblioteka libpq dla klienta psycopg (opcjonalna)",
-    "pyinstaller": "budowanie pakietu aplikacji (narzedzie deweloperskie)",
     "pytest": "testy (narzedzie deweloperskie)",
     "mypy": "kontrola typow (narzedzie deweloperskie)",
     "ruff": "linting i formatowanie (narzedzie deweloperskie)",
 }
 
-#: Pakiety uzywane wylacznie podczas budowania i testow.
+#: Pakiety uzywane wylacznie podczas testow i kontroli jakosci.
 DEV_ONLY = {
-    "pyinstaller",
-    "pyinstaller-hooks-contrib",
     "pytest",
     "pytest-qt",
     "pytest-cov",
@@ -89,8 +97,6 @@ DEV_ONLY = {
     "coverage",
     "iniconfig",
     "pluggy",
-    "altgraph",
-    "pefile",
     "types-openpyxl",
     "types-pywin32",
 }
@@ -119,7 +125,7 @@ EXTERNAL: list[ExternalComponent] = [
         license_name="Apache-2.0",
         source="https://huggingface.co/sdadas/mmlw-retrieval-roberta-base",
         usage="model embeddingow do wyszukiwania semantycznego po polsku",
-        downloaded="tak, jednorazowo przez uzytkownika albo dolaczony do instalatora",
+        downloaded="tak, jednorazowo przez uzytkownika",
         notes="Eksportowany do ONNX skryptem tools/export_model_onnx.py, wariant INT8.",
     ),
     ExternalComponent(
@@ -152,15 +158,6 @@ EXTERNAL: list[ExternalComponent] = [
         usage="opcjonalny silnik OCR o najlepszej jakosci dla jezyka polskiego",
         downloaded="nie, instalowany osobno przez administratora",
         notes="Model jezyka polskiego 'pol' na licencji Apache-2.0.",
-    ),
-    ExternalComponent(
-        name="Inno Setup",
-        version="6.x",
-        kind="application",
-        license_name="Inno Setup License (dopuszcza uzycie komercyjne)",
-        source="https://jrsoftware.org/isinfo.php",
-        usage="budowanie instalatora Windows",
-        downloaded="nie, narzedzie deweloperskie",
     ),
 ]
 
@@ -220,14 +217,12 @@ def _source_of(dist: Distribution) -> str:
 class Resolution:
     """Wynik przejscia po zadeklarowanych zaleznosciach."""
 
-    #: Zainstalowane pakiety osiagalne z pyproject.toml.
+    #: Zainstalowane pakiety osiagalne z plikow requirements*.txt.
     reachable: set[str] = field(default_factory=set)
-    #: Zadeklarowane pakiety, ktorych nie ma w srodowisku (np. dodatek export).
+    #: Zadeklarowane pakiety, ktorych nie ma w srodowisku (np. torch z eksportu).
     missing: set[str] = field(default_factory=set)
     #: Wpisy Requires-Dist, ktorych nie dalo sie sparsowac.
     broken: list[str] = field(default_factory=list)
-    #: Znormalizowana nazwa samego projektu.
-    own: str = ""
 
 
 def _installed_distributions() -> dict[str, Distribution]:
@@ -254,29 +249,47 @@ def _requirement_applies(requirement: Requirement, extras: frozenset[str]) -> bo
     return any(requirement.marker.evaluate(context) for context in contexts)
 
 
-def resolve_declared(installed: dict[str, Distribution]) -> Resolution:
-    """Przechodzi graf zaleznosci zadeklarowanych w pyproject.toml.
+def read_requirements(path: Path, seen: set[Path] | None = None) -> list[str]:
+    """Czyta plik requirements i rozwija wpisy ``-r`` na miejscu.
 
-    Zaczynamy od ``dependencies`` i wszystkich grup ``optional-dependencies``,
-    a potem schodzimy po ``Requires-Dist`` zainstalowanych pakietow. Wezlem jest
-    para (pakiet, zadane dodatki), bo ten sam pakiet moze byc odwiedzony raz bez
-    dodatkow, a raz z dodatkiem, ktory doklada wlasne zaleznosci.
+    Obsluguje tylko to, czego uzywaja pliki projektu: komentarze, puste linie
+    i dolaczanie innego pliku. Opcje pipa (``--index-url`` i podobne) sa
+    pomijane, bo nie opisuja komponentu.
     """
-    with PYPROJECT.open("rb") as handle:
-        data = tomllib.load(handle)
-    project = data.get("project", {})
-    own_name = canonicalize_name(str(project.get("name") or ""))
-    extra_groups: dict[str, list[str]] = {
-        canonicalize_name(name): list(values)
-        for name, values in (project.get("optional-dependencies") or {}).items()
-    }
+    resolved = path.resolve()
+    seen = seen if seen is not None else set()
+    if resolved in seen or not resolved.is_file():
+        return []
+    seen.add(resolved)
 
-    result = Resolution(own=own_name)
-    queue: list[tuple[str, frozenset[str]]] = [
-        (raw, frozenset()) for raw in project.get("dependencies") or []
-    ]
-    for group in extra_groups.values():
-        queue += [(raw, frozenset()) for raw in group]
+    entries: list[str] = []
+    for line in resolved.read_text(encoding="utf-8").splitlines():
+        text = line.split(" #", 1)[0].strip()
+        if not text or text.startswith("#"):
+            continue
+        if text.startswith(("-r", "--requirement")):
+            target = text.split(maxsplit=1)[1].strip() if " " in text else ""
+            if target:
+                entries += read_requirements(resolved.parent / target, seen)
+            continue
+        if text.startswith("-"):
+            continue
+        entries.append(text)
+    return entries
+
+
+def resolve_declared(installed: dict[str, Distribution]) -> Resolution:
+    """Przechodzi graf zaleznosci zadeklarowanych w plikach requirements*.txt.
+
+    Zaczynamy od wszystkich plikow z ``REQUIREMENT_FILES``, a potem schodzimy
+    po ``Requires-Dist`` zainstalowanych pakietow. Wezlem jest para (pakiet,
+    zadane dodatki), bo ten sam pakiet moze byc odwiedzony raz bez dodatkow,
+    a raz z dodatkiem, ktory doklada wlasne zaleznosci.
+    """
+    result = Resolution()
+    queue: list[tuple[str, frozenset[str]]] = []
+    for name in REQUIREMENT_FILES:
+        queue += [(raw, frozenset()) for raw in read_requirements(PROJECT_ROOT / name)]
 
     visited: set[tuple[str, frozenset[str]]] = set()
     while queue:
@@ -293,13 +306,6 @@ def resolve_declared(installed: dict[str, Distribution]) -> Resolution:
         if (name, extras) in visited:
             continue
         visited.add((name, extras))
-        if name == own_name:
-            # Dodatek ``all`` odwoluje sie do samego pakietu. Rozwijamy go
-            # z pyproject, a nie z metadanych zainstalowanej kopii: przy
-            # instalacji edytowalnej te metadane bywaja starsze niz zrodla.
-            for extra in extras:
-                queue += [(entry, frozenset()) for entry in extra_groups.get(extra, [])]
-            continue
         dist = installed.get(name)
         if dist is None:
             result.missing.add(name)
@@ -310,7 +316,7 @@ def resolve_declared(installed: dict[str, Distribution]) -> Resolution:
 
 
 def collect_components() -> tuple[list[Component], Resolution, list[str]]:
-    """Zbiera pakiety osiagalne z zaleznosci zadeklarowanych w pyproject.toml.
+    """Zbiera pakiety osiagalne z zaleznosci zadeklarowanych w requirements*.txt.
 
     Zwraca komponenty, wynik przejscia po grafie oraz nazwy pakietow obecnych
     w srodowisku, ale nieosiagalnych z tego grafu. Sieroty biora sie z recznych
@@ -336,7 +342,7 @@ def collect_components() -> tuple[list[Component], Resolution, list[str]]:
             )
         )
     components.sort(key=lambda c: c.name.lower())
-    orphans = sorted(set(installed) - resolution.reachable - {resolution.own})
+    orphans = sorted(set(installed) - resolution.reachable)
     return components, resolution, orphans
 
 
@@ -409,9 +415,9 @@ def build_markdown(components: list[Component]) -> str:
         f"Dokument wygenerowany automatycznie przez `tools/gen_sbom.py` dla wersji {APP_VERSION}.",
         "Odpowiadajacy mu plik SBOM w formacie CycloneDX to `sbom.cdx.json`.",
         "",
-        "Wykaz obejmuje zaleznosci zadeklarowane w `pyproject.toml` wraz z zaleznosciami",
-        "przechodnimi. Pakiet doinstalowany doraznie do srodowiska deweloperskiego nie jest",
-        "komponentem produktu i nie wchodzi na te liste.",
+        "Wykaz obejmuje zaleznosci zadeklarowane w plikach `requirements*.txt` wraz",
+        "z zaleznosciami przechodnimi. Pakiet doinstalowany doraznie do srodowiska",
+        "deweloperskiego nie jest komponentem produktu i nie wchodzi na te liste.",
         "",
         "Wszystkie komponenty dzialaja lokalnie. Zaden z nich nie wysyla tresci dokumentow",
         "ani zapytan poza komputer uzytkownika w konfiguracji domyslnej.",
@@ -444,7 +450,7 @@ def build_markdown(components: list[Component]) -> str:
         "",
         "## Narzedzia deweloperskie",
         "",
-        "Nie trafiaja do pakietu instalacyjnego.",
+        "Potrzebne tylko do testow i kontroli jakosci, aplikacja ich nie uzywa.",
         "",
         "| Komponent | Wersja | Licencja |",
         "| --- | --- | --- |",

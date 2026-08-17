@@ -2,7 +2,7 @@
 
 Obraz nie zawiera warstwy tekstowej, wiec poprawnym wynikiem parsera jest brak
 sekcji i ustawiona flaga ``needs_ocr``. Pliki .doc czytamy wprost z kontenera OLE,
-bez pakietu Office, bo instalator nie moze go wymagac.
+bez pakietu Office, bo wdrozenie nie moze go wymagac.
 """
 
 from __future__ import annotations

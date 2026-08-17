@@ -19,7 +19,7 @@ Haslo uzytkownika bazy nie jest zapisywane w konfiguracji. Magazyn dostaje
 funkcje zwracajaca haslo z magazynu poswiadczen i odczytuje je dopiero przy
 nawiazywaniu polaczenia.
 
-Sterownik ``psycopg`` jest zaleznoscia opcjonalna (dodatek ``finddocs[pgvector]``)
+Sterownik ``psycopg`` jest zaleznoscia opcjonalna (``requirements-pgvector.txt``)
 i jest importowany dopiero przy pierwszym polaczeniu. Argument ``driver``
 konstruktora to hak testowy, pozwalajacy podstawic sterownik udawany.
 """
@@ -181,7 +181,7 @@ class PgVectorStore:
             except ImportError as exc:
                 raise DependencyUnavailableError(
                     "Sterownik psycopg nie jest zainstalowany. Magazyn pgvector "
-                    'wymaga dodatku: pip install "finddocs[pgvector]".',
+                    "wymaga polecenia: pip install -r requirements-pgvector.txt.",
                     cause=exc,
                 ) from exc
             self._driver = psycopg

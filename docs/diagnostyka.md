@@ -3,7 +3,7 @@
 ## Od czego zacząć
 
 ```bash
-finddocs doctor
+python run.py doctor
 ```
 
 Polecenie wypisuje wersje bibliotek, dostępność FTS5, listę parserów wraz
@@ -72,7 +72,7 @@ w oknie błędu, w logu, w tabeli `error_log` i w raporcie pokrycia.
 | `FD-1001` | błąd konfiguracji | sprawdź `config\config.json`, w razie potrzeby usuń go i skonfiguruj od nowa |
 | `FD-1002` | za mało miejsca na dysku | zwolnij miejsce albo zmniejsz `min_free_disk_bytes` |
 | `FD-1003` | problem z przestrzenią tymczasową | sprawdź prawa do `%LOCALAPPDATA%\FindDocs\temp` |
-| `FD-1004` | brak wymaganego składnika | `finddocs doctor` pokaże, czego brakuje |
+| `FD-1004` | brak wymaganego składnika | `python run.py doctor` pokaże, czego brakuje |
 | `FD-1005` | połączenie odrzucone przez politykę sieciową | adres spoza listy dozwolonych, patrz ekran **Diagnostyka** |
 
 ### FD-2xxx: źródła dokumentów
@@ -110,7 +110,7 @@ w oknie błędu, w logu, w tabeli `error_log` i w raporcie pokrycia.
 
 | Kod | Znaczenie | Co zrobić |
 | --- | --- | --- |
-| `FD-5000` | ogólny błąd indeksu | `finddocs maintenance check` |
+| `FD-5000` | ogólny błąd indeksu | `python run.py maintenance check` |
 | `FD-5001` | indeks niezgodny z konfiguracją | przebudowa, patrz [odbudowa indeksu](odbudowa-indeksu.md) |
 | `FD-5002` | indeks uszkodzony | przywróć kopię albo odbuduj |
 | `FD-5003` | błąd migracji schematu | przywróć kopię, zgłoś problem z logiem |
@@ -137,7 +137,7 @@ w oknie błędu, w logu, w tabeli `error_log` i w raporcie pokrycia.
 ## Sprawdzanie spójności indeksu
 
 ```bash
-finddocs maintenance check
+python run.py maintenance check
 ```
 
 Sprawdza `PRAGMA integrity_check`, fragmenty bez dokumentu, zgodność liczników,
@@ -150,7 +150,7 @@ Wynik niezdrowy nie zawsze oznacza katastrofę. Duża liczba nagrobków to sygna
 ## Raport pokrycia
 
 ```bash
-finddocs report --json-out raport.json --csv-out raport.csv
+python run.py report --json-out raport.json --csv-out raport.csv
 ```
 
 Raport odpowiada na pytanie „czego nie ma w indeksie i dlaczego”. Zawiera liczby
@@ -171,21 +171,25 @@ treści dokumentów.
 Sprawdź `%LOCALAPPDATA%\FindDocs\logs\blad-uruchomienia.txt`. Plik powstaje,
 gdy błąd wystąpi zanim wstanie interfejs. Zawiera pełny ślad wyjątku.
 
-Jeżeli pliku nie ma, a okno się nie pojawia, uruchom z wiersza poleceń:
+Jeżeli pliku nie ma, a okno się nie pojawia, uruchom z wiersza poleceń
+(w katalogu z kodem):
 
 ```bash
-"%LOCALAPPDATA%\Programs\FindDocs\FindDocs.exe" --self-test
+.venv\Scripts\python run.py gui --self-test
 ```
 
-Kod wyjścia 0 oznacza, że aplikacja wstaje i zamyka się poprawnie.
+Kod wyjścia 0 oznacza, że aplikacja wstaje i zamyka się poprawnie. Uruchomienie
+przez `python.exe`, a nie `pythonw.exe`, pokazuje wszystkie komunikaty błędów
+na konsoli. Komunikat o brakującym pakiecie oznacza, że środowisko wirtualne
+jest niekompletne: powtórz `pip install -r requirements.txt`.
 
 ### Nie widać dokumentu, o którym wiadomo, że istnieje
 
 Kolejno:
 
-1. Czy jego źródło jest dodane i włączone? `finddocs sources list`.
+1. Czy jego źródło jest dodane i włączone? `python run.py sources list`.
 2. Czy indeksowanie się zakończyło? Ekran **Indeksowanie**.
-3. Czy dokument jest w raporcie jako niewyszukiwalny? `finddocs report`.
+3. Czy dokument jest w raporcie jako niewyszukiwalny? `python run.py report`.
 4. Czy nie zawężają go filtry? Naciśnij **Wyczyść filtry**.
 5. Czy szukasz w trybie **Dokładnym**? Tylko on gwarantuje kompletność.
 
@@ -230,7 +234,7 @@ to jest błąd. Zgłoś go razem z logiem i opisem, co robiłeś.
 
 Dołącz:
 
-1. wynik `finddocs doctor`;
+1. wynik `python run.py doctor`;
 2. ostatnie 200 wierszy `logs\finddocs.log`;
 3. raport pokrycia w formacie JSON;
 4. kod błędu z okna, jeżeli się pojawił;
