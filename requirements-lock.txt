@@ -78,6 +78,6 @@ tqdm==4.70.0
 types-openpyxl==3.1.5.20260724
 types-pywin32==312.0.0.20260724
 typing_extensions==4.16.0
-urllib3==2.7.0
+urllib3==2.8.0
 xlrd==2.0.2
 zipp==4.1.0
