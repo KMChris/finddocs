@@ -1,6 +1,6 @@
 # Licencje komponentow
 
-Dokument wygenerowany automatycznie przez `tools/gen_sbom.py` dla wersji 0.3.0.
+Dokument wygenerowany automatycznie przez `tools/gen_sbom.py` dla wersji 0.3.1.
 Odpowiadajacy mu plik SBOM w formacie CycloneDX to `sbom.cdx.json`.
 
 Wykaz obejmuje zaleznosci zadeklarowane w `pyproject.toml` wraz z zaleznosciami
@@ -20,7 +20,7 @@ ani zapytan poza komputer uzytkownika w konfiguracji domyslnej.
 | backports.tarfile | 1.2.0 | MIT License | zaleznosc posrednia | https://github.com/jaraco/backports.tarfile |
 | backports.zstd | 1.6.0 | PSF-2.0 | zaleznosc posrednia | https://github.com/rogdham/backports.zstd |
 | brotli | 1.2.0 | MIT | zaleznosc posrednia | https://github.com/google/brotli |
-| certifi | 2026.7.22 | Mozilla Public License 2.0 (MPL 2.0) | zaleznosc posrednia | https://github.com/certifi/python-certifi |
+| certifi | 2026.10.19 | Mozilla Public License 2.0 (MPL 2.0) | zaleznosc posrednia | https://github.com/certifi/python-certifi |
 | cffi | 2.1.0 | MIT-0 | zaleznosc posrednia | https://cffi.readthedocs.io/ |
 | charset-normalizer | 3.4.9 | MIT | wykrywanie kodowania plikow tekstowych | https://charset-normalizer.readthedocs.io/ |
 | colorama | 0.4.6 | BSD License | zaleznosc posrednia | https://github.com/tartley/colorama |
@@ -55,7 +55,7 @@ ani zapytan poza komputer uzytkownika w konfiguracji domyslnej.
 | openpyxl | 3.1.5 | MIT License | odczyt plikow XLSX | https://openpyxl.readthedocs.io |
 | packaging | 26.2 | Apache-2.0 OR BSD-2-Clause | zaleznosc posrednia | https://packaging.pypa.io/ |
 | pathspec | 1.1.1 | Mozilla Public License 2.0 (MPL 2.0) | zaleznosc posrednia | https://python-path-specification.readthedocs.io/en/latest/index.html |
-| pillow | 12.3.0 | MIT-CMU | obsluga obrazow i przygotowanie stron do OCR | https://pillow.readthedocs.io |
+| pillow | 13.0.0 | MIT-CMU | obsluga obrazow i przygotowanie stron do OCR | https://pillow.readthedocs.io |
 | protobuf | 7.35.1 | 3-Clause BSD License | zaleznosc posrednia | https://developers.google.com/protocol-buffers/ |
 | psutil | 7.2.2 | BSD-3-Clause | zaleznosc posrednia | https://github.com/giampaolo/psutil |
 | psycopg | 3.3.4 | LGPL-3.0-only | klient PostgreSQL dla magazynu wektorow pgvector (opcjonalny) | https://psycopg.org/ |
@@ -65,7 +65,7 @@ ani zapytan poza komputer uzytkownika w konfiguracji domyslnej.
 | pyclipper | 1.4.0 | MIT License | zaleznosc posrednia | https://github.com/fonttools/pyclipper |
 | pycparser | 3.0 | BSD-3-Clause | zaleznosc posrednia | https://github.com/eliben/pycparser |
 | pycryptodomex | 3.23.0 | BSD License | zaleznosc posrednia | https://www.pycryptodome.org |
-| PyJWT | 2.13.0 | MIT | zaleznosc posrednia | https://github.com/jpadilla/pyjwt |
+| PyJWT | 2.15.1 | MIT | zaleznosc posrednia | https://github.com/jpadilla/pyjwt |
 | pypdfium2 | 5.12.1 | BSD-3-Clause, Apache-2.0, dependency licenses | odczyt i rasteryzacja PDF | https://github.com/pypdfium2-team/pypdfium2 |
 | pyppmd | 1.3.1 | LGPL-2.1-or-later | zaleznosc posrednia | https://github.com/miurahr/pyppmd |
 | PySide6 | 6.11.1 | LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only | interfejs graficzny | https://pyside.org |
@@ -89,7 +89,7 @@ ani zapytan poza komputer uzytkownika w konfiguracji domyslnej.
 | tqdm | 4.70.0 | MPL-2.0 AND MIT | zaleznosc posrednia | https://tqdm.github.io |
 | typing_extensions | 4.16.0 | PSF-2.0 | zaleznosc posrednia | https://typing-extensions.readthedocs.io/ |
 | tzdata | 2026.3 | Apache-2.0 | zaleznosc posrednia | https://github.com/python/tzdata |
-| urllib3 | 2.7.0 | MIT | zaleznosc posrednia | https://urllib3.readthedocs.io |
+| urllib3 | 2.8.0 | MIT | zaleznosc posrednia | https://urllib3.readthedocs.io |
 | xlrd | 2.0.2 | BSD License | odczyt starych plikow XLS | http://www.python-excel.org/ |
 | xlsxwriter | 3.2.9 | BSD License | zaleznosc posrednia | https://github.com/jmcnamara/XlsxWriter |
 | zipp | 4.1.0 | MIT | zaleznosc posrednia | https://github.com/jaraco/zipp |

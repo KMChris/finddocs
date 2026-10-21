@@ -37,7 +37,7 @@ from packaging.utils import canonicalize_name
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 PYPROJECT = PROJECT_ROOT / "pyproject.toml"
 APP_NAME = "FindDocs"
-APP_VERSION = "0.3.0"
+APP_VERSION = "0.3.1"
 
 #: Zastosowanie pakietu w aplikacji. Klucz to znormalizowana nazwa pakietu.
 USAGE: dict[str, str] = {
