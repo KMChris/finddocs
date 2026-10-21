@@ -170,11 +170,15 @@ nie mogą zmienić struktury wyrażenia.
 **Kontrola: brak sekretów w repozytorium.** Konfiguracja nie zawiera i nie może
 zawierać sekretów. Nie ma zakodowanych na sztywno poświadczeń ani kluczy.
 
-**Kontrola: zależności przypięte.** `requirements-lock.txt` zawiera dokładne
-wersje. SBOM w formacie CycloneDX 1.5 jest w `sbom.cdx.json`. Wykaz powstaje
-z zależności zadeklarowanych w `pyproject.toml` wraz z zależnościami przechodnimi,
-więc pakiet doinstalowany doraźnie do środowiska deweloperskiego nie trafia do
-komponentów produktu. Generator wypisuje takie pakiety jako ostrzeżenie.
+**Kontrola: zależności przypięte.** Bezpośrednie zależności uruchomieniowe
+w `pyproject.toml` są przypięte do dokładnych wersji; wyjątkiem jest `numpy`
+w zakresie `>=1.26,<3`. Dodatki `ocr-easy` i `export` mają tylko dolne granice
+wersji. Zależności przechodnich projekt nie przypina i nie ma osobnego pliku
+blokady: dokładne wersje, z którymi powstało wydanie, zapisuje SBOM w formacie
+CycloneDX 1.5 w `sbom.cdx.json`. Wykaz powstaje z zależności zadeklarowanych
+w `pyproject.toml` wraz z zależnościami przechodnimi, więc pakiet doinstalowany
+doraźnie do środowiska deweloperskiego nie trafia do komponentów produktu.
+Generator wypisuje takie pakiety jako ostrzeżenie.
 
 **Kontrola: licencje sprawdzone.** Wszystkie zależności mają licencję
 dopuszczającą użycie komercyjne. Składniki o licencjach kłopotliwych (PyMuPDF
@@ -208,7 +212,9 @@ katalogu `src`.
    do których użytkownik ma dostęp. Zawężenie wymaga `Sites.Selected`, co nie
    zostało przetestowane w tej wersji.
 5. **Aktualizacje zależności.** Repozytorium ma włączonego Dependabota, ale
-   decyzja o aktualizacji i ponownym wydaniu należy do organizacji.
+   decyzja o aktualizacji i ponownym wydaniu należy do organizacji. Zależności
+   przechodnie nie są przypięte, więc instalacja w późniejszym terminie może
+   pobrać nowsze wersje niż wykazane w SBOM.
 
 ## Weryfikacja
 
